@@ -15,7 +15,6 @@ const icons: Record<string, string> = {
   map: "map",
   activity: "wave-pulse",
   eye: "eye",
-  language: "language",
   "eye-off": "eye-slash",
   copy: "copy",
   check: "check",
@@ -90,9 +89,9 @@ const brands: Record<string, string> = {
   "brand-playstation": "playstation",
 }
 
-export function UIIcon({ name, className = "", solid = false }: { name: string, className?: string, solid?: boolean }) {
+export function UIIcon({ name, className = "" }: { name: string, className?: string }) {
   const brand = brands[name]
-  const style = solid || name === "circle" ? "fa-solid" : "fa-regular"
+  const style = name === "circle" ? "fa-solid" : "fa-regular"
   return <i className={`ui-icon ${brand ? `fa-brands fa-${brand}` : `${style} fa-${icons[name] || icons.unknown}`} ${className}`.trim()} aria-hidden="true" />
 }
 
