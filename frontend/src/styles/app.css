@@ -211,32 +211,33 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   }
 }
 
-.site-header-user {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  max-width: 16rem;
-  padding: 0.28rem 0.35rem 0.28rem 0.7rem;
-  --sq-r:18px;
-  border: 1px solid var(--color-gray-200);
-  background: var(--surface);
+/* The account menu is only the avatar, the same size as the theme button beside it. */
+.site-header-account {
+  display: block;
+  flex: none;
+  width: var(--header-control);
+  height: var(--header-control);
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: box-shadow 140ms;
 }
 
-.site-header-user:hover {
-  background: var(--color-gray-50);
-  border-color: var(--color-gray-300);
-}
+.site-header-account:hover { box-shadow: 0 0 0 3px var(--color-gray-200); }
+.site-header-account[aria-expanded="true"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--analytics-accent) 35%, transparent); }
 
 .site-header-avatar {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
-  border-radius: var(--ui-radius-pill);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
   background: var(--accent-color);
   color: var(--accent-on-solid);
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   font-weight: 600;
   object-fit: cover;
 }
@@ -246,7 +247,7 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   right: 0;
   z-index: 50;
   margin-top: 0.4rem;
-  width: 16.5rem;
+  width: 12rem;
   max-height: calc(100dvh - 88px);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -257,10 +258,6 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   color: var(--color-gray-800);
   box-shadow: 0 12px 32px rgb(0 0 0 / 10%);
   outline: 1px solid rgb(0 0 0 / 0.06);
-}
-
-.site-header-menu-meta {
-  padding: 0.65rem 0.85rem;
 }
 
 .site-header-menu-line {
@@ -841,14 +838,11 @@ button:disabled { cursor: not-allowed; }
 }
 
 html[data-theme="dark"] .bg-white\/90 { background-color: var(--surface); }
-@media (max-width: 639px) { .site-header-bar { grid-template-columns: auto 1fr; gap: 0.5rem; } .site-header-user { padding: 0.28rem; } }
+@media (max-width: 639px) { .site-header-bar { grid-template-columns: auto 1fr; gap: 0.5rem; } }
 
 /* Analytics controls share the header's height. */
 html { --control-height: var(--ui-control-height); --map-ocean: #f7f8fc; --map-empty: #e3e6ee; --map-border: #f7f8fc; }
 html[data-theme="dark"] { --map-ocean: #242630; --map-empty: #3d4151; --map-border: #242630; }
-.site-header-user { height: var(--control-height); box-sizing: border-box; }
-
-.site-header-user { padding-block: 3px; }
 .dash-toolbar { padding-block: 16px 2px; gap: 8px; }
 .dash-identity { display:flex; align-items:center; gap:10px; flex:1 1 240px; min-width:0; }
 .dashboard-health-inline { display:flex; align-items:center; flex:none; gap:12px; height:var(--ui-control-height); box-sizing:border-box; margin-left:auto; min-width:0; overflow-x:auto; white-space:nowrap; padding:0 12px; border:1px solid var(--color-gray-200); --sq-r:12px; background:var(--surface); color:var(--color-gray-500); font-size:12px; font-variant-numeric:tabular-nums; scrollbar-width:none; transition:background 140ms,border-color 140ms; }
@@ -1303,7 +1297,6 @@ html[data-theme="dark"] .site-footer { background:#000; }
 :is(
   .site-header-nav-link.is-active,
   .site-header-menu-item.is-active,
-  .site-header-user[aria-expanded="true"],
   .settings-nav-link.is-active,
   .settings-mobile-toggle[aria-expanded="true"],
   .control-trigger[aria-expanded="true"],
@@ -1325,7 +1318,6 @@ html[data-theme="dark"] .site-footer { background:#000; }
 }
 .settings-nav-link.is-active, .activity-type-tabs button[aria-pressed="true"] { font-weight:600; }
 .control-menu-item[data-selected="true"] :is(kbd, .selection-detail),
-.site-header-user[aria-expanded="true"] > .selection-detail,
 .metric-grid .metric-item > button[aria-pressed="true"] :is(div, .metric-value, .metric-change) { color:inherit; }
 /* Preserve improvement/decline meaning with contrast against the selected fill. */
 .metric-grid .metric-item > button[aria-pressed="true"] .text-green-500 { color:#a7f3d0; }
@@ -1465,5 +1457,4 @@ select:disabled { opacity:.65; cursor:not-allowed; }
 .site-header-brand .plost-logo__mark { width: var(--header-control); height: var(--header-control); }
 .site-header-nav-link, .site-header-link { display: inline-flex; align-items: center; box-sizing: border-box; height: var(--header-control); padding-block: 0; }
 .site-header .theme-toggle { width: var(--header-control); height: var(--header-control); }
-.site-header .site-header-user { height: var(--header-control); }
-.site-header .squircle:is(.theme-toggle, .site-header-user) { --sq-r: calc(var(--header-control) * .46); }
+.site-header .squircle.theme-toggle { --sq-r: calc(var(--header-control) * .46); }

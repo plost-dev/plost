@@ -278,26 +278,20 @@ function UserMenu({
     <div className="relative" ref={menuRef}>
       <button
         type="button"
-        className="squircle site-header-user"
+        className="site-header-account"
         ref={triggerRef}
         aria-label={t("账户菜单")}
         aria-expanded={open}
         aria-haspopup="menu"
         onClick={() => setOpen((v) => !v)}
       >
-        <span className="selection-detail hidden truncate text-sm font-medium text-gray-800 md:block">{user.name || user.email}</span>
         <UserAvatar avatar={user.avatar} gravatarUrl={user.gravatarUrl} name={user.name || user.email} className="site-header-avatar" />
-        <UIIcon name="chevron-down" className="ui-chevron" />
       </button>
       {open ? (
         <div className="squircle site-header-menu" role="menu">
-          <div className="site-header-menu-meta">
-            <div className="text-xs text-gray-500">{t("nav.signed_in")}</div>
-            <p className="truncate font-medium text-gray-900">{user.email}</p>
-          </div>
+          {/* The menu bar is hidden on narrow screens, so its pages move in here; settings is the profile link below. */}
           <div className="site-header-menu-mobile">
-            <div className="site-header-menu-line" />
-            {items.map((item) => (
+            {items.filter(item => item.key !== "account").map((item) => (
               <Link
                 key={item.key}
                 to={item.to}
@@ -309,7 +303,17 @@ function UserMenu({
                 {t(item.label)}
               </Link>
             ))}
+            <div className="site-header-menu-line" />
           </div>
+          <Link
+            to="/account"
+            search={{ tab: "preferences" }}
+            aria-current={pathname === "/account" ? "page" : undefined}
+            className={`squircle site-header-menu-item${pathname === "/account" ? " is-active" : ""}`}
+            onClick={() => setOpen(false)}
+          >
+            {t("个人资料设置")}
+          </Link>
           <div className="site-header-menu-line" />
           <button
             type="button"

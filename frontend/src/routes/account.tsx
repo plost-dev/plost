@@ -3,6 +3,7 @@ import { AccountPreferences } from "~/components/AccountPreferences"
 import { AccountSecurity } from "~/components/AccountSecurity"
 import { ActionLink } from "~/components/ActionButton"
 import { ApiDocsContent } from "~/components/ApiDocs"
+import { PasskeyPanel } from "~/components/PasskeyPanel"
 import { BackupPanel } from "~/components/BackupPanel"
 import { MapboxSettingsPanel } from "~/components/MapboxSettingsPanel"
 import { SettingsHeader } from "~/components/SettingsChrome"
@@ -14,7 +15,7 @@ import { useT } from "~/lib/i18n"
 import { mapboxSettingsFn } from "~/lib/mapbox-actions"
 
 const ACCOUNT_TABS = [
-  { id: "preferences", label: "偏好设置" },
+  { id: "preferences", label: "个人资料" },
   { id: "security", label: "安全" },
   { id: "api", label: "API" },
 ]
@@ -76,7 +77,7 @@ function AccountPage() {
             </SettingsNav>
           </div>
         </>}>
-          {tab === "preferences" ? <AccountPreferences user={user} onSaved={() => router.invalidate()} /> : null}
+          {tab === "preferences" ? <><AccountPreferences user={user} onSaved={() => router.invalidate()} /><PasskeyPanel /></> : null}
           {tab === "security" ? <AccountSecurity user={user} onSaved={() => router.invalidate()} /> : null}
           {tab === "api" ? <ApiDocsContent embedded /> : null}
           {tab === "system/mapbox" && mapbox ? <MapboxSettingsPanel initial={mapbox} /> : null}

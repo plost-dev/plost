@@ -30,7 +30,6 @@
 .settings-modal-foot .ui-action { --sq-r: calc(var(--control-size) * .46); }
 .squircle.theme-toggle { --sq-r: calc(var(--control-height) * .46); }
 .squircle:is(.activity-entry, .control-trigger) { --sq-r: calc(var(--ui-control-height) * .46); }
-.squircle.site-header-user { --sq-r: calc(var(--ui-control-height) * .46); }
 
 /* Large surfaces and detached menus. */
 .ui-surface.squircle[data-radius="small"] { --sq-r: 8px; }

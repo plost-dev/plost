@@ -1,6 +1,5 @@
 import { ActionButton } from "~/components/ActionButton"
 import { useState } from "react"
-import { PasskeyPanel } from "~/components/PasskeyPanel"
 import { ConfirmModal, Field, FormActions, SettingsForm } from "~/components/SettingsForm"
 import { Tile } from "~/components/ui"
 import { updateProfileFn } from "~/lib/actions"
@@ -167,7 +166,6 @@ export function AccountSecurity({
         )}
         {error ? <p role="alert" className="mt-3 text-sm text-red-600">{t(error || "")}</p> : null}
       </Tile>
-      <PasskeyPanel />
 
       <ConfirmModal
         open={enableOpen}

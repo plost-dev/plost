@@ -1135,5 +1135,8 @@
   "显示密码": "Show password",
   "隐藏密码": "Hide password",
   "请填写姓名、有效邮箱，以及至少 8 个字符的密码（最长 72 字节）": "Enter a name, a valid email and a password of at least 8 characters (at most 72 bytes)",
-  "新密码至少需要 8 个字符（最长 72 字节）": "The new password needs at least 8 characters (at most 72 bytes)"
+  "新密码至少需要 8 个字符（最长 72 字节）": "The new password needs at least 8 characters (at most 72 bytes)",
+  "个人资料设置": "Profile settings",
+  "如需更改邮箱，请到「安全」页。": "To change your email, go to the Security tab.",
+  "现在是用 IP 地址打开的，浏览器不允许在 IP 地址上创建 Passkey。请改用域名；在本机测试时打开 http://localhost:端口。": "You opened this page by IP address, and browsers do not allow Passkeys on an IP address. Use a domain name, or open http://localhost:port when testing on this machine."
 }

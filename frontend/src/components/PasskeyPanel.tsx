@@ -8,6 +8,9 @@ import { passkeyAddFn, passkeyListFn, passkeyRemoveFn, type PasskeyItem } from "
 import { useT } from "~/lib/i18n"
 import { PasswordInput } from "~/components/PasswordInput"
 
+// A browser ties a Passkey to a domain name, so a page opened by an address like 127.0.0.1 can never create one.
+const byIpAddress = () => typeof window !== "undefined" && /^(\d{1,3}(\.\d{1,3}){3}|\[[0-9a-f:.]+\])$/i.test(window.location.hostname)
+
 /** Passkeys are listed here; adding or removing one needs the account password. */
 export function PasskeyPanel() {
   const { t, locale } = useT()
@@ -18,6 +21,7 @@ export function PasskeyPanel() {
   const [password, setPassword] = useState("")
   const [name, setName] = useState("")
   const [pending, setPending] = useState(false)
+  const ipHost = byIpAddress()
 
   const load = useCallback(() => passkeyListFn().then(setItems, err => setError(err instanceof Error ? err.message : "加载失败，请刷新页面重试")), [])
   useEffect(() => { void load() }, [load])
@@ -36,8 +40,9 @@ export function PasskeyPanel() {
         </li>)}
       </ul> : null}
       <div className="mt-4">
-        <ActionButton className="btn btn-primary" disabled={!items} onClick={() => { setError(""); setAdding(true) }}>{t("security.add_passkey")}</ActionButton>
+        <ActionButton className="btn btn-primary" disabled={!items || ipHost} onClick={() => { setError(""); setAdding(true) }}>{t("security.add_passkey")}</ActionButton>
       </div>
+      {ipHost ? <p className="squircle settings-feedback">{t("现在是用 IP 地址打开的，浏览器不允许在 IP 地址上创建 Passkey。请改用域名；在本机测试时打开 http://localhost:端口。")}</p> : null}
       {error ? <p role="alert" className="mt-3 text-sm text-red-600">{t(error)}</p> : null}
     </Tile>
     <ConfirmModal
