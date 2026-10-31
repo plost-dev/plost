@@ -288,11 +288,12 @@ export function TrendChart({
               <dt><span className="traffic-series-dot" aria-hidden="true" />{t(label)}</dt>
               <dd>{selected.values[key].toLocaleString(locale)}</dd>
             </div>)}</dl>
-            <hr className="my-1 border-gray-600" />
-            <div className="flex items-center justify-between gap-4">
-              {canZoom ? <button type="button" className={TOOLTIP_ACTION_CLASS} onClick={event=>{event.stopPropagation();onZoom?.(selected.date)}}>{t("点击查看")} {t(INTERVAL_VIEW[interval])}</button> : null}
-              {hover.persistent ? <button type="button" className={TOOLTIP_ACTION_CLASS} onClick={event => {event.stopPropagation();dismissTooltip(event.detail === 0 ? undefined : indexFromClientX(event.clientX))}}>{t("关闭")}</button> : null}
-            </div>
+            {canZoom ? <>
+              <hr className="my-1 border-gray-600" />
+              <div className="flex items-center justify-between gap-4">
+                <button type="button" className={TOOLTIP_ACTION_CLASS} onClick={event=>{event.stopPropagation();onZoom?.(selected.date)}}>{t("点击查看")} {t(INTERVAL_VIEW[interval])}</button>
+              </div>
+            </> : null}
             {!hover.persistent ? <div className="text-xs text-gray-300">{t("右键固定提示")}</div> : null}
           </aside>
         </div>

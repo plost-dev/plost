@@ -8,6 +8,7 @@ import { UIIcon } from "./UIIcon"
 import { formatTimestamp } from "~/lib/format"
 import { useT } from "~/lib/i18n"
 import { rpc } from "~/lib/rpc"
+import { showToast } from "~/lib/toast"
 import { PasswordInput } from "~/components/PasswordInput"
 
 type Settings = {
@@ -107,7 +108,7 @@ export function BackupSchedulePanel() {
       cloudEnabled: form!.cloudEnabled, schedule: form!.schedule, hour: form!.hour, minute: form!.minute, weekday: form!.weekday, keep: form!.keep,
     })
     setSaved(next); setForm(next); setSecrets(NO_SECRETS); setConnection(null)
-    setMsg(t("备份设置已保存"))
+    showToast("备份设置已保存")
   }
 
   const credentialHint = (hasSaved: boolean) => destinationChanged

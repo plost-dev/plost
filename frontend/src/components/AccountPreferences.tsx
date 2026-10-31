@@ -7,6 +7,7 @@ import { Field, FormActions, SettingsForm } from "~/components/SettingsForm"
 import { Tile } from "~/components/ui"
 import { updateProfileFn } from "~/lib/actions"
 import { useT } from "~/lib/i18n"
+import { showToast } from "~/lib/toast"
 
 function resizeAvatar(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -50,25 +51,24 @@ export function AccountPreferences({ user, onSaved }: {
   const [avatar, setAvatar] = useState(user.avatar || "")
   const [avatarError, setAvatarError] = useState("")
   const [processing, setProcessing] = useState(false)
-  const [saved, setSaved] = useState(false)
   useEffect(() => {setName(user.name);setAvatar(user.avatar || "")}, [user.name,user.avatar])
   return <Tile icon="user" title={t("偏好设置")}>
-    <SettingsForm className="preferences-form" onSubmit={async event=>{event.preventDefault();setSaved(false);await updateProfileFn({data:{name,avatar:avatar || null,locale:language}});setLocale(language);onSaved();setSaved(true)}}>
+    <SettingsForm className="preferences-form" onSubmit={async event=>{event.preventDefault();await updateProfileFn({data:{name,avatar:avatar || null,locale:language}});setLocale(language);onSaved();showToast("设置已保存")}}>
       <div className="settings-avatar-row">
         <UserAvatar avatar={avatar} gravatarUrl={user.gravatarUrl} name={name} className="settings-avatar-preview" alt={t("profile.avatar")} />
         <div className="settings-avatar-controls flex min-w-0 flex-wrap gap-2">
           <ActionUpload  className="btn-secondary settings-avatar-upload" accept="image/*" disabled={processing} onChange={async event=>{
             const file=event.target.files?.[0];event.target.value="";if(!file)return
-            setProcessing(true);setAvatarError("");setSaved(false)
+            setProcessing(true);setAvatarError("")
             try {setAvatar(await resizeAvatar(file))} catch(err){setAvatarError(err instanceof Error ? err.message : t("无法读取图片"))} finally {setProcessing(false)}
           }}>{t("profile.change_avatar")}</ActionUpload>
-          {avatar ? <ActionButton  type="button" className="btn btn-secondary" onClick={()=>{setAvatar("");setSaved(false)}}>{t("profile.remove_avatar")}</ActionButton> : null}
+          {avatar ? <ActionButton  type="button" className="btn btn-secondary" onClick={()=>setAvatar("")}>{t("profile.remove_avatar")}</ActionButton> : null}
         </div>
       </div>
       {avatarError ? <p role="alert" className="mt-3 text-sm text-red-600">{t(avatarError)}</p> : null}
-      <Field label={t("profile.nickname_label")}><input className="squircle input" required value={name} onChange={event=>{setName(event.target.value);setSaved(false)}} /></Field>
-      <Field label={t("界面语言")}><select className="squircle input" value={language} onChange={event=>{setLanguage(event.target.value === "en" ? "en" : "zh-CN");setSaved(false)}}><option value="zh-CN">简体中文</option><option value="en">English</option></select></Field>
-      <FormActions><ActionButton className="btn btn-primary" type="submit" disabled={processing}>{t("保存设置")}</ActionButton>{saved ? <span role="status" className="text-sm text-indigo-600">{t("设置已保存")}</span> : null}</FormActions>
+      <Field label={t("profile.nickname_label")}><input className="squircle input" required value={name} onChange={event=>setName(event.target.value)} /></Field>
+      <Field label={t("界面语言")}><select className="squircle input" value={language} onChange={event=>setLanguage(event.target.value === "en" ? "en" : "zh-CN")}><option value="zh-CN">简体中文</option><option value="en">English</option></select></Field>
+      <FormActions><ActionButton className="btn btn-primary" type="submit" disabled={processing}>{t("保存设置")}</ActionButton></FormActions>
     </SettingsForm>
     <AccentPicker />
     <MapStylePicker />

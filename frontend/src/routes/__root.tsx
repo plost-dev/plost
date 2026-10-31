@@ -8,6 +8,7 @@ import { pageTitle } from "~/lib/page-title"
 import { syncAccentFavicon, subscribeAccentColor } from "~/lib/accent-preference"
 import { PageState } from "~/components/PageState"
 import { RouteErrorPage } from "~/components/RouteErrorPage"
+import { Toaster } from "~/components/Toaster"
 
 export const Route = createRootRoute({
   loader: rootPreferencesFn,
@@ -44,6 +45,7 @@ export function RootShell({ children }: { children: ReactNode }) {
       <MapStyleProvider styleId={preferences?.mapboxStyle ?? DEFAULT_MAPBOX_STYLE}>
         <PageTitle />
         {children}
+        <Toaster />
       </MapStyleProvider>
     </I18nProvider>
   )

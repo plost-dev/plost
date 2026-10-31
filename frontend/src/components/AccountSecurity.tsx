@@ -11,6 +11,7 @@ import {
   regenRecoveryFn,
 } from "~/lib/auth-actions"
 import { useT } from "~/lib/i18n"
+import { showToast } from "~/lib/toast"
 import { PasswordInput } from "~/components/PasswordInput"
 
 export function AccountSecurity({
@@ -28,9 +29,7 @@ export function AccountSecurity({
   const [confirm, setConfirm] = useState("")
   const [error, setError] = useState("")
   const [emailError, setEmailError] = useState("")
-  const [emailOk, setEmailOk] = useState("")
   const [passwordError, setPasswordError] = useState("")
-  const [passwordOk, setPasswordOk] = useState("")
   const [setup, setSetup] = useState<{ qr: string, secret: string } | null>(null)
   const [code, setCode] = useState("")
   const [codes, setCodes] = useState<string[] | null>(null)
@@ -48,12 +47,11 @@ export function AccountSecurity({
           onSubmit={async (e) => {
             e.preventDefault()
             setEmailError("")
-            setEmailOk("")
             try {
               await updateProfileFn({ data: { email, oldPassword: emailPassword } })
               setEmail("")
               setEmailPassword("")
-              setEmailOk(t("邮箱已更新"))
+              showToast("邮箱已更新")
               onSaved()
             } catch (err) {
               setEmailError(err instanceof Error ? err.message : t("无法更改邮箱"))
@@ -70,7 +68,6 @@ export function AccountSecurity({
             <PasswordInput className="squircle input" value={emailPassword} onChange={(e) => setEmailPassword(e.target.value)} required />
           </Field>
           {emailError ? <p role="alert" className="mt-3 text-sm text-red-600">{t(emailError)}</p> : null}
-          {emailOk ? <p role="status" className="mt-3 text-sm text-indigo-600">{t(emailOk)}</p> : null}
           <FormActions>
             <ActionButton className="btn btn-primary" type="submit">{t("security.change_email")}</ActionButton>
           </FormActions>
@@ -81,7 +78,6 @@ export function AccountSecurity({
           onSubmit={async (e) => {
             e.preventDefault()
             setPasswordError("")
-            setPasswordOk("")
             if (password !== confirm) {
               setPasswordError(t("两次输入的新密码不一致"))
               return
@@ -91,7 +87,7 @@ export function AccountSecurity({
               setOldPassword("")
               setPassword("")
               setConfirm("")
-              setPasswordOk(t("密码已更新"))
+              showToast("密码已更新")
             } catch (err) {
               setPasswordError(err instanceof Error ? err.message : t("无法更改密码"))
             }
@@ -107,7 +103,6 @@ export function AccountSecurity({
             <PasswordInput className="squircle input" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
           </Field>
           {passwordError ? <p role="alert" className="mt-3 text-sm text-red-600">{t(passwordError)}</p> : null}
-          {passwordOk ? <p role="status" className="mt-3 text-sm text-indigo-600">{t(passwordOk)}</p> : null}
           <FormActions>
             <ActionButton className="btn btn-primary" type="submit">{t("security.change_password")}</ActionButton>
           </FormActions>

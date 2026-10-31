@@ -10,6 +10,7 @@ import { SettingsHeader } from "~/components/SettingsChrome"
 import { Shell } from "~/components/Shell"
 import { Tile } from "~/components/ui"
 import { useT } from "~/lib/i18n"
+import { showToast } from "~/lib/toast"
 import { timezoneOptions } from "~/lib/timezones"
 import {
   createShareFn,
@@ -53,8 +54,6 @@ function SettingsPage() {
   const [healthEnabled, setHealthEnabled] = useState(data.health?.enabled || false)
   const [healthPath, setHealthPath] = useState(data.health?.path || "/")
   const [shareName, setShareName] = useState(t("公开报表"))
-  const [ok, setOk] = useState("")
-  useEffect(() => { setOk("") }, [tab])
 
   const [origin, setOrigin] = useState("")
   useEffect(() => { setOrigin(window.location.origin) }, [])
@@ -78,8 +77,6 @@ function SettingsPage() {
         <SettingsLayout navigationTitle={t(TABS.find(item => item.id === tab)?.label || "设置")} sidebar={<SettingsNav label={t("站点设置")}>
           {TABS.map(item => <Link key={item.id} to="/sites/$domain/settings" params={{domain}} search={{tab:item.id}} aria-current={tab === item.id ? "page" : undefined} className={`squircle settings-nav-link${tab === item.id ? " is-active" : ""}`}>{t(item.label)}</Link>)}
         </SettingsNav>}>
-          {ok ? <p role="status" className="text-sm text-indigo-600">{t(ok || "")}</p> : null}
-
           {tab === "general" ? <Tile icon="globe" title={t("站点详情")}>
             <SettingsForm onSubmit={async event => {
               event.preventDefault()
@@ -88,7 +85,7 @@ function SettingsPage() {
               if (data.health) await saveSiteCheckFn({data:{domain:saved.domain,enabled:healthEnabled,path:healthPath || "/"}})
               if (saved.domain !== domain) await router.navigate({to:"/sites/$domain/settings",params:{domain:saved.domain},search:{tab:"general"}})
               else await router.invalidate()
-              setOk(t("设置已保存"))
+              showToast("设置已保存")
             }}>
               <Field label={t("站点名称")}><input className="squircle input" title={t("在站点列表中显示，留空则默认使用域名。")} placeholder={domain} value={name} onChange={event => setName(event.target.value)} /></Field>
               <Field label={t("站点域名")}><input className="squircle input" value={newDomain} onChange={event => setNewDomain(event.target.value)} required /></Field>
@@ -109,7 +106,7 @@ function SettingsPage() {
                   event.preventDefault()
                   await saveSettingsFn({data:{domain,public:isPublic}})
                   await router.invalidate()
-                  setOk(t("设置已保存"))
+                  showToast("设置已保存")
                 }}>
                   <label className="flex items-center gap-3 text-sm text-gray-800"><input type="checkbox" checked={isPublic} onChange={event => setIsPublic(event.target.checked)} />{t("公开这个站点的仪表盘")}</label>
                   <FormActions><ActionButton className="btn btn-primary" type="submit">{t("保存设置")}</ActionButton></FormActions>
