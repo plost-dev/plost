@@ -1,1 +1,0 @@
-import{t as e}from"./ApiDocs-BAPksdb0.js";import{t}from"./Shell-CnzQ4cZ_.js";import{c as n}from"./useSelector-DzGlCpWO.js";var r=n();function i(){return(0,r.jsx)(t,{children:(0,r.jsx)(e,{})})}export{i as component};

@@ -46,17 +46,30 @@ func isPublicAddress(ip netip.Addr) bool {
 	return true
 }
 
-// publicOnly runs for the address actually being dialed, so a hostname that
-// resolves to an internal address (or changes after validation) cannot be used.
-func publicOnly(_, address string, _ syscall.RawConn) error {
-	host, _, err := net.SplitHostPort(address)
-	if err != nil {
-		return err
-	}
-	if ip, err := netip.ParseAddr(host); err != nil || !isPublicAddress(ip) {
+// outboundGuard runs for the address actually being dialed, so a hostname that resolves to an internal
+// address (or changes after validation) cannot be used. allow lists networks the operator has chosen to
+// permit anyway, such as the fake-IP range some local proxy tools hand out for every name.
+func outboundGuard(allow []netip.Prefix) func(network, address string, c syscall.RawConn) error {
+	return func(_, address string, _ syscall.RawConn) error {
+		host, _, err := net.SplitHostPort(address)
+		if err != nil {
+			return err
+		}
+		ip, err := netip.ParseAddr(host)
+		if err != nil {
+			return errNotPublic
+		}
+		if isPublicAddress(ip) {
+			return nil
+		}
+		ip = ip.Unmap().WithZone("")
+		for _, network := range allow {
+			if network.Contains(ip) {
+				return nil
+			}
+		}
 		return errNotPublic
 	}
-	return nil
 }
 
 type s3Client struct {
@@ -65,8 +78,8 @@ type s3Client struct {
 	now  func() time.Time
 }
 
-func newS3Client(cfg cloudSettings) *s3Client {
-	dialer := &net.Dialer{Timeout: 8 * time.Second, Control: publicOnly}
+func newS3Client(cfg cloudSettings, allow []netip.Prefix) *s3Client {
+	dialer := &net.Dialer{Timeout: 8 * time.Second, Control: outboundGuard(allow)}
 	transport := &http.Transport{
 		// Environment proxies would make the dial-time address check see the proxy instead of the storage host.
 		Proxy:                 nil,

@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/netip"
 	"os"
 	"os/signal"
 	"runtime/debug"
+	"strings"
 	"syscall"
 	"time"
 
@@ -24,6 +26,7 @@ func main() {
 	proxy := flag.Bool("trust-proxy", false, "Trust a local reverse proxy that overwrites forwarding headers")
 	showVersion := flag.Bool("version", false, "Print version")
 	memory := flag.Int("memory", 64, "Go runtime soft memory limit in MiB (not a total process limit)")
+	allowOutbound := flag.String("allow-outbound", "", "Comma-separated networks that site checks and cloud backups may connect to although they are normally refused, e.g. 198.18.0.0/15 for a local proxy's fake-IP mode")
 	flag.Parse()
 	if *showVersion {
 		fmt.Println("Plost", version)
@@ -32,7 +35,18 @@ func main() {
 	if *memory > 0 {
 		debug.SetMemoryLimit(int64(*memory) << 20)
 	}
-	app, err := plost.Open(plost.Config{DataDir: *data, Origin: *origin, TrustProxy: *proxy, Version: version})
+	var allow []netip.Prefix
+	for _, field := range strings.Split(*allowOutbound, ",") {
+		if field = strings.TrimSpace(field); field == "" {
+			continue
+		}
+		network, err := netip.ParsePrefix(field)
+		if err != nil {
+			log.Fatalf("-allow-outbound: %q is not a network such as 198.18.0.0/15", field)
+		}
+		allow = append(allow, network)
+	}
+	app, err := plost.Open(plost.Config{DataDir: *data, Origin: *origin, TrustProxy: *proxy, Version: version, OutboundAllow: allow})
 	if err != nil {
 		log.Fatal("Cannot open Plost: ", err)
 	}

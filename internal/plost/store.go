@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"net/netip"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -22,6 +23,10 @@ type Config struct {
 	Origin     string
 	TrustProxy bool
 	Version    string
+	// OutboundAllow lists networks that site checks and cloud backups may connect to although they are
+	// normally refused (private, loopback, reserved). It exists for setups such as a local proxy that
+	// answers every name with a fake address, and is only ever set by whoever starts the program.
+	OutboundAllow []netip.Prefix
 }
 
 type App struct {
@@ -50,9 +55,24 @@ type App struct {
 	// Test seams: tests point cloud requests at a local fake and allow its loopback address.
 	newCloud          func(cloudSettings) *s3Client
 	allowPrivateCloud bool
+
+	siteProbe     siteChecker // Network probes behind the site check; tests replace them.
+	outboundAllow []netip.Prefix
 }
 
 func Open(cfg Config) (*App, error) {
+	allow := make([]netip.Prefix, 0, len(cfg.OutboundAllow))
+	for _, network := range cfg.OutboundAllow {
+		widest := 16 // IPv6
+		if network.Addr().Is4() || network.Addr().Is4In6() {
+			widest = 8
+		}
+		if !network.IsValid() || network.Bits() < widest {
+			return nil, errors.New("allow-outbound networks must be valid and no wider than /8 (IPv4) or /16 (IPv6)")
+		}
+		allow = append(allow, network.Masked())
+	}
+	cfg.OutboundAllow = allow
 	if cfg.Origin != "" {
 		u, err := url.Parse(cfg.Origin)
 		if err != nil || u.Host == "" || (u.Scheme != "https" && u.Scheme != "http") || u.User != nil || u.RawQuery != "" || u.Fragment != "" || (u.Path != "" && u.Path != "/") {
@@ -110,9 +130,12 @@ func Open(cfg Config) (*App, error) {
 	}
 	a := &App{cfg: cfg, db: db, secret: key, queue: make(chan *ingest, 1024), stop: make(chan struct{}), limits: newLimiter(), lockFile: lock}
 	a.jobCtx, a.cancelJobs = context.WithCancel(context.Background())
-	a.workers.Add(2)
+	a.outboundAllow = cfg.OutboundAllow
+	a.siteProbe = newSiteChecker(cfg.OutboundAllow)
+	a.workers.Add(3)
 	go a.ingestLoop()
 	go a.scheduleLoop()
+	go a.siteCheckLoop()
 	opened = true
 	return a, nil
 }
@@ -177,6 +200,15 @@ CREATE TABLE IF NOT EXISTS backup_settings(
  last_run_at INTEGER NOT NULL DEFAULT 0,last_attempt_at INTEGER NOT NULL DEFAULT 0,
  last_status TEXT NOT NULL DEFAULT '',last_error TEXT NOT NULL DEFAULT '',last_backup TEXT NOT NULL DEFAULT '');
 INSERT OR IGNORE INTO backup_settings(id) VALUES(1);
+CREATE TABLE IF NOT EXISTS site_check_settings(
+ site_id INTEGER PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,enabled INTEGER NOT NULL DEFAULT 0,
+ path TEXT NOT NULL DEFAULT '/',version INTEGER NOT NULL DEFAULT 1,next_check_at INTEGER NOT NULL DEFAULT 0,
+ last_started_at INTEGER NOT NULL DEFAULT 0,expiry TEXT NOT NULL DEFAULT '',expiry_host TEXT NOT NULL DEFAULT '');
+CREATE TABLE IF NOT EXISTS site_check_results(
+ id INTEGER PRIMARY KEY AUTOINCREMENT,site_id INTEGER NOT NULL REFERENCES sites(id) ON DELETE CASCADE,
+ target_url TEXT NOT NULL,checked_at INTEGER NOT NULL,ok INTEGER NOT NULL,status INTEGER NOT NULL DEFAULT 0,
+ duration_ms INTEGER NOT NULL DEFAULT -1,error TEXT NOT NULL DEFAULT '');
+CREATE INDEX IF NOT EXISTS site_check_results_site_time ON site_check_results(site_id,checked_at DESC);
 CREATE TABLE IF NOT EXISTS passkeys(
  id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
  credential_id TEXT NOT NULL UNIQUE,name TEXT NOT NULL,credential TEXT NOT NULL,
@@ -195,7 +227,7 @@ func migrate(db *sql.DB) error {
 	if _, err := db.Exec(schema); err != nil {
 		return err
 	}
-	for _, column := range []struct{ table, name, kind string }{{"users", "avatar", "TEXT NOT NULL DEFAULT ''"}, {"shared_links", "slug", "TEXT NOT NULL DEFAULT ''"}} {
+	for _, column := range []struct{ table, name, kind string }{{"users", "avatar", "TEXT NOT NULL DEFAULT ''"}, {"shared_links", "slug", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "source_id", "TEXT NOT NULL DEFAULT ''"}} {
 		var n int
 		if err := db.QueryRow("SELECT count(*) FROM pragma_table_info(?) WHERE name=?", column.table, column.name).Scan(&n); err != nil {
 			return err
@@ -205,6 +237,10 @@ func migrate(db *sql.DB) error {
 				return err
 			}
 		}
+	}
+	// Imported history carries the id of its source row, which makes a repeated import a no-op and lets it be rolled back.
+	if _, err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS events_source ON events_v2(site_id,source_id) WHERE source_id<>''"); err != nil {
+		return err
 	}
 	_, err := db.Exec("INSERT INTO settings(key,value) VALUES('visitor_secret',?) ON CONFLICT(key) DO NOTHING", randomHex(32))
 	return err

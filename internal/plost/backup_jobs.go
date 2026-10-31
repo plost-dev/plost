@@ -37,7 +37,7 @@ func (a *App) cloudClient(c cloudSettings) *s3Client {
 	if a.newCloud != nil {
 		return a.newCloud(c)
 	}
-	return newS3Client(c)
+	return newS3Client(c, a.outboundAllow)
 }
 
 // beginBackup claims the single backup slot; the claimant must call runBackup.

@@ -147,6 +147,9 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/sites/{domain}/settings", a.api(a.updateSite, true))
 	mux.HandleFunc("DELETE /api/sites/{domain}", a.api(a.deleteSite, true))
 	mux.HandleFunc("GET /api/sites/{domain}/report", a.api(a.siteReport, false))
+	mux.HandleFunc("GET /api/sites/{domain}/checks", a.api(a.siteCheckGet, true))
+	mux.HandleFunc("PUT /api/sites/{domain}/checks", a.api(a.siteCheckPut, true))
+	mux.HandleFunc("POST /api/sites/{domain}/checks/run", a.apiOpen(a.siteCheckRun, 30*time.Second))
 	mux.HandleFunc("GET /api/sites/{domain}/activity", a.api(a.activity, true))
 	mux.HandleFunc("GET /api/sites/{domain}/visitors", a.api(a.visitors, true))
 	mux.HandleFunc("POST /api/sites/{domain}/shares", a.api(a.createShare, true))
@@ -316,6 +319,7 @@ func (a *App) listSites(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
+	expiries := a.certificateExpiries(r.Context())
 	result := []map[string]any{}
 	for _, s := range sites {
 		rng, err := parseRange(r.URL.Query(), s.Timezone)
@@ -326,7 +330,11 @@ func (a *App) listSites(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		item := map[string]any{"site": s, "overview": over}
+		var expiry any
+		if at, ok := expiries[s.ID]; ok {
+			expiry = at
+		}
+		item := map[string]any{"site": s, "overview": over, "certificateExpiresAt": expiry}
 		if r.URL.Query().Get("ui") == "1" {
 			series, err := a.series(r.Context(), s.ID, rng, nil)
 			if err != nil {
@@ -440,6 +448,9 @@ func (a *App) updateSite(w http.ResponseWriter, r *http.Request) error {
 			return failure(409, "这个网站已经添加")
 		}
 		return err
+	}
+	if in.Domain != s.Domain { // the checks now concern another address, so look again soon
+		_, _ = a.db.ExecContext(r.Context(), "UPDATE site_check_settings SET version=version+1,next_check_at=? WHERE site_id=?", unixNow(), s.ID)
 	}
 	return jsonResponse(w, map[string]any{"ok": true, "domain": in.Domain})
 }

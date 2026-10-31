@@ -1,6 +1,7 @@
 import {rpc} from "./rpc"
 import type {Overview,SeriesBy,Row,RecentVisitor,RecentEvent} from "./ch"
 import type {DashSearch} from "./range"
+import type {SiteCheckReport} from "./site-checks"
 
 export type User={id:number;email:string;name:string;theme:"system"|"dark"|"light";locale:"zh-CN"|"en";avatar:string;totp:boolean;totp_enabled:boolean;isAdmin:boolean;gravatarUrl?:string}
 export type Site={id:number;domain:string;name:string;timezone:string;public:boolean;createdAt:number}
@@ -24,15 +25,22 @@ export async function updateProfileFn({data}:Input<Omit<Partial<User>,"avatar"|"
 export async function accountSettingsFn(){const user=await meFn();if(!user)throw Error("请先登录");return {user,passkeys:[]}}
 export async function siteDomainsFn(){return (await rpc<Array<{site:Site}>>("/api/sites")).map(r=>r.site)}
 export async function sitesFn(){
-  const items=await rpc<Array<{site:Site;overview:GoOverview;series:GoPoint[];previous:GoOverview}>>("/api/sites?period=24h&ui=1")
-  return items.map(({site:s,overview:o,series,previous})=>({...s,certificateExpiresAt:null,visitors:o.visitors,visits:o.visits,pageviews:o.pageviews,live:o.online,change:previous.visitors?Math.round((o.visitors-previous.visitors)/previous.visitors*100):0,sparkline:series.map(p=>p.visitors)}))
+  const items=await rpc<Array<{site:Site;overview:GoOverview;series:GoPoint[];previous:GoOverview;certificateExpiresAt:string|null}>>("/api/sites?period=24h&ui=1")
+  return items.map(({site:s,overview:o,series,previous,certificateExpiresAt})=>({...s,certificateExpiresAt,visitors:o.visitors,visits:o.visits,pageviews:o.pageviews,live:o.online,change:previous.visitors?Math.round((o.visitors-previous.visitors)/previous.visitors*100):0,sparkline:series.map(p=>p.visitors)}))
 }
 export async function trafficPulseFn(){const items=await rpc<Array<{site:Site;overview:GoOverview}>>("/api/sites");return {sites:{count:items.length,visitors:items.reduce((n,s)=>n+s.overview.visitors,0),visits:items.reduce((n,s)=>n+s.overview.visits,0),pageviews:items.reduce((n,s)=>n+s.overview.pageviews,0)}}}
 export async function createSiteFn({data}:Input<{domain:string;timezone:string;name?:string|null}>){return rpc<{domain:string}>("/api/sites","POST",data)}
 export async function siteReadyFn({data}:Input<{domain:string}>){const r=await rpc<GoReport>(sitePath(data.domain)+"/report?period=all");return {ready:r.overview.pageviews>0}}
 export type Share={id:number;name:string;slug:string;createdAt:number}
-export const siteSettingsFn=({data}:Input<{domain:string}>)=>rpc<{site:Site;shares:Share[]}>(sitePath(data.domain)+"/settings")
-export async function saveSettingsFn({data}:Input<{domain:string;name?:string;timezone?:string;public?:boolean;newDomain?:string}>){const {site}=await siteSettingsFn({data});return rpc<{domain:string}>(sitePath(data.domain)+"/settings","PUT",{name:data.name??site.name,domain:data.newDomain??site.domain,timezone:data.timezone??site.timezone,public:data.public??site.public})}
+const siteSettingsOnly=({data}:Input<{domain:string}>)=>rpc<{site:Site;shares:Share[]}>(sitePath(data.domain)+"/settings")
+export const siteCheckFn=({data}:Input<{domain:string}>)=>rpc<{report:SiteCheckReport;canManage:boolean}>(sitePath(data.domain)+"/checks")
+export const runSiteCheckFn=({data}:Input<{domain:string}>)=>rpc<{ok:boolean}>(sitePath(data.domain)+"/checks/run","POST",{})
+export const saveSiteCheckFn=({data}:Input<{domain:string;enabled:boolean;path:string}>)=>rpc<{ok:boolean}>(sitePath(data.domain)+"/checks","PUT",{enabled:data.enabled,path:data.path})
+export async function siteSettingsFn({data}:Input<{domain:string}>){
+  const [settings,health]=await Promise.all([siteSettingsOnly({data}),siteCheckFn({data}).then(r=>r.report,()=>null)])
+  return {...settings,health}
+}
+export async function saveSettingsFn({data}:Input<{domain:string;name?:string;timezone?:string;public?:boolean;newDomain?:string}>){const {site}=await siteSettingsOnly({data});return rpc<{domain:string}>(sitePath(data.domain)+"/settings","PUT",{name:data.name??site.name,domain:data.newDomain??site.domain,timezone:data.timezone??site.timezone,public:data.public??site.public})}
 export const removeSiteFn=({data}:Input<{domain:string}>)=>rpc(sitePath(data.domain),"DELETE",{confirmation:data.domain})
 export const createShareFn=({data}:Input<{domain:string;name:string}>)=>rpc<{token:string}>(sitePath(data.domain)+"/shares","POST",{name:data.name})
 export const removeShareFn=({data}:Input<{domain:string;id:number}>)=>rpc(sitePath(data.domain)+"/shares/"+data.id,"DELETE")
@@ -44,10 +52,14 @@ export function adaptReport(r:GoReport){
   const point=(key:keyof GoPoint)=>r.series.map(p=>({date:time(p.at),value:Number(p[key])}))
   const seriesBy:SeriesBy={visitors:point("visitors"),session_visitors:point("visitors"),pageviews:point("pageviews"),visits:point("visits"),views_per_visit:r.series.map(p=>({date:time(p.at),value:p.visits?p.pageviews/p.visits:0})),bounce_rate:point("bounceRate"),visit_duration:point("duration")}
   const total=(rows:Row[])=>rows.reduce((sum,row)=>sum+row.value,0)
-  return {site:r.site,overview:overview(r.overview),compare:r.range.period==="all"?{}:overview(r.previous),series:seriesBy.visitors,seriesBy,sources:r.sources,pages:(detail.pageVisitors||r.pages)as Row[],countries:r.countries.filter(r=>r.name),regions:[] as Row[],cities:[] as Row[],browsers:r.browsers,os:r.os,devices:r.devices,languages:r.languages,screens:r.screens,channels:(detail.channels||[]) as Row[],aiSources:(detail.aiSources||[]) as Row[],entryPages:(detail.entryPages||[]) as Row[],exitPages:(detail.exitPages||[]) as Row[],hostnames:(detail.hostnames||[]) as Row[],titles:(detail.titles||[]) as Row[],notFoundPages:(detail.notFoundPages||[]) as Row[],utm:(detail.utm||[]) as Row[],utmMediums:(detail.utmMediums||[]) as Row[],campaigns:(detail.campaigns||[]) as Row[],heatmap:(detail.heatmap||[]) as Array<{dow:number;hour:number;value:number}>,mapboxToken:detail.mapboxToken||"",liveGeo:[] as Array<{country:string}>,health:null,eventSummary:{events:(detail.eventCounts||[]) as Row[],total:total(detail.eventCounts||[]),downloads:(detail.downloads||[]) as Row[],downloadsTotal:total(detail.downloads||[]),outbound:(detail.outbound||[]) as Row[],outboundTotal:total(detail.outbound||[]),properties:(detail.properties||[]) as Row[]},access:{member:!r.readonly,canManage:!r.readonly}}
+  return {site:r.site,overview:overview(r.overview),compare:r.range.period==="all"?{}:overview(r.previous),series:seriesBy.visitors,seriesBy,sources:r.sources,pages:(detail.pageVisitors||r.pages)as Row[],countries:r.countries.filter(r=>r.name),regions:[] as Row[],cities:[] as Row[],browsers:r.browsers,os:r.os,devices:r.devices,languages:r.languages,screens:r.screens,channels:(detail.channels||[]) as Row[],aiSources:(detail.aiSources||[]) as Row[],entryPages:(detail.entryPages||[]) as Row[],exitPages:(detail.exitPages||[]) as Row[],hostnames:(detail.hostnames||[]) as Row[],titles:(detail.titles||[]) as Row[],notFoundPages:(detail.notFoundPages||[]) as Row[],utm:(detail.utm||[]) as Row[],utmMediums:(detail.utmMediums||[]) as Row[],campaigns:(detail.campaigns||[]) as Row[],heatmap:(detail.heatmap||[]) as Array<{dow:number;hour:number;value:number}>,mapboxToken:detail.mapboxToken||"",liveGeo:[] as Array<{country:string}>,health:null as SiteCheckReport|null,eventSummary:{events:(detail.eventCounts||[]) as Row[],total:total(detail.eventCounts||[]),downloads:(detail.downloads||[]) as Row[],downloadsTotal:total(detail.downloads||[]),outbound:(detail.outbound||[]) as Row[],outboundTotal:total(detail.outbound||[]),properties:(detail.properties||[]) as Row[]},access:{member:!r.readonly,canManage:!r.readonly}}
 }
 function query(data:Partial<DashSearch>){const q=new URLSearchParams({period:data.period||"24h",ui:"1"});for(const key of ["from","to","interval","source","page","country","browser","os","device","hostname"]as const){if(data[key])q.set(key,String(data[key]))}return q.toString()}
-export async function dashboardFn({data}:Input<Partial<DashSearch>&{domain:string}>){return adaptReport(await rpc<GoReport>(sitePath(data.domain)+"/report?"+query(data)))}
+export async function dashboardFn({data}:Input<Partial<DashSearch>&{domain:string}>){
+  // What the server learns about the site is only for the signed-in manager; a visitor of a public site gets 401 here and sees nothing.
+  const [report,health]=await Promise.all([rpc<GoReport>(sitePath(data.domain)+"/report?"+query(data)),siteCheckFn({data}).then(r=>r.report,()=>null)])
+  return {...adaptReport(report),health:report.readonly?null:health}
+}
 export async function shareDashboardFn({data}:Input<Partial<DashSearch>&{slug:string}>){return adaptReport(await rpc<GoReport>("/api/share/"+encodeURIComponent(data.slug)+"?"+query(data)))}
 export const recentVisitorsFn=({data}:Input<{domain:string}>)=>rpc<{rows:RecentVisitor[];total:number;online:number;timezone:string;fetchedAt:string}>(sitePath(data.domain)+"/visitors")
 export async function activityFn({data}:Input<{domain:string;window?:string}>){const rows=await rpc<Array<{at:number;name:string;page:string;source:string;country:string;browser:string;os:string;device:string}>>(sitePath(data.domain)+"/activity?period="+(data.window==="30m"?"realtime":data.window==="7d"?"7d":"24h"));const {site}=await siteSettingsFn({data});return {rows:rows.slice(0,200).map(r=>({name:r.name,pathname:r.page,source:r.source,country:r.country,browser:r.browser,os:r.os,device:r.device,time:new Date(r.at*1000).toISOString()})) as RecentEvent[],timezone:site.timezone,hasMore:rows.length>200,fetchedAt:new Date().toISOString()}}

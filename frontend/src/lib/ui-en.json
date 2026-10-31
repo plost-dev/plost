@@ -1118,5 +1118,18 @@
   "Passkey 无效": "Invalid passkey",
   "Passkey 不存在": "Passkey not found",
   "登录尝试过多，请稍后再试": "Too many sign-in attempts. Try again later.",
-  "尚未配置 Passkey": "No passkey is set up yet"
+  "尚未配置 Passkey": "No passkey is set up yet",
+  "域名验证": "Domain validation",
+  "组织验证": "Organization validation",
+  "扩展验证": "Extended validation",
+  "注册日期": "Registered",
+  "到期日期": "Expires",
+  "注册商": "Registrar",
+  "证书类型": "Certificate type",
+  "常规": "General",
+  "删除后会移除此站点及访问历史，无法撤销。": "Deleting removes this site and its visit history. This cannot be undone.",
+  "确认删除": "Confirm deletion",
+  "请输入完整域名以确认删除": "Enter the full domain to confirm deletion",
+  "网站不存在": "Site not found",
+  "检查过于频繁，请稍后再试": "Checks are too frequent. Please try again shortly."
 }

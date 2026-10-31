@@ -5,6 +5,8 @@ import { useT } from "~/lib/i18n"
 import { useEffect, useRef, useState, type ReactNode } from "react"
 import { SiteSwitcher } from "~/components/SiteSwitcher"
 import { ReportFilter } from "./ReportFilter"
+import { expiryState } from "~/lib/site-check-view"
+import type { SiteCheckReport } from "~/lib/site-checks"
 import { INTERVAL_LABEL, PERIOD_LABEL, availableIntervals, intervalStorageKey, periodLabel, type DashSearch, type Interval, type Period } from "~/lib/range"
 
 const GROUPS: Period[][] = [
@@ -49,6 +51,7 @@ export function DashTopBar({
   canManage = !readonly,
   onExport,
   filterOptions = {},
+  health = null,
 }: {
   domain: string
   filters?: ReactNode
@@ -58,6 +61,7 @@ export function DashTopBar({
   canManage?: boolean
   filterOptions?: Partial<Record<keyof DashSearch, Array<{name:string;label?:string}>>>
   onExport?: () => void
+  health?: SiteCheckReport | null
 }) {
   const { t } = useT()
   const [open, setOpen] = useState<"filter" | "period" | "more" | null>(null)
@@ -119,14 +123,24 @@ export function DashTopBar({
   }, [onPeriod, search.period, search.interval, search.from, search.to, domain])
 
   const label = periodLabel(search.period, { from: search.from, to: search.to })
+  const latest = health?.latest
+  const fresh = !!latest && Date.parse(health!.now) - Date.parse(latest.checkedAt) <= 10 * 60_000
+  const healthState = !health?.enabled || !fresh ? "unknown" : latest?.ok ? "good" : "bad"
+  const httpLabel = !health?.enabled ? t("已暂停") : fresh ? `HTTP ${latest?.status ?? "—"}` : t("等待检查")
+  const certificateDays = health?.expiry ? expiryState(health.expiry.certificate.expiresAt, health.now).days : null
 
   return (
     <div className="dash-toolbar col-span-full flex w-full min-w-0 flex-wrap items-center gap-x-1 gap-y-2 py-1 md:gap-x-2.5">
       <div className="dash-identity">
         <SiteSwitcher domain={domain} readonly={readonly} canManage={canManage} />
         {filters}
+        {!readonly && health ? <Link to="/sites/$domain/health" params={{domain}} className="squircle dashboard-health-inline" title={t("站点检查")}>
+          <span className={`health-inline-state is-${healthState}`}><i/>{httpLabel}</span>
+          <span>SSL {certificateDays ?? "—"}{certificateDays === null ? "" : ` ${t("天")}`}</span>
+        </Link> : null}
       </div>
       <div className="dash-actions relative ml-auto flex shrink-0 items-center gap-x-1 md:gap-x-2.5" ref={box}>
+        {!readonly ? <Link to="/sites/$domain/health" params={{domain}} className="squircle activity-entry">{t("站点检查")}</Link> : null}
         {!readonly ? <Link to="/sites/$domain/activity" params={{domain}} search={{window:"24h"}} className="squircle activity-entry">{t("活动日志")}</Link> : null}
         <div>
           <button

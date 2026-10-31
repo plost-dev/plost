@@ -259,7 +259,7 @@ func TestEndpointValidation(t *testing.T) {
 
 func TestDialRefusesNonPublicAddresses(t *testing.T) {
 	f := newFakeS3(t)
-	client := newS3Client(cloudSettings{Provider: "s3", Endpoint: f.srv.URL, Region: "us-east-1", Bucket: fakeBucket, AccessKey: fakeAccess, SecretKey: fakeSecret})
+	client := newS3Client(cloudSettings{Provider: "s3", Endpoint: f.srv.URL, Region: "us-east-1", Bucket: fakeBucket, AccessKey: fakeAccess, SecretKey: fakeSecret}, nil)
 	_, err := client.list(context.Background(), "p/", 1)
 	if err == nil {
 		t.Fatal("loopback storage address was reachable")

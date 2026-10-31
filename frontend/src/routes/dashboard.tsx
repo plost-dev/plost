@@ -10,6 +10,7 @@ import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
 import { readSiteLayout, setSiteLayout, subscribeSiteLayout, type SiteLayout } from "~/lib/site-layout-preference"
 import { useRouterAutoRefresh } from "~/lib/router-refresh"
+import { expiryState } from "~/lib/site-check-view"
 
 export const Route = createFileRoute("/dashboard")({
   loader: async () => {
@@ -28,6 +29,7 @@ function DashboardPage() {
   const layout = useSyncExternalStore(subscribeSiteLayout, readSiteLayout, () => "compact")
   const [layoutSaveFailed, setLayoutSaveFailed] = useState(false)
   useRouterAutoRefresh()
+  const now = new Date().toISOString()
   function changeLayout(value: SiteLayout) {
     setMenu(null)
     setLayoutSaveFailed(!setSiteLayout(value))
@@ -134,6 +136,7 @@ function DashboardPage() {
                       <div className="management-site-name min-w-0 flex-1">
                         <div className="management-site-heading">
                           <h3 title={site.name || site.domain} className="management-site-title text-base leading-6 font-semibold text-gray-900">{site.name || site.domain}</h3>
+                          <p className={`management-site-ssl${(expiryState(site.certificateExpiresAt, now).days ?? Infinity) < 30 ? " is-expiring" : ""}`}><UIIcon name="shield"/>SSL {expiryState(site.certificateExpiresAt, now).days ?? "—"}{expiryState(site.certificateExpiresAt, now).days === null ? "" : ` ${t("天")}`}</p>
                         </div>
                       </div>
                     </div>

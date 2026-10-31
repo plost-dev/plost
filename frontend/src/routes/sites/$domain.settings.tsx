@@ -17,6 +17,7 @@ import {
   removeShareFn,
   removeSiteFn,
   saveSettingsFn,
+  saveSiteCheckFn,
   siteSettingsFn,
 } from "~/lib/actions"
 
@@ -49,6 +50,8 @@ function SettingsPage() {
   const ZONES = useMemo(() => timezoneOptions(timezone), [timezone])
   const [newDomain, setNewDomain] = useState(domain)
   const [isPublic, setIsPublic] = useState(!!data.site.public)
+  const [healthEnabled, setHealthEnabled] = useState(data.health?.enabled || false)
+  const [healthPath, setHealthPath] = useState(data.health?.path || "/")
   const [shareName, setShareName] = useState(t("公开报表"))
   const [ok, setOk] = useState("")
   useEffect(() => { setOk("") }, [tab])
@@ -81,6 +84,8 @@ function SettingsPage() {
             <SettingsForm onSubmit={async event => {
               event.preventDefault()
               const saved = await saveSettingsFn({data:{domain,name,timezone,newDomain,public:data.site.public}})
+              // The checks follow the site, so they are saved under its new address if it was renamed.
+              if (data.health) await saveSiteCheckFn({data:{domain:saved.domain,enabled:healthEnabled,path:healthPath || "/"}})
               if (saved.domain !== domain) await router.navigate({to:"/sites/$domain/settings",params:{domain:saved.domain},search:{tab:"general"}})
               else await router.invalidate()
               setOk(t("设置已保存"))
@@ -91,6 +96,8 @@ function SettingsPage() {
                 {ZONES.some(zone => zone.value === timezone) ? null : <option value={timezone}>{timezone}</option>}
                 {ZONES.map(zone => <option key={zone.value} value={zone.value}>{t(zone.label)}</option>)}
               </select></Field>
+              {data.health ? <Field label={t("站点检查")}><span className="flex items-center gap-3 text-sm text-gray-800"><input type="checkbox" checked={healthEnabled} onChange={event=>setHealthEnabled(event.target.checked)} />{t("开启检查")}</span></Field> : null}
+              {data.health && healthEnabled ? <Field label={t("检查路径")} hint={t("每 5 分钟访问一次，跟随跳转后返回 HTTP 200 视为正常。无需安装探针或统计脚本。")}><input className="squircle input" required maxLength={2048} value={healthPath} onChange={event=>setHealthPath(event.target.value)} placeholder="/" autoCapitalize="none" autoCorrect="off" spellCheck={false}/></Field> : null}
               <FormActions><ActionButton className="btn btn-primary" type="submit">{t("保存设置")}</ActionButton></FormActions>
             </SettingsForm>
           </Tile> : null}
