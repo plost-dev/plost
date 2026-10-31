@@ -1,0 +1,1 @@
+import{t as e}from"./ApiDocs-DJJO6352.js";import{t}from"./Shell-DMww1WpL.js";import{c as n}from"./useSelector-DzGlCpWO.js";var r=n();function i(){return(0,r.jsx)(t,{children:(0,r.jsx)(e,{})})}export{i as component};

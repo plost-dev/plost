@@ -289,19 +289,7 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   padding-block: 0.65rem;
 }
 
-.site-footer-brand {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.42rem;
-  flex: none;
-  font-size: 1rem;
-  line-height: 1;
-  color: #a1a1aa;
-  white-space: nowrap;
-}
-
-.site-footer-brand:hover { color: #fff; }
-.site-footer-brand .logo.plost-logo { --plost-tile-size: 40px; --plost-pill: transparent; --plost-brand: currentColor; }
+.site-footer-brand .logo.plost-logo { --plost-tile-size: 35px; --plost-pill: transparent; --plost-brand: currentColor; filter: none; }
 
 .site-footer-meta {
   grid-area: meta;
@@ -337,49 +325,45 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   align-items: center;
   justify-content: flex-end;
   justify-self: end;
-  gap: 0;
+  gap: 4px;
   min-width: 0;
 }
 
-.site-footer-github,
+/* The language, theme, GitHub and Plost icons each sit on the same superellipse tile. */
 .site-footer-tool {
+  --sq-r: calc(36px * .46);
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 40px;
-  height: 40px;
-  color: #a1a1aa;
-  border-radius: 12px;
-}
-
-/* The theme and language buttons are footer icons too: same touch area, colour and hover as GitHub, with no frame or fill. */
-.site-footer-tool {
-  position: relative;
+  width: 36px;
+  height: 36px;
   padding: 0;
   border: 0;
-  background: transparent;
+  background: rgb(255 255 255 / 0.08);
+  color: #a1a1aa;
   cursor: pointer;
+  transition: background-color 140ms, color 140ms;
 }
 
-.site-footer-tool:disabled { cursor: wait; }
-.site-footer-tool .ui-icon { font-size: 20px; line-height: 1; }
-
-.site-footer-github-mark {
-  display: block;
-  width: calc(40px * 4 / 7);
-  height: calc(40px * 4 / 7);
-}
-
-.site-footer-github:hover,
 .site-footer-tool:hover {
+  background: rgb(255 255 255 / 0.16);
   color: #fff;
 }
 
-.site-footer-github:focus-visible,
+.site-footer-tool:disabled { cursor: wait; }
+.site-footer-tool .ui-icon { font-size: 17px; line-height: 1; }
+
+.site-footer-github-mark {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
 .site-footer-tool:focus-visible {
   outline: 2px solid #d4d4d8;
-  outline-offset: 4px;
+  outline-offset: 3px;
 }
 
 .site-footer-pulse {
@@ -1252,7 +1236,7 @@ html { scrollbar-gutter: stable; }
 @media(max-width:639px) { .recent-visitors-dialog > header { padding:16px; } .recent-visitors-controls { flex-wrap:wrap; padding:16px 16px 0; } .recent-visitors-controls > div button { padding-inline:8px; font-size:12px; } .recent-visitors-list { padding:8px 16px 16px; } .recent-visitor summary { grid-template-columns:8px minmax(0,1fr) auto 16px; gap:8px; } .recent-visitor-device { grid-row:2; grid-column:2 / -1; } }
 
 .theme-toggle:active { transform:scale(.92); }
-.theme-toggle .ui-icon { position:absolute; width:20px; height:20px; transition:transform .45s cubic-bezier(.22,1,.36,1),opacity .3s; }
+.theme-toggle .ui-icon { position:absolute; width:17px; height:17px; transition:transform .45s cubic-bezier(.22,1,.36,1),opacity .3s; }
 .theme-toggle-sun { opacity:1; transform:rotate(0) scale(1); }
 .theme-toggle-moon { opacity:0; transform:rotate(-70deg) scale(.35); }
 .theme-toggle.is-dark .theme-toggle-sun { opacity:0; transform:rotate(90deg) scale(.35); }

@@ -108,8 +108,8 @@ function DashboardPage() {
                 <span className="management-tool-label">{t("紧凑")}</span>
               </button>
             </div>
-          <Link to="/sites/new" className="squircle btn btn-primary" aria-label={t("添加网站")} title={t("添加网站")}>
-            <span className="management-tool-label">{t("添加网站")}</span></Link>
+          <Link to="/sites/new" className="squircle btn btn-primary ui-icon-button" aria-label={t("添加网站")} title={t("添加网站")}>
+            <UIIcon name="plus" className="size-4" /></Link>
           </div>
         </header>
         {layoutSaveFailed ? <p className="text-xs text-gray-500" role="status">{t("已切换，当前浏览器无法保存显示方式。")}</p> : null}
