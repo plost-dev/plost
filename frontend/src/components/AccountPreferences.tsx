@@ -55,7 +55,7 @@ export function AccountPreferences({ user, onSaved }: {
   return <Tile icon="user" title={t("个人资料")}>
     <SettingsForm className="preferences-form" onSubmit={async event=>{event.preventDefault();await updateProfileFn({data:{name,avatar:avatar || null,locale:language}});setLocale(language);onSaved();showToast("设置已保存")}}>
       <div className="settings-avatar-row">
-        <UserAvatar avatar={avatar} gravatarUrl={user.gravatarUrl} name={name} className="settings-avatar-preview" alt={t("profile.avatar")} />
+        <UserAvatar avatar={avatar} gravatarUrl={user.gravatarUrl} name={name} className="squircle settings-avatar-preview" alt={t("profile.avatar")} />
         <div className="settings-avatar-controls flex min-w-0 flex-wrap gap-2">
           <ActionUpload  className="btn-secondary settings-avatar-upload" accept="image/*" disabled={processing} onChange={async event=>{
             const file=event.target.files?.[0];event.target.value="";if(!file)return

@@ -9,10 +9,10 @@ function AvatarImage({source,onError}:{source:string;onError:()=>void}) {
       else onError()
     }
   },[source,onError])
-  return <img ref={image} src={source} alt="" referrerPolicy="no-referrer" onLoad={()=>setLoaded(true)} onError={onError} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",borderRadius:"inherit",opacity:loaded ? 1 : 0}}/>
+  return <img ref={image} src={source} alt="" referrerPolicy="no-referrer" onLoad={()=>setLoaded(true)} onError={onError} style={{position:"absolute",inset:0,width:"100%",height:"100%",objectFit:"cover",opacity:loaded ? 1 : 0}}/>
 }
 
-/** Uploaded avatar takes precedence; missing Gravatars fall back to an initial. */
+/** Uploaded avatar takes precedence; missing Gravatars fall back to an initial. The frame clips the picture, so it keeps whatever corner shape the class gives it. */
 export function UserAvatar({avatar,gravatarUrl,name,className,alt=""}:{avatar?:string|null;gravatarUrl?:string;name:string;className:string;alt?:string}) {
   const [failed,setFailed]=useState<string[]>([])
   const source=[avatar,gravatarUrl].find((url):url is string=>!!url && !failed.includes(url))
