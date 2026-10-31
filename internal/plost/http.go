@@ -73,6 +73,30 @@ func (a *App) api(fn endpoint, auth bool) http.HandlerFunc {
 		}
 	}
 }
+
+// apiOpen is for slow operations (network calls, large transfers). It authenticates under the
+// read lock but does not hold it while fn runs, so a waiting restore cannot stall every request.
+// fn must lock a.mu itself around any database use.
+func (a *App) apiOpen(fn endpoint, timeout time.Duration) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), timeout)
+		defer cancel()
+		r = r.WithContext(ctx)
+		a.mu.RLock()
+		_, err := a.user(r)
+		a.mu.RUnlock()
+		if err != nil {
+			writeError(w, failure(401, "请先登录"))
+			return
+		}
+		// The server's default write timeout is too short for a large backup transfer.
+		_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(timeout + 10*time.Second))
+		if err := fn(w, r); err != nil {
+			writeError(w, err)
+		}
+	}
+}
+
 func writeError(w http.ResponseWriter, err error) {
 	status, msg := 500, "暂时无法完成操作，请重试"
 	var e *apiError
@@ -103,6 +127,12 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("POST /api/setup", a.api(a.setup, false))
 	mux.HandleFunc("POST /api/login", a.api(a.login, false))
 	mux.HandleFunc("POST /api/login/totp", a.api(a.verifyTOTP, false))
+	mux.HandleFunc("POST /api/login/passkey/begin", a.api(a.passkeyLoginBegin, false))
+	mux.HandleFunc("POST /api/login/passkey/finish", a.api(a.passkeyLoginFinish, false))
+	mux.HandleFunc("GET /api/passkeys", a.api(a.passkeyList, true))
+	mux.HandleFunc("POST /api/passkeys/register/begin", a.api(a.passkeyRegisterBegin, true))
+	mux.HandleFunc("POST /api/passkeys/register/finish", a.api(a.passkeyRegisterFinish, true))
+	mux.HandleFunc("DELETE /api/passkeys/{id}", a.api(a.passkeyDelete, true))
 	mux.HandleFunc("POST /api/logout", a.api(a.logout, false))
 	mux.HandleFunc("GET /api/account", a.api(a.profile, true))
 	mux.HandleFunc("PUT /api/account", a.api(a.profile, true))
@@ -127,6 +157,13 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("GET /api/export/{domain}", a.api(a.exportCSV, true))
 	mux.HandleFunc("POST /api/event", a.collect)
 	mux.HandleFunc("OPTIONS /api/event", a.collect)
+	mux.HandleFunc("GET /api/backup/settings", a.api(a.backupSettingsGet, true))
+	mux.HandleFunc("PUT /api/backup/settings", a.api(a.backupSettingsPut, true))
+	mux.HandleFunc("POST /api/backup/cloud/test", a.apiOpen(a.cloudTest, 30*time.Second))
+	mux.HandleFunc("POST /api/backup/cloud/scan", a.apiOpen(a.cloudScan, 60*time.Second))
+	mux.HandleFunc("POST /api/backup/run", a.apiOpen(a.runNow, 10*time.Second))
+	mux.HandleFunc("GET /api/backup/local", a.api(a.localList, true))
+	mux.HandleFunc("GET /api/backup/local/{name}", a.apiOpen(a.localDownload, 30*time.Minute))
 	mux.HandleFunc("POST /api/backup", a.api(a.downloadBackup, true))
 	mux.HandleFunc("POST /api/backup/validate", a.validateBackup)
 	mux.HandleFunc("POST /api/backup/restore", a.restoreBackup)

@@ -94,7 +94,7 @@ func (a *App) authStatus(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	u, _ := a.user(r)
-	return jsonResponse(w, map[string]any{"needsSetup": count == 0, "user": u, "version": a.cfg.Version})
+	return jsonResponse(w, map[string]any{"needsSetup": count == 0, "user": u, "version": a.cfg.Version, "passkey": a.hasPasskeys(r.Context())})
 }
 
 type credentials struct {

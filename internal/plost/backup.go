@@ -199,10 +199,14 @@ func (a *App) downloadBackup(w http.ResponseWriter, r *http.Request) error {
 
 type upload struct{ path, password, confirmation string }
 
+// readBackupUpload decrypts and validates an uploaded or listed backup into a temporary database.
+// The read lock covers only database access, not the transfer, so a slow upload or cloud download
+// does not stall every other request behind a waiting restore.
 func (a *App) readBackupUpload(w http.ResponseWriter, r *http.Request) (upload, error) {
 	a.mu.RLock()
-	defer a.mu.RUnlock()
-	if _, err := a.user(r); err != nil {
+	_, err := a.user(r)
+	a.mu.RUnlock()
+	if err != nil {
 		return upload{}, failure(401, "请先登录")
 	}
 	if !a.limits.allow("restore", a.clientIP(r), 6, 5*time.Minute) {
@@ -215,18 +219,36 @@ func (a *App) readBackupUpload(w http.ResponseWriter, r *http.Request) (upload, 
 	if r.MultipartForm != nil {
 		defer r.MultipartForm.RemoveAll()
 	}
-	if !a.checkPassword(r.Context(), r.FormValue("currentPassword")) {
+	a.mu.RLock()
+	authorized := a.checkPassword(r.Context(), r.FormValue("currentPassword"))
+	a.mu.RUnlock()
+	if !authorized {
 		return upload{}, failure(400, "当前账号密码错误")
 	}
 	password := r.FormValue("password")
 	if len(password) < 12 || len(password) > 256 {
 		return upload{}, failure(400, "备份密码无效")
 	}
-	f, _, err := r.FormFile("file")
-	if err != nil {
-		return upload{}, failure(400, "请选择 Go 版备份文件")
+	var src io.Reader
+	if source := r.FormValue("source"); source != "" {
+		// A listed backup skips the browser upload but passes through the same decryption and validation.
+		_ = http.NewResponseController(w).SetWriteDeadline(time.Now().Add(31 * time.Minute))
+		ctx, cancel := context.WithTimeout(r.Context(), 30*time.Minute)
+		defer cancel()
+		body, err := a.openBackupSource(ctx, source)
+		if err != nil {
+			return upload{}, err
+		}
+		defer body.Close()
+		src = body
+	} else {
+		f, _, err := r.FormFile("file")
+		if err != nil {
+			return upload{}, failure(400, "请选择 Go 版备份文件")
+		}
+		defer f.Close()
+		src = f
 	}
-	defer f.Close()
 	out, err := os.CreateTemp(a.cfg.DataDir, ".restore-*.db")
 	if err != nil {
 		return upload{}, err
@@ -239,7 +261,7 @@ func (a *App) readBackupUpload(w http.ResponseWriter, r *http.Request) (upload, 
 			os.Remove(p)
 		}
 	}()
-	if err := decryptBackup(out, f, password); err != nil {
+	if err := decryptBackup(out, src, password); err != nil {
 		return upload{}, failure(400, err.Error())
 	}
 	if err := out.Sync(); err != nil {

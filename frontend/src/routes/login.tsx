@@ -4,14 +4,15 @@ import { useState } from "react"
 import { BrandMark } from "~/components/BrandMark"
 import { SiteFooter } from "~/components/Shell"
 import { instanceSetupFn, loginFn, meFn } from "~/lib/actions"
-import { verifyLogin2faFn } from "~/lib/auth-actions"
+import { passkeyLoginFn, verifyLogin2faFn } from "~/lib/auth-actions"
 import { useT } from "~/lib/i18n"
 
 export const Route = createFileRoute("/login")({
   loader: async () => {
     if (await meFn()) throw redirect({ to: "/dashboard" })
-    if ((await instanceSetupFn()).needsSetup) throw redirect({ to: "/setup" })
-    return null
+    const setup = await instanceSetupFn()
+    if (setup.needsSetup) throw redirect({ to: "/setup" })
+    return { passkeyEnabled: setup.passkey }
   },
   component: LoginPage,
 })
@@ -19,6 +20,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const router = useRouter()
   const { t } = useT()
+  const { passkeyEnabled } = Route.useLoaderData()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [code, setCode] = useState("")
@@ -98,6 +100,26 @@ function LoginPage() {
               <ActionButton className="btn btn-primary w-full"  loading={pending} type="submit">
                 {pending ? t("login.pending") : t("login.submit")}
               </ActionButton>
+              {passkeyEnabled ? <ActionButton
+                type="button"
+                className="btn btn-secondary w-full"
+                disabled={pending}
+                onClick={async () => {
+                  setError("")
+                  setPending(true)
+                  try {
+                    await passkeyLoginFn()
+                    await router.invalidate()
+                    await router.navigate({ to: "/dashboard" })
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : t("Passkey 登录失败"))
+                  } finally {
+                    setPending(false)
+                  }
+                }}
+              >
+                {t("login.passkey")}
+              </ActionButton> : null}
             </form>
           )}
         </section>

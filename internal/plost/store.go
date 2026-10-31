@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -35,6 +36,20 @@ type App struct {
 	limits   *limiter
 	closed   sync.Once
 	lockFile *os.File
+
+	keyMu         sync.Mutex // Guards the lazily loaded key for stored backup credentials.
+	key           []byte
+	backupRunning atomic.Bool
+	jobsMu        sync.Mutex // Orders job starts against Close.
+	closing       bool
+	jobCtx        context.Context
+	cancelJobs    context.CancelFunc
+	ceremonyMu    sync.Mutex // Guards pending passkey registrations and sign-ins.
+	ceremonies    map[string]ceremony
+
+	// Test seams: tests point cloud requests at a local fake and allow its loopback address.
+	newCloud          func(cloudSettings) *s3Client
+	allowPrivateCloud bool
 }
 
 func Open(cfg Config) (*App, error) {
@@ -94,8 +109,10 @@ func Open(cfg Config) (*App, error) {
 		return nil, errors.New("invalid visitor secret")
 	}
 	a := &App{cfg: cfg, db: db, secret: key, queue: make(chan *ingest, 1024), stop: make(chan struct{}), limits: newLimiter(), lockFile: lock}
-	a.workers.Add(1)
+	a.jobCtx, a.cancelJobs = context.WithCancel(context.Background())
+	a.workers.Add(2)
 	go a.ingestLoop()
+	go a.scheduleLoop()
 	opened = true
 	return a, nil
 }
@@ -151,6 +168,19 @@ CREATE TABLE IF NOT EXISTS events_v2(
 CREATE INDEX IF NOT EXISTS events_site_time ON events_v2(site_id,timestamp);
 CREATE INDEX IF NOT EXISTS events_visitor_time ON events_v2(site_id,user_id,timestamp DESC);
 CREATE INDEX IF NOT EXISTS events_session ON events_v2(site_id,session_id,timestamp);
+CREATE TABLE IF NOT EXISTS backup_settings(
+ id INTEGER PRIMARY KEY CHECK(id=1),provider TEXT NOT NULL DEFAULT 'r2',endpoint TEXT NOT NULL DEFAULT '',
+ region TEXT NOT NULL DEFAULT 'auto',bucket TEXT NOT NULL DEFAULT '',prefix TEXT NOT NULL DEFAULT '',
+ access_key TEXT NOT NULL DEFAULT '',secret_key TEXT NOT NULL DEFAULT '',backup_password TEXT NOT NULL DEFAULT '',
+ cloud_enabled INTEGER NOT NULL DEFAULT 0,schedule TEXT NOT NULL DEFAULT 'off',
+ hour INTEGER NOT NULL DEFAULT 3,minute INTEGER NOT NULL DEFAULT 0,weekday INTEGER NOT NULL DEFAULT 0,keep INTEGER NOT NULL DEFAULT 7,
+ last_run_at INTEGER NOT NULL DEFAULT 0,last_attempt_at INTEGER NOT NULL DEFAULT 0,
+ last_status TEXT NOT NULL DEFAULT '',last_error TEXT NOT NULL DEFAULT '',last_backup TEXT NOT NULL DEFAULT '');
+INSERT OR IGNORE INTO backup_settings(id) VALUES(1);
+CREATE TABLE IF NOT EXISTS passkeys(
+ id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+ credential_id TEXT NOT NULL UNIQUE,name TEXT NOT NULL,credential TEXT NOT NULL,
+ created_at INTEGER NOT NULL,last_used_at INTEGER NOT NULL DEFAULT 0);
 PRAGMA user_version=1;
 `
 
@@ -183,6 +213,10 @@ func migrate(db *sql.DB) error {
 func (a *App) Close() error {
 	var err error
 	a.closed.Do(func() {
+		a.jobsMu.Lock()
+		a.closing = true
+		a.jobsMu.Unlock()
+		a.cancelJobs()
 		close(a.stop)
 		a.workers.Wait()
 		a.mu.Lock()

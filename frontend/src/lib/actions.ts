@@ -11,7 +11,7 @@ export type GoReport={site:Site;range:{from:string;to:string;period:string};over
 const sitePath=(domain:string)=>"/api/sites/"+encodeURIComponent(domain)
 const asUser=(u:User|null)=>u?{...u,isAdmin:true,totp_enabled:u.totp}:null
 export async function meFn(){const result=await rpc<{user:User|null}>("/api/auth");return asUser(result.user)}
-export async function instanceSetupFn(){const result=await rpc<{needsSetup:boolean}>("/api/auth");return {needsSetup:result.needsSetup}}
+export async function instanceSetupFn(){const result=await rpc<{needsSetup:boolean;passkey?:boolean}>("/api/auth");return {needsSetup:result.needsSetup,passkey:!!result.passkey}}
 export async function loginFn({data}:Input<{email:string;password:string}>){const r=await rpc<{requiresTOTP:boolean}>("/api/login","POST",data);return r.requiresTOTP?{needs2fa:true,email:data.email}:{needs2fa:false}}
 export const setupAdminFn=({data}:Input<{email:string;password:string;name:string}>)=>rpc("/api/setup","POST",data)
 export const logoutFn=()=>rpc("/api/logout","POST")
