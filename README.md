@@ -65,6 +65,8 @@ go build -trimpath -ldflags='-s -w' -o plost ./cmd/plost
 
 地图沿用原版，后台可配置 Mapbox 公开 Token，无 Token 时使用内嵌备用地图。当前采集只提供国家，不采集城市或省州，相关视图为空。国家默认未知。若反向代理可信地覆盖客户端 IP 和 `CF-IPCountry`，且从本机回源，可以用 `-trust-proxy` 接受这些头。该选项只信任回环地址上的直接代理；没有启用外部 IP 查询服务，不会悄悄向第三方发送访客 IP。
 
+站点和来源图标由本实例的 `/favicon/sources/{名称}` 提供。公网域名会被 302 到 `https://favicon.la/{域名}`，由浏览器直接向该服务取图，所以 favicon.la 能看到被统计网站和来源网站的域名；`localhost`、`.local`、`.test`、IP 地址等内网、保留或格式不合法的名称只返回本地占位图，不会外发。该路由不需要登录，分享页的访客也能看到图标。
+
 ## 统计口径
 
 - **访客**：所选时段内产生 pageview 的不同匿名访客。

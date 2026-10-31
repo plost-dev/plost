@@ -273,3 +273,18 @@ macOS arm64 程序从源码目录之外的临时目录启动，依然可以提�
 
 - 手机宽度下四个底块（共 156px）与版权文字的排布没有实测。
 - 太阳和月亮是 FontAwesome 实心图标，笔画比 GitHub 和 Plost 细一点，没有做进一步的光学校正。
+
+## 站点与来源图标路由 · 2026-10-31
+
+- 补上 `/favicon/sources/{名称}`：此前前端一直请求这个地址，但 Go 版没有注册，请求落到页面兜底返回 404，站点和来源图标只会显示灰色占位。现在公网域名 302 到 `https://favicon.la/{域名}`，其余名称返回本地占位图。
+- 判断规则与云版一致：接受域名或完整 http(s) 网址，去掉 `www.` 和末尾的点，中文域名转为 punycode；拒绝单段名称、IP（含 `2130706433`、`0x7f000001`、`127.1` 写法）、带账号密码、非 http(s)、含空白或反斜杠、标签格式不合法，以及 `.local`、`.test`、`.lan`、`example.com`、`home.arpa` 等保留后缀。`Google`、`Bing Images`、`X (Twitter)` 这类来源名通过内置对照表（398 项，复制自云版）映射到站点。
+- 自动测试：4 项。覆盖公网域名与来源名跳转、各类私有或畸形名称只返回本地占位图、对照表加载，以及经真实路由请求（含百分号编码的名称、空名称、未登录）。把路由注册去掉后这些测试会失败（404）。
+- `go vet ./...`、`go test ./...`、`go test -race ./internal/...` 通过；darwin/arm64、linux/amd64、linux/arm64 三个目标在 `CGO_ENABLED=0` 下构建通过。`golang.org/x/net` 升为直接依赖（IDNA），间接多了 `golang.org/x/text`。
+- Chrome 实测（临时实例，已删除）：站点 `github.com` 显示 GitHub 图标，`audit.local.test` 显示本地灰色地球；页面里只有 `github.com` 的图片请求去了 favicon.la，`audit.local.test` 只请求了本实例。
+
+### 未验证
+
+- 统计页里的来源列表图标没有在页面上看，它和站点图标走同一个路由。
+- favicon.la 的可用性与限流，以及它对个别网站返回字母占位图的情况（沿用云版，没有处理）。
+- 来源名对照表复制自云版 `app/src/lib/referer-domains.json`，仓库里没有记录它的原始出处和许可。
+- 手机宽度、深色模式下的图标显示；Safari、Firefox 没测。
