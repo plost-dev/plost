@@ -8,12 +8,6 @@
   font-display: swap;
 }
 
-.company-name {
-  font-family: "Sora", sans-serif;
-  font-weight: 400;
-  white-space: nowrap;
-}
-
 @font-face {
   font-family: "Space Mono";
   src: url("/fonts/space-mono-latin-400-normal.woff2") format("woff2");

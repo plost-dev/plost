@@ -48,7 +48,7 @@ export function AnalyticsDashboard({data,domain,search,onSearch,readonly=true,ca
     search.os&&{key:"os",label:t("系统 {0}",{0:reportValueLabel("os",search.os,locale)})},
     search.device&&{key:"device",label:t("设备 {0}",{0:search.device})},
   ].filter(Boolean))as Array<{key:"source"|"page"|"country"|"browser"|"os"|"device";label:string}>
-  return <div className="analytics-dashboard mb-16 grid min-w-0 grid-cols-1 md:grid-cols-2" aria-busy={loading||undefined} data-loading={loading||undefined}>
+  return <div className="analytics-dashboard grid min-w-0 grid-cols-1 md:grid-cols-2" aria-busy={loading||undefined} data-loading={loading||undefined}>
     {loading?<DotsLoader className="dots-loader-floating" label={t("加载中…")}/>:null}
     <DashTopBar domain={domain} search={search} readonly={readonly} canManage={canManage} health={data.health} onPeriod={go}
       filterOptions={{page:data.pages,source:data.sources.map(r=>({...r,label:isDirectSource(r.name)?t("直接访问"):r.name})),country:countries,device:data.devices,browser:data.browsers,os:data.os}}

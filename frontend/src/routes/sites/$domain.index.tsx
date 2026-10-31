@@ -44,7 +44,8 @@ function DashboardContent({ domain }: { domain: string }) {
   const view = useSettled(data, JSON.stringify(search))
   const loading = useRef(false)
   loading.current = view.pending
-  useRouterAutoRefresh({ skip: () => loading.current })
+  // The live visitor count and today's totals follow quickly; the other pages keep the slower default.
+  useRouterAutoRefresh({ intervalMs: 10_000, skip: () => loading.current })
   const onSearch = (next: DashSearch) => { void router.navigate({to: "/sites/$domain", params: {domain}, search: next}) }
   const { result } = view
   if (result && !result.ok) return <PageState title="页面出错" description={result.message} />

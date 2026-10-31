@@ -28,7 +28,7 @@ export function startRouterRefresh(refresh: () => Promise<unknown>, {
 }
 
 /** `skip` holds a tick back while data a loader handed over is still loading, so slow refreshes never pile up. */
-export function useRouterAutoRefresh({enabled = true, onError, skip}: {enabled?: boolean; onError?: () => void; skip?: () => boolean} = {}) {
+export function useRouterAutoRefresh({enabled = true, intervalMs, onError, skip}: {enabled?: boolean; intervalMs?: number; onError?: () => void; skip?: () => boolean} = {}) {
   const router = useRouter()
   const errorRef = useRef(onError)
   errorRef.current = onError
@@ -36,6 +36,6 @@ export function useRouterAutoRefresh({enabled = true, onError, skip}: {enabled?:
   skipRef.current = skip
   useEffect(() => {
     if (!enabled) return
-    return startRouterRefresh(async () => { if (!skipRef.current?.()) await router.invalidate() }, {onError: () => errorRef.current?.()})
-  }, [router, enabled])
+    return startRouterRefresh(async () => { if (!skipRef.current?.()) await router.invalidate() }, {intervalMs, onError: () => errorRef.current?.()})
+  }, [router, enabled, intervalMs])
 }

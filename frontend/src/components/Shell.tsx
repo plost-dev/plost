@@ -3,7 +3,6 @@ import { UserAvatar } from "./UserAvatar"
 import { Link, useRouter, useRouterState, type AnyRouter } from "@tanstack/react-router"
 import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { BrandMark } from "./BrandMark"
-import { CompanyName } from "./CompanyName"
 import { logoutFn, trafficPulseFn, updateProfileFn } from "~/lib/actions"
 import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
@@ -68,7 +67,7 @@ export function SiteFooter({ user }: { user?: ShellUser }) {
     <footer className="site-footer">
       <div className="container-ls site-footer-inner">
         <p className="site-footer-meta">
-          <span className="footer-copyright">© {new Date().getFullYear()} <CompanyName /></span>
+          <span className="footer-copyright">© {new Date().getFullYear()} Plost</span>
           <span aria-hidden="true">·</span>
           <span>{t("footer.own")}</span>
         </p>
@@ -102,7 +101,8 @@ export function Shell({
   return (
     <div className={`flex min-h-full flex-col${layout === "management" ? " management-shell" : ""}`}>
       <SiteHeader user={user} />
-      <main className="container-ls flex-1 pb-10">{children}</main>
+      {/* The space under the last card equals the space between the header and the first one. */}
+      <main className={`container-ls flex-1 ${layout === "management" ? "pb-8" : "pb-4"}`}>{children}</main>
       <SiteFooter user={user} />
     </div>
   )

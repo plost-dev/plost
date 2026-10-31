@@ -1459,3 +1459,11 @@ select:disabled { opacity:.65; cursor:not-allowed; }
 @keyframes toast-life { 0% { opacity: 0; transform: scale(.92); } 8% { opacity: 1; transform: scale(1); } 88% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(.98); } }
 @keyframes toast-fade { 0% { opacity: 0; } 8% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .toast { animation-name: toast-fade; } }
+
+/* One height runs through the header row: the logo, the menu pills, the theme button and the account menu. */
+.site-header { --header-control: 36px; }
+.site-header-brand .plost-logo__mark { width: var(--header-control); height: var(--header-control); }
+.site-header-nav-link, .site-header-link { display: inline-flex; align-items: center; box-sizing: border-box; height: var(--header-control); padding-block: 0; }
+.site-header .theme-toggle { width: var(--header-control); height: var(--header-control); }
+.site-header .site-header-user { height: var(--header-control); }
+.site-header .squircle:is(.theme-toggle, .site-header-user) { --sq-r: calc(var(--header-control) * .46); }

@@ -40,7 +40,7 @@ export function AnalyticsDashboardSkeleton({ domain, search, onSearch, readonly 
 }) {
   const { t } = useT()
   return (
-    <div className="analytics-dashboard dashboard-skeleton traffic-overview-skeleton mb-16 grid min-w-0 grid-cols-1 md:grid-cols-2" aria-busy="true">
+    <div className="analytics-dashboard dashboard-skeleton traffic-overview-skeleton grid min-w-0 grid-cols-1 md:grid-cols-2" aria-busy="true">
       {domain ? <DashTopBar
         domain={domain}
         search={search}
