@@ -3,6 +3,7 @@ import { ActionButton } from "./ActionButton"
 import { Field, SettingsForm } from "./SettingsForm"
 import { useT } from "~/lib/i18n"
 import { rpc } from "~/lib/rpc"
+import { PasswordInput } from "~/components/PasswordInput"
 
 /** Verify, then restore. The backup is either an uploaded file or a listed one named by `source` ("local:<name>" / "cloud:<name>"). */
 export function RestoreForm({ source, label, onCancel }: { source?: string, label?: string, onCancel: () => void }) {
@@ -37,8 +38,8 @@ export function RestoreForm({ source, label, onCancel }: { source?: string, labe
         <p className="settings-hint">{t("请选择此 Go 版生成的 .plostbk 备份。旧版 PostgreSQL / ClickHouse 的备份不能直接恢复。")}</p>
         <Field label={t("上传备份文件")}><input className="squircle input" type="file" accept=".plostbk" required onChange={e => { setFile(e.target.files?.[0] || null); stale() }} /></Field>
       </>}
-    <Field label={t("当前管理员密码")}><input className="squircle input" required type="password" autoComplete="current-password" value={current} onChange={e => { setCurrent(e.target.value); stale() }} /></Field>
-    <Field label={t("备份密码")}><input className="squircle input" required type="password" minLength={12} autoComplete="off" value={password} onChange={e => { setPassword(e.target.value); stale() }} /></Field>
+    <Field label={t("当前管理员密码")}><PasswordInput className="squircle input" required autoComplete="current-password" value={current} onChange={e => { setCurrent(e.target.value); stale() }} /></Field>
+    <Field label={t("备份密码")}><PasswordInput className="squircle input" required minLength={12} autoComplete="off" value={password} onChange={e => { setPassword(e.target.value); stale() }} /></Field>
     {verified ? <Field label={t("输入 RESTORE 确认恢复")}><input className="squircle input" required pattern="RESTORE" autoComplete="off" spellCheck={false} value={confirmation} onChange={e => setConfirmation(e.target.value)} /></Field> : null}
     <div className="backup-run-actions">
       <ActionButton className={verified ? "btn btn-danger" : ""} type="submit">{t(verified ? "恢复此完整备份" : "校验备份文件")}</ActionButton>

@@ -5,6 +5,7 @@ import { instanceSetupFn, meFn, setupAdminFn } from "~/lib/actions"
 import { useT } from "~/lib/i18n"
 import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
+import { PasswordInput } from "~/components/PasswordInput"
 
 export const Route = createFileRoute("/setup")({
   loader: async () => {
@@ -58,7 +59,7 @@ function SetupPage() {
               {t("邮箱")}<input className="squircle input" name="email" type="email" autoComplete="email" value={email} onChange={event => setEmail(event.target.value)} maxLength={255} required />
             </label>
             <label className="flex flex-col gap-y-2 text-sm font-semibold text-gray-800">
-              {t("密码")}<input className="squircle input" name="password" type="password" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} minLength={10} maxLength={72} required />
+              {t("密码")}<PasswordInput className="squircle input" name="password" autoComplete="new-password" value={password} onChange={event => setPassword(event.target.value)} minLength={8} maxLength={72} required />
             </label>
             {error ? <p role="alert" className="text-sm text-red-500">{t(error)}</p> : null}
             <ActionButton className="btn btn-primary w-full"  disabled={pending} type="submit">

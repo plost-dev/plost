@@ -6,6 +6,7 @@ import { SiteFooter } from "~/components/Shell"
 import { instanceSetupFn, loginFn, meFn } from "~/lib/actions"
 import { passkeyLoginFn, verifyLogin2faFn } from "~/lib/auth-actions"
 import { useT } from "~/lib/i18n"
+import { PasswordInput } from "~/components/PasswordInput"
 
 export const Route = createFileRoute("/login")({
   loader: async () => {
@@ -94,7 +95,7 @@ function LoginPage() {
               </label>
               <label className="flex flex-col gap-y-2 text-sm font-semibold text-gray-800">
                 {t("login.password")}
-                <input className="squircle input" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                <PasswordInput className="squircle input" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
               </label>
               {error ? <p role="alert" className="text-sm text-red-500">{t(error || "")}</p> : null}
               <ActionButton className="btn btn-primary w-full"  loading={pending} type="submit">

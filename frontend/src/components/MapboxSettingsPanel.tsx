@@ -4,6 +4,7 @@ import { saveMapboxSettingsFn } from "~/lib/mapbox-actions"
 import { ActionButton } from "./ActionButton"
 import { Field, FormActions, SettingsForm } from "./SettingsForm"
 import { Tile } from "./ui"
+import { PasswordInput } from "~/components/PasswordInput"
 
 export function MapboxSettingsPanel({initial}: {initial: {enabled: boolean; configured: boolean}}) {
   const {t} = useT()
@@ -19,7 +20,7 @@ export function MapboxSettingsPanel({initial}: {initial: {enabled: boolean; conf
     }}>
       <label className="flex items-center gap-2 text-sm" title={t("统一设置所有站点及分享页的访客地图。")}><input type="checkbox" checked={enabled} onChange={event => {setEnabled(event.target.checked); setSaved(false)}}/>{t("使用 Mapbox 访客地图")}</label>
       <Field label="Mapbox Access Token" hint={settings.configured ? t("已保存密钥，留空保留；填写新值可替换。") : t("填写以 pk. 开头的公开 Token。") }>
-        <input className="squircle input" aria-label="Mapbox Access Token" type="password" autoComplete="off" spellCheck={false} required={enabled && !settings.configured} value={token} placeholder={settings.configured ? "••••••••" : "pk.…"} onChange={event => {setToken(event.target.value); setSaved(false)}}/>
+        <PasswordInput className="squircle input" aria-label="Mapbox Access Token" autoComplete="off" spellCheck={false} required={enabled && !settings.configured} value={token} placeholder={settings.configured ? "••••••••" : "pk.…"} onChange={event => {setToken(event.target.value); setSaved(false)}}/>
       </Field>
       <p className="mt-3 text-xs leading-6 text-gray-500">{t("地图会在浏览器使用此公开 Token。请限制为本站域名，并开启 styles:read、fonts:read；不要填写 sk. 私密密钥。")}</p>
       <a className="mt-3 text-sm" href="https://console.mapbox.com/account/access-tokens/" target="_blank" rel="noreferrer">{t("打开 Mapbox 获取 Token")} </a>

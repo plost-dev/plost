@@ -15,6 +15,7 @@ const icons: Record<string, string> = {
   map: "map",
   activity: "wave-pulse",
   eye: "eye",
+  "eye-off": "eye-slash",
   copy: "copy",
   check: "check",
   funnel: "filter",

@@ -1131,5 +1131,9 @@
   "确认删除": "Confirm deletion",
   "请输入完整域名以确认删除": "Enter the full domain to confirm deletion",
   "网站不存在": "Site not found",
-  "检查过于频繁，请稍后再试": "Checks are too frequent. Please try again shortly."
+  "检查过于频繁，请稍后再试": "Checks are too frequent. Please try again shortly.",
+  "显示密码": "Show password",
+  "隐藏密码": "Hide password",
+  "请填写姓名、有效邮箱，以及至少 8 个字符的密码（最长 72 字节）": "Enter a name, a valid email and a password of at least 8 characters (at most 72 bytes)",
+  "新密码至少需要 8 个字符（最长 72 字节）": "The new password needs at least 8 characters (at most 72 bytes)"
 }

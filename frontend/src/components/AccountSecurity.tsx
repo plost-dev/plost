@@ -11,6 +11,7 @@ import {
   regenRecoveryFn,
 } from "~/lib/auth-actions"
 import { useT } from "~/lib/i18n"
+import { PasswordInput } from "~/components/PasswordInput"
 
 export function AccountSecurity({
   user,
@@ -66,7 +67,7 @@ export function AccountSecurity({
             <input className="squircle input" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
           </Field>
           <Field label={t("security.confirm_password")}>
-            <input className="squircle input" type="password" value={emailPassword} onChange={(e) => setEmailPassword(e.target.value)} required />
+            <PasswordInput className="squircle input" value={emailPassword} onChange={(e) => setEmailPassword(e.target.value)} required />
           </Field>
           {emailError ? <p role="alert" className="mt-3 text-sm text-red-600">{t(emailError)}</p> : null}
           {emailOk ? <p role="status" className="mt-3 text-sm text-indigo-600">{t(emailOk)}</p> : null}
@@ -97,13 +98,13 @@ export function AccountSecurity({
           }}
         >
           <Field label={t("security.old_password")}>
-            <input className="squircle input" type="password" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} required />
+            <PasswordInput className="squircle input" value={oldPassword} onChange={(e) => setOldPassword(e.target.value)} required />
           </Field>
           <Field label={t("security.new_password")}>
-            <input className="squircle input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+            <PasswordInput className="squircle input" value={password} onChange={(e) => setPassword(e.target.value)} required />
           </Field>
           <Field label={t("security.confirm_new_password")}>
-            <input className="squircle input" type="password" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
+            <PasswordInput className="squircle input" value={confirm} onChange={(e) => setConfirm(e.target.value)} required />
           </Field>
           {passwordError ? <p role="alert" className="mt-3 text-sm text-red-600">{t(passwordError)}</p> : null}
           {passwordOk ? <p role="status" className="mt-3 text-sm text-indigo-600">{t(passwordOk)}</p> : null}
@@ -190,7 +191,7 @@ export function AccountSecurity({
         }}
       >
         <Field label={t("security.confirm_password")}>
-          <input className="squircle input" required type="password" autoComplete="current-password" value={securePassword} onChange={event => setSecurePassword(event.target.value)} />
+          <PasswordInput className="squircle input" required autoComplete="current-password" value={securePassword} onChange={event => setSecurePassword(event.target.value)} />
         </Field>
       </ConfirmModal>
       <ConfirmModal
@@ -214,7 +215,7 @@ export function AccountSecurity({
         }}
       >
         <p>{t("security.disable_confirm")}</p>
-        <Field label={t("security.confirm_password")}><input className="squircle input" type="password" autoComplete="current-password" value={securePassword} onChange={(e) => setSecurePassword(e.target.value)} required /></Field>
+        <Field label={t("security.confirm_password")}><PasswordInput className="squircle input" autoComplete="current-password" value={securePassword} onChange={(e) => setSecurePassword(e.target.value)} required /></Field>
         <Field label={t("security.verify_2fa")}><input className="squircle input" autoComplete="one-time-code" value={secureCode} onChange={(e) => setSecureCode(e.target.value)} required /></Field>
       </ConfirmModal>
       <ConfirmModal
@@ -237,7 +238,7 @@ export function AccountSecurity({
         }}
       >
         <p>{t("security.disable_confirm")}</p>
-        <Field label={t("security.confirm_password")}><input className="squircle input" type="password" autoComplete="current-password" value={securePassword} onChange={(e) => setSecurePassword(e.target.value)} required /></Field>
+        <Field label={t("security.confirm_password")}><PasswordInput className="squircle input" autoComplete="current-password" value={securePassword} onChange={(e) => setSecurePassword(e.target.value)} required /></Field>
         <Field label={t("security.verify_2fa")}><input className="squircle input" autoComplete="one-time-code" value={secureCode} onChange={(e) => setSecureCode(e.target.value)} required /></Field>
       </ConfirmModal>
     </>

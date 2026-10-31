@@ -6,6 +6,7 @@ import { UIIcon } from "./UIIcon"
 import { formatTimestamp } from "~/lib/format"
 import { passkeyAddFn, passkeyListFn, passkeyRemoveFn, type PasskeyItem } from "~/lib/auth-actions"
 import { useT } from "~/lib/i18n"
+import { PasswordInput } from "~/components/PasswordInput"
 
 /** Passkeys are listed here; adding or removing one needs the account password. */
 export function PasskeyPanel() {
@@ -53,7 +54,7 @@ export function PasskeyPanel() {
     >
       <p>{t("确认密码后，浏览器会请你用指纹、面容或安全密钥创建 Passkey。")}</p>
       <Field label={t("Passkey 名称（可选）")}><input className="squircle input" maxLength={60} autoComplete="off" placeholder={t("例如：工作电脑")} value={name} onChange={e => setName(e.target.value)} /></Field>
-      <Field label={t("security.confirm_password")}><input className="squircle input" required type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} /></Field>
+      <Field label={t("security.confirm_password")}><PasswordInput className="squircle input" required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} /></Field>
     </ConfirmModal>
     <ConfirmModal
       open={!!removing}
@@ -70,7 +71,7 @@ export function PasskeyPanel() {
       }}
     >
       <p>{t("移除后，{0} 将不能再用于登录。", { 0: removing?.name || "" })}</p>
-      <Field label={t("security.confirm_password")}><input className="squircle input" required type="password" autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} /></Field>
+      <Field label={t("security.confirm_password")}><PasswordInput className="squircle input" required autoComplete="current-password" value={password} onChange={e => setPassword(e.target.value)} /></Field>
     </ConfirmModal>
   </>
 }

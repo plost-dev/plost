@@ -20,6 +20,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode/utf8"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -104,6 +105,12 @@ type credentials struct {
 	Code     string `json:"code"`
 }
 
+// validPassword leaves the choice to the person: at least eight characters of any kind, digits only included,
+// and no more than the 72 bytes bcrypt can use. Length is counted in characters, so a password in Chinese is not penalised.
+func validPassword(p string) bool {
+	return utf8.RuneCountInString(p) >= 8 && len(p) <= 72
+}
+
 func validEmail(s string) bool {
 	m, e := mail.ParseAddress(s)
 	return e == nil && m.Address == s && len(s) <= 254
@@ -119,8 +126,8 @@ func (a *App) setup(w http.ResponseWriter, r *http.Request) error {
 	}
 	in.Email = strings.ToLower(strings.TrimSpace(in.Email))
 	in.Name = strings.TrimSpace(in.Name)
-	if !validEmail(in.Email) || in.Name == "" || len(in.Name) > 100 || len(in.Password) < 10 || len(in.Password) > 72 {
-		return failure(400, "请填写姓名、有效邮箱，以及 10 至 72 字节的密码")
+	if !validEmail(in.Email) || in.Name == "" || len(in.Name) > 100 || !validPassword(in.Password) {
+		return failure(400, "请填写姓名、有效邮箱，以及至少 8 个字符的密码（最长 72 字节）")
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(in.Password), bcrypt.DefaultCost)
 	if err != nil {
@@ -238,8 +245,8 @@ func (a *App) profile(w http.ResponseWriter, r *http.Request) error {
 		}
 	}
 	if passwordChange {
-		if len(in.Password) < 10 || len(in.Password) > 72 {
-			return failure(400, "新密码需为 10 至 72 字节")
+		if !validPassword(in.Password) {
+			return failure(400, "新密码至少需要 8 个字符（最长 72 字节）")
 		}
 		b, err := bcrypt.GenerateFromPassword([]byte(in.Password), bcrypt.DefaultCost)
 		if err != nil {

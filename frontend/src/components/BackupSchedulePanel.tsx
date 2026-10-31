@@ -8,6 +8,7 @@ import { UIIcon } from "./UIIcon"
 import { formatTimestamp } from "~/lib/format"
 import { useT } from "~/lib/i18n"
 import { rpc } from "~/lib/rpc"
+import { PasswordInput } from "~/components/PasswordInput"
 
 type Settings = {
   provider: "r2" | "s3", endpoint: string, region: string, bucket: string, prefix: string
@@ -143,10 +144,10 @@ export function BackupSchedulePanel() {
             <p>{t("云端旧备份不会被自动删除，请在存储桶中设置生命周期规则。")}</p>
             <div className="backup-fields">
               <Field label="Access Key ID">
-                <input className="squircle input" title={credentialHint(saved.hasAccessKey)} type="password" maxLength={256} autoComplete="new-password" name="s3-access-key" value={secrets.accessKey} placeholder={saved.hasAccessKey && !destinationChanged ? t("已保存的 Access Key ID") : "Access Key ID"} spellCheck={false} onChange={e => secret("accessKey", e.target.value)} />
+                <PasswordInput className="squircle input" title={credentialHint(saved.hasAccessKey)} maxLength={256} autoComplete="new-password" name="s3-access-key" value={secrets.accessKey} placeholder={saved.hasAccessKey && !destinationChanged ? t("已保存的 Access Key ID") : "Access Key ID"} spellCheck={false} onChange={e => secret("accessKey", e.target.value)} />
               </Field>
               <Field label="Secret Access Key">
-                <input className="squircle input" title={credentialHint(saved.hasSecretKey)} type="password" maxLength={512} autoComplete="new-password" name="s3-secret-key" value={secrets.secretKey} placeholder={saved.hasSecretKey && !destinationChanged ? t("已保存的 Secret Access Key") : "Secret Access Key"} spellCheck={false} onChange={e => secret("secretKey", e.target.value)} />
+                <PasswordInput className="squircle input" title={credentialHint(saved.hasSecretKey)} maxLength={512} autoComplete="new-password" name="s3-secret-key" value={secrets.secretKey} placeholder={saved.hasSecretKey && !destinationChanged ? t("已保存的 Secret Access Key") : "Secret Access Key"} spellCheck={false} onChange={e => secret("secretKey", e.target.value)} />
               </Field>
             </div>
           </div>
@@ -186,10 +187,10 @@ export function BackupSchedulePanel() {
               <input className="squircle input" type="number" min={0} max={90} step={1} required value={form.keep} onChange={e => set("keep", Math.max(0, Math.min(90, Math.trunc(Number(e.target.value) || 0))))} />
             </Field>
             <Field wide label={t("计划备份密码")} hint={saved.hasBackupPassword ? t("已保存。留空保留，填写新值可替换。") : t("至少 12 个字符。用于加密每份自动备份，加密后保存在这台服务器上，不会再显示。恢复时需要它，请另外保管。")}>
-              <input className="squircle input" type="password" minLength={12} maxLength={256} autoComplete="new-password" name="scheduled-backup-password" value={secrets.backupPassword} placeholder={saved.hasBackupPassword ? t("已保存的计划备份密码") : ""} onChange={e => secret("backupPassword", e.target.value)} />
+              <PasswordInput className="squircle input" minLength={12} maxLength={256} autoComplete="new-password" name="scheduled-backup-password" value={secrets.backupPassword} placeholder={saved.hasBackupPassword ? t("已保存的计划备份密码") : ""} onChange={e => secret("backupPassword", e.target.value)} />
             </Field>
             <Field wide label={t("当前管理员密码")} hint={t("修改备份去向或密码时需要确认身份。")}>
-              <input className="squircle input" type="password" required={dirty} autoComplete="current-password" value={secrets.currentPassword} onChange={e => secret("currentPassword", e.target.value)} />
+              <PasswordInput className="squircle input" required={dirty} autoComplete="current-password" value={secrets.currentPassword} onChange={e => secret("currentPassword", e.target.value)} />
             </Field>
           </div>
           <div className="settings-actions backup-save-actions">

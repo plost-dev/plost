@@ -5,6 +5,7 @@ import { RestoreForm } from "./RestoreForm"
 import { Field, SettingsForm } from "./SettingsForm"
 import { useT } from "~/lib/i18n"
 import { download } from "~/lib/rpc"
+import { PasswordInput } from "~/components/PasswordInput"
 
 export function FullBackupPanel() {
   const { t } = useT()
@@ -27,8 +28,8 @@ export function FullBackupPanel() {
       await download("/api/backup", { currentPassword: current, password })
       setCreate(false); clear(); setNotice("备份已下载，请将备份密码另外妥善保存。")
     }}>
-      <Field label={t("当前管理员密码")}><input className="squircle input" type="password" required autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)} /></Field>
-      <Field label={t("备份密码")} hint={t("至少 12 个字符。此密码用于恢复备份，不能找回。")}><input className="squircle input" type="password" required minLength={12} maxLength={256} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} /></Field>
+      <Field label={t("当前管理员密码")}><PasswordInput className="squircle input" required autoComplete="current-password" value={current} onChange={e => setCurrent(e.target.value)} /></Field>
+      <Field label={t("备份密码")} hint={t("至少 12 个字符。此密码用于恢复备份，不能找回。")}><PasswordInput className="squircle input" required minLength={12} maxLength={256} autoComplete="new-password" value={password} onChange={e => setPassword(e.target.value)} /></Field>
       <div className="backup-run-actions">
         <ActionButton className="btn btn-primary" type="submit">{t("创建并下载")}</ActionButton>
         <ActionButton onClick={() => { clear(); setCreate(false) }}>{t("取消")}</ActionButton>

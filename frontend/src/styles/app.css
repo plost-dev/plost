@@ -1440,3 +1440,12 @@ select:disabled { opacity:.65; cursor:not-allowed; }
 .map-style-option-caption { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:2px 4px 4px; font-size:13px; line-height:20px; overflow-wrap:anywhere; }
 @media(max-width:767px) { .map-style-options { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:399px) { .map-style-options { grid-template-columns:minmax(0,1fr); } }
+
+/* Password fields end in an eye that reveals what was typed. */
+.password-field { position: relative; display: block; min-width: 0; width: 100%; }
+.password-field .input { padding-right: 44px; }
+.password-field input::-ms-reveal, .password-field input::-ms-clear { display: none; }
+.password-toggle { position: absolute; top: 0; right: 0; bottom: 0; width: 42px; display: grid; place-items: center; border: 0; border-radius: 0 15px 15px 0; background: transparent; color: var(--color-gray-400); cursor: pointer; }
+.password-toggle:hover { color: var(--color-gray-600); }
+.password-toggle[aria-pressed="true"] { color: var(--analytics-accent); }
+.password-toggle:focus-visible { outline: 2px solid var(--analytics-accent); outline-offset: -4px; }
