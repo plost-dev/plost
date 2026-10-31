@@ -174,6 +174,7 @@ func (a *App) Handler() http.Handler {
 		mux.HandleFunc("GET "+p, func(w http.ResponseWriter, r *http.Request) { a.serveAsset(w, r, "script.js") })
 	}
 	mux.HandleFunc("GET /assets/{file...}", func(w http.ResponseWriter, r *http.Request) { a.serveAsset(w, r, "assets/"+r.PathValue("file")) })
+	mux.HandleFunc("GET /favicon/sources/{name...}", a.faviconSource)
 	for _, prefix := range []string{"brands", "images", "flags", "fonts", "map-previews", "icons", "attribution"} {
 		mux.HandleFunc("GET /"+prefix+"/{file...}", func(w http.ResponseWriter, r *http.Request) { a.serveAsset(w, r, strings.TrimPrefix(r.URL.Path, "/")) })
 	}
