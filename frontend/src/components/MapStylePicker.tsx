@@ -33,7 +33,10 @@ export function MapStylePicker() {
     } finally {setPending(false)}
   }
   return <fieldset className="map-style-picker" disabled={pending} aria-describedby={hintId} aria-busy={pending}>
-    <legend>{t("地图样式")}</legend>
+    <legend>{t("地图样式")}{pending ? <svg className="button-spinner map-style-spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" opacity=".25"/>
+      <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
+    </svg> : null}<span className="sr-only" role="status">{pending ? t("保存中…") : ""}</span></legend>
     <HelpHint id={hintId}>{t("选择后自动保存到当前账号。标准为默认地图并适配界面深浅色；街道和深色保持自身配色。预览使用相同区域。")}</HelpHint>
     <div className="map-style-options">
       {MAPBOX_STYLES.map(style => <label key={style.id} className={`squircle map-style-option${selected === style.id ? " is-selected" : ""}`}>
@@ -42,7 +45,6 @@ export function MapStylePicker() {
         <span className="map-style-option-caption"><span>{t(style.label)}</span>{selected === style.id ? <UIIcon name="check" className="size-3.5"/> : null}</span>
       </label>)}
     </div>
-    {pending ? <p className="settings-hint" role="status">{t("保存中…")}</p> : null}
     {error ? <p className="text-sm text-red-600" role="alert">{t(error)}</p> : null}
   </fieldset>
 }
