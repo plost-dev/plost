@@ -4,6 +4,7 @@ import { ActionButton } from "./ActionButton"
 import { HelpHint } from "./HelpHint"
 import { RestoreForm } from "./RestoreForm"
 import { Field, SettingsForm } from "./SettingsForm"
+import { Toggle } from "./Toggle"
 import { UIIcon } from "./UIIcon"
 import { formatTimestamp } from "~/lib/format"
 import { useT } from "~/lib/i18n"
@@ -120,7 +121,7 @@ export function BackupSchedulePanel() {
       <fieldset disabled={!!busy} className="backup-form-fields">
         <Tile icon="cloud" brand={form.provider === "r2" ? "cloudflare" : undefined} id="storage" title={t("对象存储")}>
           {saved.credentialsUnreadable ? <p role="alert" className="squircle settings-feedback is-error">{t("已保存的凭据无法在这台服务器上解密，请重新填写密钥和计划备份密码。")}</p> : null}
-          <label className="flex items-center gap-3 text-sm text-gray-800 mb-5"><input type="checkbox" checked={form.cloudEnabled} onChange={e => set("cloudEnabled", e.target.checked)} />{t("每次备份后上传到云存储")}</label>
+          <div className="mb-6"><Toggle checked={form.cloudEnabled} onChange={next => set("cloudEnabled", next)}>{t("每次备份后上传到云存储")}</Toggle></div>
           <div className="backup-fields">
             <Field label={t("存储服务")}>
               <select className="squircle input" value={form.provider} onChange={e => set("provider", e.target.value as Settings["provider"])}>

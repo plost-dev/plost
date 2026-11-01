@@ -5,6 +5,7 @@ import { saveMapboxSettingsFn } from "~/lib/mapbox-actions"
 import { ActionButton } from "./ActionButton"
 import { Field, FormActions, SettingsForm } from "./SettingsForm"
 import { Tile } from "./ui"
+import { Toggle } from "./Toggle"
 import { PasswordInput } from "~/components/PasswordInput"
 
 export function MapboxSettingsPanel({initial}: {initial: {enabled: boolean; configured: boolean}}) {
@@ -17,7 +18,7 @@ export function MapboxSettingsPanel({initial}: {initial: {enabled: boolean; conf
       const next = await saveMapboxSettingsFn({data: {enabled, ...(token.trim() ? {token: token.trim()} : {})}})
       setSettings(next); setToken(""); showToast("地图设置已保存，重新打开统计页后生效。")
     }}>
-      <label className="flex items-center gap-2 text-sm" title={t("统一设置所有站点及分享页的访客地图。")}><input type="checkbox" checked={enabled} onChange={event => setEnabled(event.target.checked)}/>{t("使用 Mapbox 访客地图")}</label>
+      <div className="mb-6"><Toggle checked={enabled} onChange={setEnabled} title={t("统一设置所有站点及分享页的访客地图。")}>{t("使用 Mapbox 访客地图")}</Toggle></div>
       <Field label="Mapbox Access Token" hint={settings.configured ? t("已保存密钥，留空保留；填写新值可替换。") : t("填写以 pk. 开头的公开 Token。") }>
         <PasswordInput className="squircle input" aria-label="Mapbox Access Token" autoComplete="off" spellCheck={false} required={enabled && !settings.configured} value={token} placeholder={settings.configured ? "••••••••" : "pk.…"} onChange={event => setToken(event.target.value)}/>
       </Field>

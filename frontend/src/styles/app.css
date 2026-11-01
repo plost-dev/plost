@@ -954,6 +954,15 @@ button.map-live-count:focus-visible { outline:2px solid var(--analytics-accent);
 .map-flags-toggle input:focus-visible + .map-flags-track { outline:2px solid var(--accent-text); outline-offset:3px; }
 .map-stage[data-show-flags="false"] .country-flags { display:none; }
 @media(prefers-reduced-motion:reduce) { .map-flags-track, .map-flags-thumb { transition:none; } }
+/* Form switch: the same look as the map's flag switch, sized for a form row. */
+.toggle { display:inline-flex; align-items:center; gap:12px; min-height:var(--ui-control-compact); font-size:14px; line-height:20px; color:var(--color-gray-800); cursor:pointer; }
+.toggle-track { --sq-r:12px; display:block; position:relative; width:44px; height:24px; flex:none; padding:3px; background:var(--color-gray-400); transition:background-color 120ms; }
+.toggle-thumb { --sq-r:9px; display:block; width:18px; height:18px; background:#fff; transition:transform 120ms; }
+.toggle input:checked + .toggle-track { background:var(--ui-selection-bg); }
+.toggle input:checked + .toggle-track .toggle-thumb { transform:translateX(20px); background:var(--ui-selection-text); }
+.toggle input:focus-visible + .toggle-track { outline:2px solid var(--accent-text); outline-offset:3px; }
+.toggle:has(input:disabled) { opacity:.5; cursor:not-allowed; }
+@media(prefers-reduced-motion:reduce) { .toggle-track, .toggle-thumb { transition:none; } }
 /* QR quiet zones must stay white in both themes. */
 .auth-qr { background:#fff; }
 .mapbox-stage { position:relative; overflow:hidden; background:var(--map-ocean); }

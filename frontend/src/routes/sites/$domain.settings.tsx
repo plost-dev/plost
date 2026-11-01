@@ -7,6 +7,7 @@ import { SettingsForm, Field, FormActions, ConfirmModal } from "~/components/Set
 import { Link, createFileRoute, redirect, useRouter } from "@tanstack/react-router"
 import { useMemo, useEffect, useState } from "react"
 import { SettingsHeader } from "~/components/SettingsChrome"
+import { Toggle } from "~/components/Toggle"
 import { Shell } from "~/components/Shell"
 import { Tile } from "~/components/ui"
 import { useT } from "~/lib/i18n"
@@ -93,7 +94,7 @@ function SettingsPage() {
                 {ZONES.some(zone => zone.value === timezone) ? null : <option value={timezone}>{timezone}</option>}
                 {ZONES.map(zone => <option key={zone.value} value={zone.value}>{t(zone.label)}</option>)}
               </select></Field>
-              {data.health ? <Field label={t("站点检查")}><span className="flex items-center gap-3 text-sm text-gray-800"><input type="checkbox" checked={healthEnabled} onChange={event=>setHealthEnabled(event.target.checked)} />{t("开启检查")}</span></Field> : null}
+              {data.health ? <div className="settings-field"><span className="settings-label">{t("站点检查")}</span><Toggle checked={healthEnabled} onChange={setHealthEnabled}>{t("开启检查")}</Toggle></div> : null}
               {data.health && healthEnabled ? <Field label={t("检查路径")} hint={t("每 5 分钟访问一次，跟随跳转后返回 HTTP 200 视为正常。无需安装探针或统计脚本。")}><input className="squircle input" required maxLength={2048} value={healthPath} onChange={event=>setHealthPath(event.target.value)} placeholder="/" autoCapitalize="none" autoCorrect="off" spellCheck={false}/></Field> : null}
               <FormActions><ActionButton className="btn btn-primary" type="submit">{t("保存设置")}</ActionButton></FormActions>
             </SettingsForm>
@@ -108,7 +109,7 @@ function SettingsPage() {
                   await router.invalidate()
                   showToast("设置已保存")
                 }}>
-                  <label className="flex items-center gap-3 text-sm text-gray-800"><input type="checkbox" checked={isPublic} onChange={event => setIsPublic(event.target.checked)} />{t("公开这个站点的仪表盘")}</label>
+                  <Toggle checked={isPublic} onChange={setIsPublic}>{t("公开这个站点的仪表盘")}</Toggle>
                   <FormActions><ActionButton className="btn btn-primary" type="submit">{t("保存设置")}</ActionButton></FormActions>
                 </SettingsForm>
               </Tile>

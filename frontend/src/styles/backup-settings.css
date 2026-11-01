@@ -1,10 +1,12 @@
 .backup-panel { min-width:0; }
-.management-shell .settings-content .backup-panel > .settings-card { border-top:1px solid var(--color-gray-200); }
+/* The sections inside the form are not siblings of the first section, so the divider between them is drawn here. */
+.management-shell .settings-content .backup-form-fields > .settings-card:first-child { border-top:1px solid var(--color-gray-200); }
+.management-shell .settings-content .backup-form-fields > .settings-card:first-child > header { padding-top:var(--ui-section-gap); }
 .backup-form-fields { border:0; padding:0; margin:0; min-width:0; }
-.backup-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px 24px; align-items:start; }
+.backup-fields { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--ui-section-gap); align-items:start; }
 .backup-fields .settings-field { display:flex; flex-direction:column; gap:8px; min-width:0; margin:0; }
 .backup-fields .settings-field.is-wide { grid-column:1 / -1; }
-.backup-fields .settings-label { font-size:13px; line-height:20px; }
+.backup-fields .settings-label { margin:0; font-size:13px; line-height:20px; }
 .backup-fields .settings-hint { order:3; margin:0; font-size:12px; line-height:1.65; color:var(--color-gray-500); overflow-wrap:anywhere; font-weight:400; }
 .backup-fields .input { min-width:0; width:100%; margin:0; }
 .backup-fields input[readonly] { color:var(--color-gray-500); background:var(--color-gray-50); }
