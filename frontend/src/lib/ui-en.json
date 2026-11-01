@@ -1141,5 +1141,6 @@
   "现在是用 IP 地址打开的，浏览器不允许在 IP 地址上创建 Passkey。请改用域名；在本机测试时打开 http://localhost:端口。": "You opened this page by IP address, and browsers do not allow Passkeys on an IP address. Use a domain name, or open http://localhost:port when testing on this machine.",
   "图表类型": "Chart type",
   "曲线": "Line",
-  "柱形": "Bars"
+  "柱形": "Bars",
+  "点击显示或隐藏": "Click to show or hide"
 }

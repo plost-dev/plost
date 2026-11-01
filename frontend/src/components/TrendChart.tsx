@@ -26,6 +26,16 @@ const FILL_ORDER: TrafficMetric[] = ["pageviews", "visits", "visitors"]
 const BAR_ORDER: TrafficMetric[] = ["pageviews", "visits", "visitors"]
 const BAR_SHARE: Record<TrafficMetric, number> = {pageviews: 1, visits: 0.62, visitors: 0.3}
 const BAR_MAX_WIDTH = 40
+const NONE: ReadonlyArray<TrafficMetric> = []
+
+// With three bars they are nested. With two, the shorter one is simply drawn in front of the taller at the same
+// width, which is how Umami draws visitors over views; only visitors against visits, which are almost equal,
+// stay nested so one does not hide the other.
+function barShares(visible: ReadonlyArray<TrafficMetric>): Record<TrafficMetric, number> {
+  if (visible.length >= 3) return BAR_SHARE
+  if (visible.includes("pageviews")) return {pageviews: 1, visits: 1, visitors: 1}
+  return {pageviews: 1, visits: 1, visitors: 0.5}
+}
 // Point rings use their own outer-to-inner order so the surface-filled outer
 // circle cannot cover the other two metrics when all values match.
 const POINT_ORDER: TrafficMetric[] = ["pageviews", "visitors", "visits"]
@@ -91,12 +101,15 @@ export function TrendChart({
   interval = "day",
   realtime = false,
   type = "line",
+  hidden = NONE,
   onZoom,
 }: {
   series: TrafficSeries
   interval?: Interval
   realtime?: boolean
   type?: ChartType
+  /** Series left out of the drawing, the tooltip and the scale; the data itself is untouched. */
+  hidden?: ReadonlyArray<TrafficMetric>
   onZoom?: (date: string) => void
 }) {
   const { t, locale } = useT()
@@ -160,10 +173,12 @@ export function TrendChart({
 
   const withYear = new Set(points.map((p) => p.date.slice(0, 4))).size > 1
   const canZoom = (interval === "day" || interval === "month") && points.length > 1 && !!onZoom
-  const label = TRAFFIC_METRICS.map(metric => t(metric.label)).join(" / ")
+  const visible = useMemo(() => TRAFFIC_METRICS.map(metric => metric.key).filter(key => !hidden.includes(key)), [hidden])
+  const shown = TRAFFIC_METRICS.filter(metric => visible.includes(metric.key))
+  const label = shown.map(metric => t(metric.label)).join(" / ")
 
   const layout = useMemo(() => {
-    const scale = axisScale(Math.max(0, ...points.flatMap(point => TRAFFIC_METRICS.map(({key}) => point.values[key]))))
+    const scale = axisScale(Math.max(0, ...points.flatMap(point => visible.map(key => point.values[key]))))
     const yMax = scale.max
     const yTickVals = scale.ticks
     // The value labels and their dashes sit left of the plot, partly in the card's own padding; only what does not fit
@@ -179,15 +194,16 @@ export function TrendChart({
     const slot = innerW / Math.max(points.length, 1)
     const x = (i: number) => bars ? left + slot * (i + 0.5) : left + (points.length <= 1 ? innerW / 2 : (i / (points.length - 1)) * innerW)
     const y = (v: number) => MARGIN.top + innerH - (v / yMax) * innerH
-    const lines = bars ? [] : DRAW_ORDER.map(key => ({key, path: chartLine<TrafficPoint>().x((_, i) => x(i)).y(point => y(point.values[key])).curve(curveMonotoneX)(points) || ""}))
-    const areas = bars ? [] : FILL_ORDER.map(key => {
+    const lines = bars ? [] : DRAW_ORDER.filter(key => visible.includes(key)).map(key => ({key, path: chartLine<TrafficPoint>().x((_, i) => x(i)).y(point => y(point.values[key])).curve(curveMonotoneX)(points) || ""}))
+    const areas = bars ? [] : FILL_ORDER.filter(key => visible.includes(key)).map(key => {
       const path = lines.find(line => line.key === key)!.path
       return {key, path: points.length ? `${path} L${x(points.length - 1)},${baseline} L${x(0)},${baseline} Z` : ""}
     })
     const barWidth = Math.max(2, Math.min(slot * 0.72, BAR_MAX_WIDTH))
-    const columns = !bars ? [] : points.map((point, i) => BAR_ORDER.map(key => {
+    const shares = barShares(visible)
+    const columns = !bars ? [] : points.map((point, i) => BAR_ORDER.filter(key => visible.includes(key)).map(key => {
       const value = point.values[key]
-      const width = Math.max(1, barWidth * BAR_SHARE[key])
+      const width = Math.max(1, barWidth * shares[key])
       const top = value > 0 ? Math.min(y(value), baseline - 1) : baseline
       return {key, i, path: value > 0 ? barPath(x(i) - width / 2, width, top, baseline) : ""}
     })).flat()
@@ -197,7 +213,7 @@ export function TrendChart({
       return { index, x: x(index), label: axisLabel(points[index].date, interval, withYear, locale) }
     }) : []
     return { gutter, left, right, innerW, slot, bars, baseline, x, y, lines, areas, columns, xTicks, yTickVals }
-  }, [points, width, interval, withYear, locale, type])
+  }, [points, width, interval, withYear, locale, type, visible])
 
   function indexFromClientX(clientX: number) {
     const rect = box.current?.getBoundingClientRect()
@@ -276,7 +292,7 @@ export function TrendChart({
       {points.length === 0 ? <p className="flex h-full items-center justify-center text-sm font-medium text-gray-500">{t("暂无数据")}</p> : (
         <svg role="img" aria-label={label} width="100%" height={HEIGHT} viewBox={`0 0 ${width} ${HEIGHT}`} className="overflow-visible">
           <defs>
-            {TRAFFIC_METRICS.map(({key}) => <linearGradient key={key} id={`${gradientId}-${key}`} x1="0" x2="0" y1="0" y2="1">
+            {shown.map(({key}) => <linearGradient key={key} id={`${gradientId}-${key}`} x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stopColor={`var(--traffic-${key})`} stopOpacity="0.14" />
               <stop offset="100%" stopColor={`var(--traffic-${key})`} stopOpacity="0.01" />
             </linearGradient>)}
@@ -302,10 +318,10 @@ export function TrendChart({
             <path data-metric={key} className="traffic-series-path" d={path} fill="none" stroke={`var(--traffic-${key})`} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
           </g>)}
           {layout.columns.map(({key, i, path}) => path ? <path key={`${i}-${key}`} data-metric={key} className="traffic-bar" d={path} /> : null)}
-          {!layout.bars && points.length === 1 ? POINT_ORDER.map(key => <circle key={key} data-metric={key} cx={layout.x(0)} cy={layout.y(points[0].values[key])} r={POINT_RADIUS[key]} fill={key === "pageviews" ? "var(--surface)" : "none"} stroke={`var(--traffic-${key})`} strokeWidth="2" />) : null}
+          {!layout.bars && points.length === 1 ? POINT_ORDER.filter(key => visible.includes(key)).map(key => <circle key={key} data-metric={key} cx={layout.x(0)} cy={layout.y(points[0].values[key])} r={POINT_RADIUS[key]} fill={key === "pageviews" ? "var(--surface)" : "none"} stroke={`var(--traffic-${key})`} strokeWidth="2" />) : null}
           {hover && selected && !layout.bars ? <>
             <line x1={hover.x} x2={hover.x} y1={MARGIN.top - 4} y2={HEIGHT - MARGIN.bottom + 4} stroke="var(--analytics-guide)" strokeWidth="1" />
-            {POINT_ORDER.map(key => <circle key={key} data-metric={key} cx={hover.x} cy={layout.y(selected.values[key])} r={POINT_RADIUS[key]} fill={key === "pageviews" ? "var(--surface)" : "none"} stroke={`var(--traffic-${key})`} strokeWidth="2" />)}
+            {POINT_ORDER.filter(key => visible.includes(key)).map(key => <circle key={key} data-metric={key} cx={hover.x} cy={layout.y(selected.values[key])} r={POINT_RADIUS[key]} fill={key === "pageviews" ? "var(--surface)" : "none"} stroke={`var(--traffic-${key})`} strokeWidth="2" />)}
           </> : null}
         </svg>
       )}
@@ -316,7 +332,7 @@ export function TrendChart({
           onContextMenu={event => event.stopPropagation()}>
           <aside className="flex flex-col gap-2 text-sm font-normal text-gray-100">
             <div className="traffic-tooltip-date">{tooltipLabel(selected.date, interval, withYear, hover.index, points.length, realtime, locale)}</div>
-            <dl className="traffic-tooltip-metrics">{TRAFFIC_METRICS.map(({key, label}) => <div key={key} data-metric={key}>
+            <dl className="traffic-tooltip-metrics">{shown.map(({key, label}) => <div key={key} data-metric={key}>
               <dt><span className="traffic-series-dot" aria-hidden="true" />{t(label)}</dt>
               <dd>{selected.values[key].toLocaleString(locale)}</dd>
             </div>)}</dl>

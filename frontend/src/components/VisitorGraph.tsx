@@ -1,7 +1,7 @@
 import { Surface } from "~/components/Surface"
 import { UIIcon } from "~/components/UIIcon"
 import { useT } from "~/lib/i18n"
-import { TRAFFIC_METRICS, TrendChart } from "~/components/TrendChart"
+import { TRAFFIC_METRICS, TrendChart, type TrafficMetric } from "~/components/TrendChart"
 import type { ChartType } from "~/lib/chart-type-preference"
 import { formatDuration, numberShort } from "~/lib/format"
 import { delta, type Interval } from "~/lib/range"
@@ -27,6 +27,8 @@ export function VisitorGraph({
   interval = "day",
   realtime = false,
   chartType = "line",
+  hiddenSeries = [],
+  onToggleSeries,
   onZoom,
 }: {
   overview: Overview
@@ -35,6 +37,8 @@ export function VisitorGraph({
   interval?: Interval
   realtime?: boolean
   chartType?: ChartType
+  hiddenSeries?: ReadonlyArray<TrafficMetric>
+  onToggleSeries?: (key: TrafficMetric) => void
   onZoom?: (date: string) => void
 }) {
   const { t, locale } = useT()
@@ -47,7 +51,7 @@ export function VisitorGraph({
           const improved = change && (invertChange ? change.diff < 0 : change.diff > 0)
           const text = format ? format(value) : numberShort(value)
           const plotted = TRAFFIC_METRICS.some(metric => metric.key === key)
-          return <div key={key} className="metric-item traffic-summary-item" data-metric={key}>
+          return <div key={key} className="metric-item traffic-summary-item" data-metric={key} data-hidden={hiddenSeries.includes(key as TrafficMetric) || undefined}>
             <dt className="traffic-summary-label">{plotted ? <span className="traffic-series-dot" aria-hidden="true" /> : null}{t(label)}</dt>
             <dd className="metric-value-row traffic-summary-values">
               <p className="metric-value" title={format ? text : value.toLocaleString(locale)}>{text}</p>
@@ -62,9 +66,16 @@ export function VisitorGraph({
       <div className="trend-section">
         <div className="analytics-heading">
           <h3>{t("访问趋势")}</h3>
-          <ul className="traffic-legend" aria-hidden="true">{TRAFFIC_METRICS.map(({key, label}) => <li key={key} data-metric={key}><span className="traffic-series-dot" />{t(label)}</li>)}</ul>
+          <ul className="traffic-legend">{TRAFFIC_METRICS.map(({key, label}) => {
+            const off = hiddenSeries.includes(key)
+            // One series always stays on, otherwise the chart would be empty.
+            const last = !off && hiddenSeries.length >= TRAFFIC_METRICS.length - 1
+            return <li key={key} data-metric={key}>
+              <button type="button" className="traffic-legend-item" aria-pressed={!off} disabled={last || !onToggleSeries} title={last ? undefined : t("点击显示或隐藏")} onClick={() => onToggleSeries?.(key)}><span className="traffic-series-dot" aria-hidden="true" />{t(label)}</button>
+            </li>
+          })}</ul>
         </div>
-        <TrendChart series={{visitors: seriesBy.visitors, visits: seriesBy.visits, pageviews: seriesBy.pageviews}} interval={interval} realtime={realtime} type={chartType} onZoom={onZoom} />
+        <TrendChart series={{visitors: seriesBy.visitors, visits: seriesBy.visits, pageviews: seriesBy.pageviews}} interval={interval} realtime={realtime} type={chartType} hidden={hiddenSeries} onZoom={onZoom} />
       </div>
     </Surface>
   )

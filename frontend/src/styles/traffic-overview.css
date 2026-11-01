@@ -46,6 +46,19 @@ html[data-theme="dark"] .traffic-overview,
 /* Value axis: dashes at each value, light grid, labels read 0, 1k, 2k, 3k. */
 .traffic-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin: 0; padding: 0; list-style: none; font-size: 12px; line-height: 18px; color: var(--color-gray-500); }
 .traffic-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.traffic-legend [data-metric="visitors"] { --series: var(--traffic-visitors); }
+.traffic-legend [data-metric="visits"] { --series: var(--traffic-visits); }
+.traffic-legend [data-metric="pageviews"] { --series: var(--traffic-pageviews); }
+/* The legend is also the switch for each series: an unpressed one shows a hollow dot and fades. */
+.traffic-legend-item { display: inline-flex; align-items: center; gap: 6px; margin: -2px -6px; padding: 2px 6px; border: 0; border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.traffic-legend-item:hover:not(:disabled) { color: var(--color-gray-900); background: var(--color-gray-100); }
+.traffic-legend-item:disabled { cursor: default; }
+.traffic-legend-item:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 1px; }
+.traffic-legend-item[aria-pressed="false"] { opacity: 0.7; }
+.traffic-legend-item[aria-pressed="false"] .traffic-series-dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--series); }
+.traffic-summary-item[data-hidden] .traffic-series-dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--traffic-visitors); }
+.traffic-summary-item[data-hidden][data-metric="visits"] .traffic-series-dot { box-shadow: inset 0 0 0 1.5px var(--traffic-visits); }
+.traffic-summary-item[data-hidden][data-metric="pageviews"] .traffic-series-dot { box-shadow: inset 0 0 0 1.5px var(--traffic-pageviews); }
 .traffic-series-halo { pointer-events: none; }
 /* Bars are nested, tallest and widest at the back; lighter tints sit behind, the full colour in front. */
 .traffic-bar { pointer-events: none; stroke: none; }
