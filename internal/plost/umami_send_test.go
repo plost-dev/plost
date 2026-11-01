@@ -51,7 +51,7 @@ func TestUmamiShapedRequestsAreStored(t *testing.T) {
 		t.Fatalf("got %d", status)
 	}
 	// What Umami's own tracker sends: a website id that is not a domain, and a path instead of an address.
-	theirs := map[string]any{"type": "event", "payload": map[string]any{"website": "b1d117e6-f63d-4dec-be28-255ec6dc50c1", "hostname": "www.example.com", "url": "/docs",
+	theirs := map[string]any{"type": "event", "payload": map[string]any{"website": "6f1c2d3e-4a5b-4c6d-8e7f-0123456789ab", "hostname": "www.example.com", "url": "/docs",
 		"title": "Docs", "language": "en-US", "screen": "390x844", "name": "signup", "data": map[string]any{"plan": "pro"}}}
 	if status := sendUmami(t, x, theirs, testChrome); status != 202 {
 		t.Fatalf("got %d", status)
