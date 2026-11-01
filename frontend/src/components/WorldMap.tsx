@@ -162,24 +162,27 @@ function WorldMap({
     // D3 interpolates actual colors, not CSS variables. Repaint on preference
     // changes without rebuilding geography or resetting the user's zoom.
     const colorScale = d3.scaleSqrt().domain([0, maxValue || 1]).range([0.12, 1]).clamp(true)
+    let ramp = (_: number) => EMPTY_FILL
+    let hoveredA3: string | null = null
+    const baseFill = (a3: string) => {
+      const row = dataByAlpha3Code.get(a3)
+      return row?.visitors ? ramp(colorScale(row.visitors)) : EMPTY_FILL
+    }
+    // The country under the pointer is shown a shade darker rather than outlined: the map is already coloured, and a
+    // thick outline only crowds the borders around it.
+    const fillOf = (a3: string) => {
+      const base = baseFill(a3)
+      const color = a3 === hoveredA3 ? d3.color(base) : null
+      return color ? color.darker(0.45).formatRgb() : base
+    }
     const applyColors = () => {
       const styles = getComputedStyle(el)
-      const ramp = d3.interpolateRgbBasis(COLOR_STOPS.map(token => styles.getPropertyValue(token).trim()))
-      countries.attr("fill", country => {
-        const row = dataByAlpha3Code.get(country.properties.a3)
-        return row?.visitors ? ramp(colorScale(row.visitors)) : EMPTY_FILL
-      })
+      ramp = d3.interpolateRgbBasis(COLOR_STOPS.map(token => styles.getPropertyValue(token).trim()))
+      countries.attr("fill", country => fillOf(country.properties.a3))
     }
     applyColors()
     const paletteObserver = new MutationObserver(applyColors)
     paletteObserver.observe(document.documentElement, {attributes: true, attributeFilter: ["data-accent", "data-theme"]})
-
-    const highlight = root.append("path")
-      .attr("fill", "none")
-      .attr("stroke", "var(--accent-text)")
-      .attr("stroke-width", 1.8)
-      .attr("stroke-linejoin", "round")
-      .attr("pointer-events", "none")
 
     countries
       .on("keydown", (event, country) => {
@@ -191,17 +194,17 @@ function WorldMap({
       .on("mouseover", function (event, country) {
         const [x, y] = d3.pointer(event, svg.node()?.parentNode)
         setTooltip({ x, y, hovered: country.properties.a3 })
-        highlight.attr("d", this.getAttribute("d"))
-        d3.select(this).attr("stroke", "var(--accent-text)").attr("stroke-width", 1.1)
+        hoveredA3 = country.properties.a3
+        d3.select(this).attr("fill", fillOf(hoveredA3))
       })
       .on("mousemove", function (event) {
         const [x, y] = d3.pointer(event, svg.node()?.parentNode)
         setTooltip((cur) => ({ ...cur, x, y }))
       })
-      .on("mouseout", function () {
+      .on("mouseout", function (_, country) {
         setTooltip({ x: 0, y: 0, hovered: null })
-        highlight.attr("d", null)
-        d3.select(this).attr("stroke", BORDER).attr("stroke-width", 0.55)
+        hoveredA3 = null
+        d3.select(this).attr("fill", fillOf(country.properties.a3))
       })
       .on("click", (event, country) => {
         if (event.defaultPrevented) return
