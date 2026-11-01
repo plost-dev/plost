@@ -2,11 +2,14 @@
   const s = document.currentScript;
   if (!s || !s.src) return;
   const domain = s.getAttribute("data-domain");
+  // Events go out exactly as Umami's tracker sends them: a JSON POST to /api/send. Some content blockers refuse
+  // requests shaped like other analytics tools but let Umami's through. A custom data-api (a proxy on the site itself)
+  // keeps the older plain format, and is used for retries too, since /e may not exist there.
+  const customApi = s.getAttribute("data-api");
   let endpoint, retryEndpoint;
   try {
-    endpoint = new URL(s.getAttribute("data-api") || "/api/event", s.src).href;
-    // A custom data-api (a proxy on the site itself) is used for retries too, since /e may not exist there.
-    retryEndpoint = new URL(s.getAttribute("data-api") || "/e", s.src).href;
+    endpoint = new URL(customApi || "/api/send", s.src).href;
+    retryEndpoint = new URL(customApi || "/e", s.src).href;
   } catch (e) { return; }
   const installed = window.__litestatsTrackers || (window.__litestatsTrackers = Object.create(null));
   const trackerKey = JSON.stringify([endpoint, domain]);
@@ -29,7 +32,7 @@
   function beacon(data, url) {
     try { return !!navigator.sendBeacon && navigator.sendBeacon(url, new Blob([JSON.stringify(data)], { type: "text/plain;charset=UTF-8" })); } catch (e) { return false; }
   }
-  // When the request to /api/event fails before any answer (a content blocker or a broken network refused it), the
+  // When the normal request fails before any answer (a content blocker or a broken network refused it), the
   // event goes again to the second address as an image, and if that is refused too, as a Beacon. Each retry says how it
   // travelled ("x"), and the server keeps only the first copy of an event id ("i"), so nothing is counted twice.
   function retry(data) {
@@ -43,11 +46,17 @@
       img.src = retryEndpoint + (retryEndpoint.indexOf("?") < 0 ? "?" : "&") + "p=" + encodeURIComponent(query);
     } catch (e) { viaBeacon(); }
   }
+  function umamiBody(data) {
+    const payload = { website: data.d, hostname: location.hostname, screen: data.s, language: data.l, title: data.t, url: data.u, referrer: data.r, v: data.v, i: data.i, w: data.w };
+    if (data.n !== "pageview") { payload.name = data.n; if (data.p) payload.data = data.p; }
+    return JSON.stringify({ type: "event", payload: payload });
+  }
   function deliver(data, attempt) {
-    const body = JSON.stringify(data);
-    if (typeof fetch !== "function") { if (!beacon(data, endpoint)) retry(data); return; }
+    const body = customApi ? JSON.stringify(data) : umamiBody(data);
+    const plain = function () { if (!beacon(Object.assign({}, data, { x: "beacon" }), retryEndpoint)) retry(data); };
+    if (typeof fetch !== "function") { plain(); return; }
     try {
-      fetch(endpoint, { method: "POST", body, headers: { "Content-Type": "text/plain;charset=UTF-8" }, credentials: "omit", keepalive: true }).then(function (response) {
+      fetch(endpoint, { method: "POST", body, headers: { "Content-Type": customApi ? "text/plain;charset=UTF-8" : "application/json" }, credentials: "omit", keepalive: true }).then(function (response) {
         // Only this explicit rejection guarantees that the event was not queued.
         // Generic 5xx responses are ambiguous and are not repeated.
         if (response.status !== 503 || attempt >= 2) return;
@@ -55,7 +64,7 @@
           if (result && result.error === "event_buffer_full") window.setTimeout(function () { deliver(data, attempt + 1); }, (attempt + 1) * 1000);
         });
       }, function () { retry(data); }).catch(function () {});
-    } catch (e) { if (!beacon(data, endpoint)) retry(data); }
+    } catch (e) { plain(); }
   }
   function send(payload) {
     if (document.prerendering) return;

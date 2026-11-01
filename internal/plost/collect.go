@@ -36,7 +36,8 @@ var eventIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{8,40}$`)
 
 // When the tracker's normal request fails (a content blocker or a broken network refuses it), it sends the same
 // event again to /e, first as an image and then as a Beacon, and says which with "x". The value is stored with the
-// event so the share of events that only arrived that way can be counted; anything else counts as the normal way.
+// event so the share of events that only arrived that way can be counted. Normal requests to /api/send are stored as
+// "send"; an empty value is the older /api/event request.
 var retryTransports = map[string]bool{"img": true, "beacon": true}
 
 // pixel is the 1×1 transparent GIF returned to image requests, so the tracker can tell a delivered event (load) from a
@@ -115,6 +116,8 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Vary", "Origin")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+	// /api/send takes JSON like Umami's tracker, which needs a preflight; let browsers reuse it.
+	w.Header().Set("Access-Control-Max-Age", "86400")
 	// No credentials or private data are exposed by this ingestion-only endpoint.
 	if o := r.Header.Get("Origin"); o != "" && o != "null" {
 		w.Header().Set("Access-Control-Allow-Origin", o)
@@ -138,6 +141,18 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 			writeError(w, failure(413, "请求过大"))
 			return
 		}
+	}
+	if r.URL.Path == "/api/send" {
+		converted, err := fromUmami(b)
+		if errors.Is(err, errUmamiIgnored) {
+			accepted(w, r)
+			return
+		}
+		if err != nil {
+			writeError(w, failure(400, "请求格式无效"))
+			return
+		}
+		b = converted
 	}
 	var data map[string]json.RawMessage
 	if json.Unmarshal(b, &data) != nil {
@@ -283,6 +298,8 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 	ev := Event{SiteID: site.ID, At: now.Unix(), Name: name, Hostname: canonicalHost(u.Hostname()), Path: short(pathname, 2048), Source: source, Referrer: short(ref, 2048), UserID: userID, SessionVisitor: sessionVisitor, Country: country, Browser: browser, OS: osName, Device: device, Language: short(first(data, "l", "language"), 64), Screen: screen, Title: short(first(data, "t", "title"), 500), UTMSource: short(q.Get("utm_source"), 200), UTMMedium: short(q.Get("utm_medium"), 200), UTMCampaign: short(q.Get("utm_campaign"), 200), Props: string(propsJSON)}
 	if via := first(data, "x"); retryTransports[via] {
 		ev.Via = via
+	} else if r.URL.Path == "/api/send" {
+		ev.Via = "send"
 	}
 	// An event that carries an id is stored once, however many of the tracker's retries reach us.
 	claimed := ""
