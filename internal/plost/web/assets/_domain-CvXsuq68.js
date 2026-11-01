@@ -1,0 +1,1 @@
+import{M as e}from"./index-Ce4zLlxa.js";var t=e;export{t as component};

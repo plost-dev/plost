@@ -1138,5 +1138,8 @@
   "新密码至少需要 8 个字符（最长 72 字节）": "The new password needs at least 8 characters (at most 72 bytes)",
   "个人资料设置": "Profile settings",
   "如需更改邮箱，请到「安全」页。": "To change your email, go to the Security tab.",
-  "现在是用 IP 地址打开的，浏览器不允许在 IP 地址上创建 Passkey。请改用域名；在本机测试时打开 http://localhost:端口。": "You opened this page by IP address, and browsers do not allow Passkeys on an IP address. Use a domain name, or open http://localhost:port when testing on this machine."
+  "现在是用 IP 地址打开的，浏览器不允许在 IP 地址上创建 Passkey。请改用域名；在本机测试时打开 http://localhost:端口。": "You opened this page by IP address, and browsers do not allow Passkeys on an IP address. Use a domain name, or open http://localhost:port when testing on this machine.",
+  "图表类型": "Chart type",
+  "曲线": "Line",
+  "柱形": "Bars"
 }

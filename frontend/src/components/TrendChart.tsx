@@ -5,6 +5,7 @@ import { formatClock, formatDayLong, formatDayShort, formatMonthYYYY } from "~/l
 import type { Interval } from "~/lib/range"
 import { INTERVAL_VIEW } from "~/lib/range"
 import type { Point } from "~/lib/ch"
+import type { ChartType } from "~/lib/chart-type-preference"
 
 export type TrafficMetric = "visitors" | "visits" | "pageviews"
 export type TrafficSeries = Record<TrafficMetric, Point[]>
@@ -17,8 +18,14 @@ export const TRAFFIC_METRICS: ReadonlyArray<{key: TrafficMetric; label: string}>
 ]
 // Each metric keeps the original soft line and fading area treatment.
 // The areas overlap transparently rather than stacking or offsetting values.
-const DRAW_ORDER: TrafficMetric[] = ["visitors", "visits", "pageviews"]
+// Visitors is drawn last so the headline metric is on top where it equals visits.
+const DRAW_ORDER: TrafficMetric[] = ["pageviews", "visits", "visitors"]
 const FILL_ORDER: TrafficMetric[] = ["pageviews", "visits", "visitors"]
+// Bars are nested: the tallest metric is the widest and sits at the back, so a narrower one is never hidden behind it,
+// even when two metrics have the same value.
+const BAR_ORDER: TrafficMetric[] = ["pageviews", "visits", "visitors"]
+const BAR_SHARE: Record<TrafficMetric, number> = {pageviews: 1, visits: 0.62, visitors: 0.3}
+const BAR_MAX_WIDTH = 40
 // Point rings use their own outer-to-inner order so the surface-filled outer
 // circle cannot cover the other two metrics when all values match.
 const POINT_ORDER: TrafficMetric[] = ["pageviews", "visitors", "visits"]
@@ -26,24 +33,28 @@ const POINT_RADIUS: Record<TrafficMetric, number> = {pageviews: 7, visitors: 5, 
 const HEIGHT = 264
 const MARGIN = { top: 16, bottom: 32 }
 const AXIS_FONT_SIZE = 10
+const TICK = 5 // length of the dash drawn at each value on the left axis
+const LABEL_GAP = 6
 const TOOLTIP_ACTION_CLASS = "squircle min-h-8 rounded-md border border-gray-600 bg-gray-700 px-3 text-xs font-medium text-gray-100 hover:bg-gray-600"
 
-function niceStep(range: number) {
-  if (range <= 0) return 1
-  const exp = Math.floor(Math.log10(range))
-  const frac = range / 10 ** exp
-  const nice = frac <= 1 ? 1 : frac <= 2 ? 2 : frac <= 5 ? 5 : 10
-  return nice * 10 ** exp
-}
-
-function integerScale(maxValue: number) {
+// Values sit on 1, 2 or 5 times a power of ten with at most four steps above zero. From a thousand up the step is a
+// whole number of thousands (and from a million up, of millions), so the axis reads 0, 1k, 2k, 3k instead of 500 and 1500.
+function axisScale(maxValue: number) {
   const raw = Math.max(maxValue, 1)
-  const rough = niceStep(raw / 4)
-  const step = Math.max(1, Math.round(rough))
+  const steps: number[] = []
+  for (let exp = 0; exp <= 12; exp++) for (const m of [1, 2, 5]) steps.push(m * 10 ** exp)
+  let step = steps.find(candidate => Math.ceil(raw / candidate) <= 4) ?? raw
+  for (const unit of [1000, 1_000_000]) if (Math.ceil(raw / step) * step >= unit && step < unit) step = unit
   const max = Math.ceil(raw / step) * step
   const ticks: number[] = []
   for (let v = 0; v <= max + 1e-6; v += step) ticks.push(Math.round(v))
   return { max, ticks }
+}
+
+/** A bar with rounded top corners that sits on the baseline. */
+function barPath(x: number, width: number, top: number, bottom: number) {
+  const r = Math.min(3, width / 2, bottom - top)
+  return `M${x},${bottom}V${top + r}Q${x},${top} ${x + r},${top}H${x + width - r}Q${x + width},${top} ${x + width},${top + r}V${bottom}Z`
 }
 
 function formatAxisTick(value: number) {
@@ -79,11 +90,13 @@ export function TrendChart({
   series,
   interval = "day",
   realtime = false,
+  type = "line",
   onZoom,
 }: {
   series: TrafficSeries
   interval?: Interval
   realtime?: boolean
+  type?: ChartType
   onZoom?: (date: string) => void
 }) {
   const { t, locale } = useT()
@@ -150,34 +163,47 @@ export function TrendChart({
   const label = TRAFFIC_METRICS.map(metric => t(metric.label)).join(" / ")
 
   const layout = useMemo(() => {
-    const scale = integerScale(Math.max(0, ...points.flatMap(point => TRAFFIC_METRICS.map(({key}) => point.values[key]))))
+    const scale = axisScale(Math.max(0, ...points.flatMap(point => TRAFFIC_METRICS.map(({key}) => point.values[key]))))
     const yMax = scale.max
     const yTickVals = scale.ticks
-    // Keep the original axis inset, chart height, tick typography and date spacing.
-    const labelSpace = Math.max(...yTickVals.map(v => formatAxisTick(v).length), 1) * 6 + 8
+    // The value labels and their dashes sit left of the plot, partly in the card's own padding; only what does not fit
+    // there widens the left margin, and the right edge has none.
+    const gutter = Math.max(...yTickVals.map(v => formatAxisTick(v).length), 1) * 6 + LABEL_GAP + TICK
     const left = 0
     const right = 0
     const innerW = Math.max(1, width - left - right)
     const innerH = HEIGHT - MARGIN.top - MARGIN.bottom
-    const x = (i: number) => left + (points.length <= 1 ? innerW / 2 : (i / (points.length - 1)) * innerW)
+    const baseline = MARGIN.top + innerH
+    const bars = type === "bar"
+    // Bars own a slot each and are centred in it; a line starts and ends on the plot's edges.
+    const slot = innerW / Math.max(points.length, 1)
+    const x = (i: number) => bars ? left + slot * (i + 0.5) : left + (points.length <= 1 ? innerW / 2 : (i / (points.length - 1)) * innerW)
     const y = (v: number) => MARGIN.top + innerH - (v / yMax) * innerH
-    const lines = DRAW_ORDER.map(key => ({key, path: chartLine<TrafficPoint>().x((_, i) => x(i)).y(point => y(point.values[key])).curve(curveMonotoneX)(points) || ""}))
-    const areas = FILL_ORDER.map(key => {
+    const lines = bars ? [] : DRAW_ORDER.map(key => ({key, path: chartLine<TrafficPoint>().x((_, i) => x(i)).y(point => y(point.values[key])).curve(curveMonotoneX)(points) || ""}))
+    const areas = bars ? [] : FILL_ORDER.map(key => {
       const path = lines.find(line => line.key === key)!.path
-      return {key, path: points.length ? `${path} L${x(points.length - 1)},${MARGIN.top + innerH} L${x(0)},${MARGIN.top + innerH} Z` : ""}
+      return {key, path: points.length ? `${path} L${x(points.length - 1)},${baseline} L${x(0)},${baseline} Z` : ""}
     })
+    const barWidth = Math.max(2, Math.min(slot * 0.72, BAR_MAX_WIDTH))
+    const columns = !bars ? [] : points.map((point, i) => BAR_ORDER.map(key => {
+      const value = point.values[key]
+      const width = Math.max(1, barWidth * BAR_SHARE[key])
+      const top = value > 0 ? Math.min(y(value), baseline - 1) : baseline
+      return {key, i, path: value > 0 ? barPath(x(i) - width / 2, width, top, baseline) : ""}
+    })).flat()
     const xTickCount = Math.min(Math.max(2, Math.floor(innerW / (withYear ? 110 : 76))), 8, points.length)
     const xTicks = points.length ? Array.from({ length: xTickCount }, (_, i) => {
       const index = xTickCount === 1 ? 0 : Math.round((i * (points.length - 1)) / (xTickCount - 1))
       return { index, x: x(index), label: axisLabel(points[index].date, interval, withYear, locale) }
     }) : []
-    return { labelSpace, left, right, innerW, x, y, lines, areas, xTicks, yTickVals }
-  }, [points, width, interval, withYear, locale])
+    return { gutter, left, right, innerW, slot, bars, baseline, x, y, lines, areas, columns, xTicks, yTickVals }
+  }, [points, width, interval, withYear, locale, type])
 
   function indexFromClientX(clientX: number) {
     const rect = box.current?.getBoundingClientRect()
     if (!rect || points.length === 0) return 0
     const px = clientX - rect.left
+    if (layout.bars) return Math.max(0, Math.min(points.length - 1, Math.floor((px - layout.left) / layout.slot)))
     const position = (px - layout.left) / layout.innerW
     return Math.max(0, Math.min(points.length - 1, Math.round(position * (points.length - 1))))
   }
@@ -205,7 +231,7 @@ export function TrendChart({
       tabIndex={points.length ? 0 : undefined}
       role="group"
       aria-label={label}
-      style={{ height: HEIGHT, marginInline: `max(0px, calc(${layout.labelSpace + 12}px - var(--trend-inset, 22px)))` }}
+      style={{ height: HEIGHT, marginLeft: `max(0px, calc(${layout.gutter}px - var(--trend-inset, 22px)))` }}
       onKeyDown={event => {
         if (event.target !== event.currentTarget || !points.length) return
         if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
@@ -258,20 +284,26 @@ export function TrendChart({
           {layout.yTickVals.map((value, i) => (
             <g key={value}>
               <line x1={layout.left} x2={width - layout.right} y1={layout.y(value)} y2={layout.y(value)} stroke={i === 0 ? "var(--color-gray-300)" : "var(--color-gray-150)"} />
-              <text x={layout.left - 8} y={layout.y(value)} dominantBaseline="middle" textAnchor="end" className="trend-axis-label fill-gray-500" fontSize={AXIS_FONT_SIZE} fontWeight="400">{formatAxisTick(value)}</text>
+              <line x1={layout.left - TICK} x2={layout.left} y1={layout.y(value)} y2={layout.y(value)} stroke="var(--color-gray-300)" />
+              <text x={layout.left - TICK - LABEL_GAP} y={layout.y(value)} dominantBaseline="middle" textAnchor="end" className="trend-axis-label fill-gray-500" fontSize={AXIS_FONT_SIZE} fontWeight="400">{formatAxisTick(value)}</text>
             </g>
           ))}
           <line x1={layout.left} x2={width - layout.right} y1={HEIGHT - MARGIN.bottom} y2={HEIGHT - MARGIN.bottom} stroke="var(--color-gray-300)" />
           {layout.xTicks.map(tick => (
             <g key={tick.index}>
               <line x1={tick.x} x2={tick.x} y1={HEIGHT - MARGIN.bottom} y2={HEIGHT - MARGIN.bottom + 4} stroke="var(--color-gray-300)" />
-              <text x={tick.x} y={HEIGHT - 10} textAnchor={tick.index === 0 ? "start" : tick.index === points.length - 1 ? "end" : "middle"} className="trend-axis-label fill-gray-500" fontSize={AXIS_FONT_SIZE} fontWeight="400">{t(tick.label)}</text>
+              <text x={tick.x} y={HEIGHT - 10} textAnchor={layout.bars ? "middle" : tick.index === 0 ? "start" : tick.index === points.length - 1 ? "end" : "middle"} className="trend-axis-label fill-gray-500" fontSize={AXIS_FONT_SIZE} fontWeight="400">{t(tick.label)}</text>
             </g>
           ))}
+          {layout.bars && hover ? <rect className="traffic-hover-band" x={layout.left + layout.slot * hover.index} y={MARGIN.top - 4} width={layout.slot} height={layout.baseline - MARGIN.top + 4} /> : null}
           {layout.areas.map(({key, path}) => <path key={key} data-metric={key} className="traffic-series-area" d={path} fill={`url(#${gradientId}-${key})`} />)}
-          {layout.lines.map(({key, path}) => <path key={key} data-metric={key} className="traffic-series-path" d={path} fill="none" stroke={`var(--traffic-${key})`} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />)}
-          {points.length === 1 ? POINT_ORDER.map(key => <circle key={key} data-metric={key} cx={layout.x(0)} cy={layout.y(points[0].values[key])} r={POINT_RADIUS[key]} fill={key === "pageviews" ? "var(--surface)" : "none"} stroke={`var(--traffic-${key})`} strokeWidth="2" />) : null}
-          {hover && selected ? <>
+          {layout.lines.map(({key, path}) => <g key={key}>
+            {key === "visits" ? <path data-metric={key} className="traffic-series-halo" d={path} fill="none" stroke={`var(--traffic-${key})`} strokeWidth="8" strokeOpacity="0.5" strokeLinejoin="round" strokeLinecap="round" /> : null}
+            <path data-metric={key} className="traffic-series-path" d={path} fill="none" stroke={`var(--traffic-${key})`} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
+          </g>)}
+          {layout.columns.map(({key, i, path}) => path ? <path key={`${i}-${key}`} data-metric={key} className="traffic-bar" d={path} /> : null)}
+          {!layout.bars && points.length === 1 ? POINT_ORDER.map(key => <circle key={key} data-metric={key} cx={layout.x(0)} cy={layout.y(points[0].values[key])} r={POINT_RADIUS[key]} fill={key === "pageviews" ? "var(--surface)" : "none"} stroke={`var(--traffic-${key})`} strokeWidth="2" />) : null}
+          {hover && selected && !layout.bars ? <>
             <line x1={hover.x} x2={hover.x} y1={MARGIN.top - 4} y2={HEIGHT - MARGIN.bottom + 4} stroke="var(--analytics-guide)" strokeWidth="1" />
             {POINT_ORDER.map(key => <circle key={key} data-metric={key} cx={hover.x} cy={layout.y(selected.values[key])} r={POINT_RADIUS[key]} fill={key === "pageviews" ? "var(--surface)" : "none"} stroke={`var(--traffic-${key})`} strokeWidth="2" />)}
           </> : null}

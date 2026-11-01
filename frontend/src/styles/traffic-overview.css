@@ -42,3 +42,14 @@ html[data-theme="dark"] .traffic-overview,
   .traffic-summary-values { gap: 4px 6px; }
   .traffic-summary-values .metric-change { font-size: 11px; }
 }
+
+/* Value axis: dashes at each value, light grid, labels read 0, 1k, 2k, 3k. */
+.traffic-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin: 0; padding: 0; list-style: none; font-size: 12px; line-height: 18px; color: var(--color-gray-500); }
+.traffic-legend li { display: inline-flex; align-items: center; gap: 6px; }
+.traffic-series-halo { pointer-events: none; }
+/* Bars are nested, tallest and widest at the back; lighter tints sit behind, the full colour in front. */
+.traffic-bar { pointer-events: none; stroke: none; }
+.traffic-bar[data-metric="pageviews"] { fill: color-mix(in srgb, var(--traffic-pageviews) 30%, var(--surface)); }
+.traffic-bar[data-metric="visits"] { fill: color-mix(in srgb, var(--traffic-visits) 62%, var(--surface)); }
+.traffic-bar[data-metric="visitors"] { fill: var(--traffic-visitors); }
+.traffic-hover-band { fill: var(--color-gray-100); pointer-events: none; }

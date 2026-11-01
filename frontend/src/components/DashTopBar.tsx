@@ -7,6 +7,7 @@ import { SiteSwitcher } from "~/components/SiteSwitcher"
 import { ReportFilter } from "./ReportFilter"
 import { expiryState } from "~/lib/site-check-view"
 import type { SiteCheckReport } from "~/lib/site-checks"
+import { CHART_TYPES, CHART_TYPE_LABEL, type ChartType } from "~/lib/chart-type-preference"
 import { INTERVAL_LABEL, PERIOD_LABEL, availableIntervals, intervalStorageKey, periodLabel, type DashSearch, type Interval, type Period } from "~/lib/range"
 
 const GROUPS: Period[][] = [
@@ -50,6 +51,8 @@ export function DashTopBar({
   readonly,
   canManage = !readonly,
   onExport,
+  chartType = "line",
+  onChartType,
   filterOptions = {},
   health = null,
 }: {
@@ -61,6 +64,8 @@ export function DashTopBar({
   canManage?: boolean
   filterOptions?: Partial<Record<keyof DashSearch, Array<{name:string;label?:string}>>>
   onExport?: () => void
+  chartType?: ChartType
+  onChartType?: (next: ChartType) => void
   health?: SiteCheckReport | null
 }) {
   const { t } = useT()
@@ -259,6 +264,25 @@ export function DashTopBar({
                     </div>
                   )
                 })()}
+
+                {onChartType ? (
+                  <div className="flex w-full items-center justify-between gap-x-2 py-1 pr-2 pl-4">
+                    <span className="shrink-0 text-sm font-medium text-gray-700">{t("图表类型")}</span>
+                    <div className="squircle segmented-control flex rounded-md bg-gray-100">
+                      {CHART_TYPES.map((id) => (
+                        <button
+                          key={id}
+                          type="button"
+                          aria-pressed={chartType === id}
+                          className="squircle rounded px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-900"
+                          onClick={() => onChartType(id)}
+                        >
+                          {t(CHART_TYPE_LABEL[id])}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
 
                 <button
                   type="button"

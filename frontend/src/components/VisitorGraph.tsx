@@ -2,6 +2,7 @@ import { Surface } from "~/components/Surface"
 import { UIIcon } from "~/components/UIIcon"
 import { useT } from "~/lib/i18n"
 import { TRAFFIC_METRICS, TrendChart } from "~/components/TrendChart"
+import type { ChartType } from "~/lib/chart-type-preference"
 import { formatDuration, numberShort } from "~/lib/format"
 import { delta, type Interval } from "~/lib/range"
 import type { MetricKey, Overview, SeriesBy } from "~/lib/ch"
@@ -25,6 +26,7 @@ export function VisitorGraph({
   seriesBy,
   interval = "day",
   realtime = false,
+  chartType = "line",
   onZoom,
 }: {
   overview: Overview
@@ -32,6 +34,7 @@ export function VisitorGraph({
   seriesBy: SeriesBy
   interval?: Interval
   realtime?: boolean
+  chartType?: ChartType
   onZoom?: (date: string) => void
 }) {
   const { t, locale } = useT()
@@ -57,8 +60,11 @@ export function VisitorGraph({
         })}
       </dl>
       <div className="trend-section">
-        <div className="analytics-heading"><h3>{t("访问趋势")}</h3></div>
-        <TrendChart series={{visitors: seriesBy.visitors, visits: seriesBy.visits, pageviews: seriesBy.pageviews}} interval={interval} realtime={realtime} onZoom={onZoom} />
+        <div className="analytics-heading">
+          <h3>{t("访问趋势")}</h3>
+          <ul className="traffic-legend" aria-hidden="true">{TRAFFIC_METRICS.map(({key, label}) => <li key={key} data-metric={key}><span className="traffic-series-dot" />{t(label)}</li>)}</ul>
+        </div>
+        <TrendChart series={{visitors: seriesBy.visitors, visits: seriesBy.visits, pageviews: seriesBy.pageviews}} interval={interval} realtime={realtime} type={chartType} onZoom={onZoom} />
       </div>
     </Surface>
   )
