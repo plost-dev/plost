@@ -1,12 +1,12 @@
 import { useT } from "~/lib/i18n"
-import { useState, type KeyboardEvent } from "react"
-import { numberShort } from "~/lib/format"
+import { useState, type CSSProperties, type KeyboardEvent } from "react"
+import { axisScale, formatAxisTick } from "~/lib/axis"
 
 const DAYS = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 export type HeatCell = { dow: number, hour: number, value: number }
 
 export function TrafficHeatmap({ cells }: { cells: HeatCell[] }) {
-  const { t } = useT()
+  const { t, locale } = useT()
   const [selected, setSelected] = useState<{ dow: number, hour: number } | null>(null)
   const [chosenDay, setChosenDay] = useState<number | null>(null)
   const values = new Map(cells.map(cell => [`${cell.dow}-${cell.hour}`, cell.value]))
@@ -14,10 +14,15 @@ export function TrafficHeatmap({ cells }: { cells: HeatCell[] }) {
   const dayTotals = DAYS.map((_, index) => cells.filter(cell => cell.dow === index + 1).reduce((sum, cell) => sum + cell.value, 0))
   const day = chosenDay ?? dayTotals.indexOf(Math.max(...dayTotals)) + 1
   const hours = Array.from({ length: 24 }, (_, hour) => values.get(`${day}-${hour}`) || 0)
-  const hourMax = Math.max(1, ...hours)
   const hasData = hours.some(value => value > 0)
+  // The axis uses the same whole steps as the trend chart (0, 1k), so the top is a round number, not the busiest hour.
+  const scale = axisScale(Math.max(1, ...hours))
+  const gridlines: CSSProperties = {backgroundImage: scale.ticks.slice(1).map(tick => {
+    const at = `${tick / scale.max * 100}%`
+    return `linear-gradient(to top, transparent calc(${at} - 1px), var(--color-gray-100) calc(${at} - 1px), var(--color-gray-100) ${at}, transparent ${at})`
+  }).join(",")}
   const hourLabel = (hour: number) => `${String(hour).padStart(2, "0")}:00`
-  const cellLabel = (dow: number, hour: number) => t("{0} {1} · {2} 访客", {0: t(DAYS[dow - 1]), 1: hourLabel(hour), 2: numberShort(values.get(`${dow}-${hour}`) || 0)})
+  const cellLabel = (dow: number, hour: number) => t("{0} {1} · {2} 访客", {0: t(DAYS[dow - 1]), 1: hourLabel(hour), 2: (values.get(`${dow}-${hour}`) || 0).toLocaleString(locale)})
   function selectCell(dow: number, hour: number) {
     setChosenDay(dow)
     setSelected({ dow, hour })
@@ -64,15 +69,15 @@ export function TrafficHeatmap({ cells }: { cells: HeatCell[] }) {
           </select>
         </div>
         <div className="traffic-scroll"><div className="traffic-hourly-chart" role="group" aria-label={t("{0}每小时访客", {0: t(DAYS[day - 1])})}>
-          <div className="traffic-hourly-axis" aria-hidden="true"><span>{hasData ? numberShort(hourMax) : ""}</span><span>0</span></div>
-          <div className="traffic-hourly-bars">
+          <div className="traffic-hourly-axis" aria-hidden="true">{hasData ? scale.ticks.map(tick => <span key={tick} style={{bottom: `${tick / scale.max * 100}%`}}>{formatAxisTick(tick)}</span>) : null}</div>
+          <div className="traffic-hourly-bars" style={hasData ? gridlines : undefined}>
             {hours.map((value, hour) => <button key={hour} type="button" className="traffic-hourly-slot"
               aria-label={cellLabel(day, hour)} title={cellLabel(day, hour)}
               data-dow={day} data-hour={hour} tabIndex={(selected?.hour ?? 0) === hour ? 0 : -1}
               onKeyDown={event=>moveCell(event,day,hour,true)}
               data-selected={selected?.dow === day && selected.hour === hour}
               onMouseEnter={() => selectCell(day, hour)} onFocus={() => selectCell(day, hour)} onClick={() => selectCell(day, hour)}>
-              <span className="traffic-hourly-bar" style={{height: `${value / hourMax * 100}%`}} />
+              <span className="traffic-hourly-bar" style={{height: `${value / scale.max * 100}%`}} />
             </button>)}
             {!hasData ? <span className="traffic-hourly-empty">{t("暂无数据")}</span> : null}
           </div>

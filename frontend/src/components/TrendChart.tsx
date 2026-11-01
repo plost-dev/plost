@@ -6,6 +6,7 @@ import type { Interval } from "~/lib/range"
 import { INTERVAL_VIEW } from "~/lib/range"
 import type { Point } from "~/lib/ch"
 import type { ChartType } from "~/lib/chart-type-preference"
+import { axisScale, formatAxisTick } from "~/lib/axis"
 
 export type TrafficMetric = "visitors" | "visits" | "pageviews"
 export type TrafficSeries = Record<TrafficMetric, Point[]>
@@ -47,31 +48,10 @@ const TICK = 5 // length of the dash drawn at each value on the left axis
 const LABEL_GAP = 6
 const TOOLTIP_ACTION_CLASS = "squircle min-h-8 rounded-md border border-gray-600 bg-gray-700 px-3 text-xs font-medium text-gray-100 hover:bg-gray-600"
 
-// Values sit on 1, 2 or 5 times a power of ten with at most four steps above zero. From a thousand up the step is a
-// whole number of thousands (and from a million up, of millions), so the axis reads 0, 1k, 2k, 3k instead of 500 and 1500.
-function axisScale(maxValue: number) {
-  const raw = Math.max(maxValue, 1)
-  const steps: number[] = []
-  for (let exp = 0; exp <= 12; exp++) for (const m of [1, 2, 5]) steps.push(m * 10 ** exp)
-  let step = steps.find(candidate => Math.ceil(raw / candidate) <= 4) ?? raw
-  for (const unit of [1000, 1_000_000]) if (Math.ceil(raw / step) * step >= unit && step < unit) step = unit
-  const max = Math.ceil(raw / step) * step
-  const ticks: number[] = []
-  for (let v = 0; v <= max + 1e-6; v += step) ticks.push(Math.round(v))
-  return { max, ticks }
-}
-
 /** A bar with rounded top corners that sits on the baseline. */
 function barPath(x: number, width: number, top: number, bottom: number) {
   const r = Math.min(3, width / 2, bottom - top)
   return `M${x},${bottom}V${top + r}Q${x},${top} ${x + r},${top}H${x + width - r}Q${x + width},${top} ${x + width},${top + r}V${bottom}Z`
-}
-
-function formatAxisTick(value: number) {
-  const n = Math.round(value)
-  if (n >= 1_000_000 && n % 1_000_000 === 0) return `${n / 1_000_000}M`
-  if (n >= 1000 && n % 1000 === 0) return `${n / 1000}k`
-  return String(n)
 }
 
 function axisLabel(date: string, interval: Interval, withYear: boolean, locale: string) {

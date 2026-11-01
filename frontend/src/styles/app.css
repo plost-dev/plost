@@ -904,9 +904,11 @@ html[data-theme="dark"] { --map-ocean: #242630; --map-empty: #3d4151; --map-bord
 .traffic-hourly-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }
 .traffic-hourly-heading h4 { font-size:12px; line-height:20px; font-weight:500; color:var(--color-gray-700); }
 .traffic-hourly-heading select { --sq-r:8px; min-height:28px; padding:2px 8px; border:1px solid var(--color-gray-200); background:var(--surface); font-size:11px; color:var(--color-gray-600); }
-.traffic-hourly-chart { display:grid; grid-template-columns:28px minmax(0,1fr); column-gap:3px; row-gap:6px; }
-.traffic-hourly-axis { display:flex; flex-direction:column; justify-content:space-between; font-size:10px; line-height:1; color:var(--color-gray-400); }
-.traffic-hourly-bars { position:relative; display:grid; grid-template-columns:repeat(24,minmax(0,1fr)); gap:3px; height:78px; border-bottom:1px solid var(--color-gray-200); background:repeating-linear-gradient(to top,transparent 0,transparent calc(50% - 1px),var(--color-gray-100) calc(50% - 1px),var(--color-gray-100) 50%); }
+/* The top value label is centred on the top line; the scroll wrapper clips anything above, so leave it room. */
+.traffic-hourly-chart { display:grid; grid-template-columns:28px minmax(0,1fr); column-gap:3px; row-gap:6px; padding-top:6px; }
+.traffic-hourly-axis { position:relative; font-size:10px; line-height:1; color:var(--color-gray-400); }
+.traffic-hourly-axis > span { position:absolute; right:0; transform:translateY(50%); }
+.traffic-hourly-bars { position:relative; display:grid; grid-template-columns:repeat(24,minmax(0,1fr)); gap:3px; height:78px; border-bottom:1px solid var(--color-gray-200); }
 .traffic-hourly-slot { display:flex; align-items:flex-end; min-width:0; height:100%; border-radius:3px 3px 0 0; }
 .traffic-hourly-bar { display:block; width:100%; border-radius:3px 3px 0 0; background:var(--analytics-accent); opacity:.55; }
 .traffic-hourly-slot:is(:hover,:focus-visible,[data-selected="true"]) { background:var(--analytics-tint); }
