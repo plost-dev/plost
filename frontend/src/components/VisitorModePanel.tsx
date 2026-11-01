@@ -7,8 +7,9 @@ import type { VisitorMode } from "~/lib/visitor-mode-preference"
 import { Tile } from "./ui"
 
 const OPTIONS: ReadonlyArray<{ id: VisitorMode, title: string, detail: string }> = [
-  { id: "persistent", title: "独立访客", detail: "按浏览器里保存的匿名标识计数。同一个浏览器换了 IP 或代理，仍然算一位访客；访问在 30 分钟没有活动后结束。" },
-  { id: "sessions", title: "会话访客", detail: "按 IP 地址、浏览器标识和月份去重，一位访客在同一个小时内算一次访问，与 Umami 的算法一致。换 IP 或代理会重新计数，数字通常更大。" },
+  { id: "plost", title: "Plost 方式（默认）", detail: "本程序自己的算法。访客按浏览器里保存的匿名标识计数，同一个浏览器换了 IP 或代理仍算一位；30 分钟没有活动后算新的一次访问；只看了一页就离开算跳出。" },
+  { id: "umami", title: "Umami 方式", detail: "与 Umami 一致。访客按 IP 地址、浏览器标识和月份去重，换 IP 或代理就多算一位；同一位访客每个小时算一次访问；只看了一页算跳出。数字通常最大。" },
+  { id: "google", title: "Google Analytics 方式", detail: "近似 Google Analytics 4。“用户”按浏览器里的匿名标识计数，不看 IP；30 分钟没有活动后算新的“会话”；跳出率按“未互动的会话”计算：浏览不到 2 页且持续不到 10 秒。没有测量页面停留时间，所以只是近似。" },
 ]
 
 /** One choice for the whole instance: the site list, reports, shared pages and the API all follow it. */
@@ -30,7 +31,7 @@ export function VisitorModePanel({ initial }: { initial: VisitorMode }) {
       setError(err instanceof Error ? err.message : t("保存失败"))
     } finally { setPending(false) }
   }
-  return <Tile icon="user" title={t("访客统计方式")} subtitle={t("决定首页、统计页、分享页和 API 里的“访客”怎么数。随时可以切换，已有数据不会改动。")}>
+  return <Tile icon="user" title={t("访客统计方式")} subtitle={t("决定首页、统计页、分享页和 API 里的访客、访问次数和跳出率怎么数。三种方式用的是同一份数据，随时可以切换对比，已有数据不会改动。")}>
     <fieldset className="visitor-mode-picker" disabled={pending} aria-busy={pending}>
       <legend className="sr-only">{t("访客统计方式")}</legend>
       <div className="visitor-mode-options">
@@ -41,7 +42,7 @@ export function VisitorModePanel({ initial }: { initial: VisitorMode }) {
         </label>)}
       </div>
     </fieldset>
-    <p className="mt-4 text-xs leading-6 text-gray-500">{t("会话访客需要拿到真实的访客 IP：放在反向代理后面时，请用 -trust-proxy 启动并让代理覆盖 X-Forwarded-For，否则所有访客的 IP 相同，数字会偏小。切换之前已经记录的访问没有 IP 信息，仍按浏览器标识计数。")}</p>
+    <p className="mt-4 text-xs leading-6 text-gray-500">{t("Umami 方式需要拿到真实的访客 IP：放在反向代理后面时，请用 -trust-proxy 启动并让代理覆盖 X-Forwarded-For，否则所有访客的 IP 相同，数字会偏小。升级之前已经记录的访问没有 IP 信息，仍按浏览器标识计数。")}</p>
     {error ? <p role="alert" className="mt-3 text-sm text-red-600">{t(error)}</p> : null}
   </Tile>
 }

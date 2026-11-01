@@ -98,18 +98,20 @@ func seedVisitors(t *testing.T, x *testApp, site int64) (from, to time.Time) {
 	t.Helper()
 	ten := time.Date(2026, 11, 1, 10, 0, 0, 0, time.UTC)
 	for _, e := range []struct {
-		at                          time.Duration
-		user, session, hash, region string
+		at                                time.Duration
+		name, user, session, hash, region string
 	}{
-		{5 * time.Minute, "u1", "S1", "s1", "US"},
-		{20 * time.Minute, "u1", "S1", "s1", "US"},
-		{40 * time.Minute, "u1", "S1", "s2", "US"}, // the same browser after changing address
-		{10 * time.Minute, "u2", "S2", "s3", "US"},
-		{90 * time.Minute, "u2", "S3", "s3", "US"}, // returns in the next hour
-		{15 * time.Minute, "u3", "S4", "", "DE"},   // stored before the session hash existed
+		{5 * time.Minute, "pageview", "u1", "S1", "s1", "US"},
+		{20 * time.Minute, "pageview", "u1", "S1", "s1", "US"},
+		{40 * time.Minute, "pageview", "u1", "S1", "s2", "US"}, // the same browser after changing address
+		{10 * time.Minute, "pageview", "u2", "S2", "s3", "US"},
+		// A link click half a minute after landing: engaged for Google, still a single-pageview bounce for the others.
+		{10*time.Minute + 30*time.Second, "Outbound Link: Click", "u2", "S2", "s3", "US"},
+		{90 * time.Minute, "pageview", "u2", "S3", "s3", "US"}, // returns in the next hour
+		{15 * time.Minute, "pageview", "u3", "S4", "", "DE"},   // stored before the session hash existed
 	} {
 		_, err := x.app.db.Exec("INSERT INTO events_v2(site_id,timestamp,name,hostname,pathname,user_id,session_id,session_visitor_id,country_code) VALUES(?,?,?,?,?,?,?,?,?)",
-			site, ten.Add(e.at).Unix(), "pageview", "example.com", "/", e.user, e.session, e.hash, e.region)
+			site, ten.Add(e.at).Unix(), e.name, "example.com", "/", e.user, e.session, e.hash, e.region)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -117,7 +119,7 @@ func seedVisitors(t *testing.T, x *testApp, site int64) (from, to time.Time) {
 	return ten, ten.Add(2 * time.Hour)
 }
 
-func TestVisitorModesCountTheSameEventsTwoWays(t *testing.T) {
+func TestVisitorModesCountTheSameEventsThreeWays(t *testing.T) {
 	x := newTestApp(t)
 	x.setup(t)
 	x.addSite(t, "example.com")
@@ -127,29 +129,31 @@ func TestVisitorModesCountTheSameEventsTwoWays(t *testing.T) {
 	ctx := context.Background()
 	rng := Range{From: from, To: to}
 
-	persistent, err := x.app.overview(ctx, site, rng, nil, modePersistent)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Browsers u1, u2, u3; visits S1..S4; one of three S-visits with a single view is a bounce.
-	if persistent.Visitors != 3 || persistent.Visits != 4 || persistent.Pageviews != 6 || persistent.BounceRate != 75 {
-		t.Errorf("persistent overview: %+v", persistent)
-	}
-	sessions, err := x.app.overview(ctx, site, rng, nil, modeSessions)
-	if err != nil {
-		t.Fatal(err)
-	}
-	// Hashes s1, s2, s3 plus u3 (no hash, falls back to its browser id); visits are (s1,10h) (s2,10h) (s3,10h) (s3,11h) (u3,10h).
-	if sessions.Visitors != 4 || sessions.Visits != 5 || sessions.Pageviews != 6 || sessions.BounceRate != 80 || sessions.Duration != 180 {
-		t.Errorf("session overview: %+v", sessions)
-	}
-	if sessions.Visitors < persistent.Visitors {
-		t.Error("a session visitor can never be fewer than the browsers behind it here")
+	for _, c := range []struct {
+		mode                        visitorMode
+		visitors, visits, pageviews int64
+		bounce, duration            float64
+	}{
+		// Browsers u1, u2, u3; visits S1..S4; S2, S3 and S4 have one pageview each.
+		{modePlost, 3, 4, 6, 75, 525},
+		// Hashes s1, s2, s3 plus u3 (no hash, so its browser id); visits (s1,10h) (s2,10h) (s3,10h) (s3,11h) (u3,10h).
+		{modeUmami, 4, 5, 6, 80, 180},
+		// The same browsers and visits as plost, but S2 is engaged: its click came 30 seconds after the pageview.
+		{modeGoogle, 3, 4, 6, 50, 525},
+	} {
+		o, err := x.app.overview(ctx, site, rng, nil, c.mode)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if o.Visitors != c.visitors || o.Visits != c.visits || o.Pageviews != c.pageviews || o.BounceRate != c.bounce || o.Duration != c.duration {
+			t.Errorf("%s overview: %+v", c.mode, o)
+		}
 	}
 
 	for mode, want := range map[visitorMode][2][2]int64{
-		modePersistent: {{3, 3}, {1, 1}}, // [hour 10: visitors, visits] [hour 11: visitors, visits]
-		modeSessions:   {{4, 4}, {1, 1}},
+		modePlost:  {{3, 3}, {1, 1}}, // [hour 10: visitors, visits] [hour 11: visitors, visits]
+		modeUmami:  {{4, 4}, {1, 1}},
+		modeGoogle: {{3, 3}, {1, 1}},
 	} {
 		points, err := x.app.series(ctx, site, Range{From: from, To: to, Period: "custom"}, url.Values{"interval": {"hour"}}, mode)
 		if err != nil || len(points) != 2 {
@@ -160,11 +164,17 @@ func TestVisitorModesCountTheSameEventsTwoWays(t *testing.T) {
 				t.Errorf("%s hour %d: visitors %d visits %d, want %v", mode, 10+i, points[i].Visitors, points[i].Visits, want[i])
 			}
 		}
+		// The first hour holds S1, S2 and S4 (plost, google) or four visits (umami): bounces are 2/3, 3/4 and 1/3.
+		wantBounce := map[visitorMode]float64{modePlost: 200.0 / 3, modeUmami: 75, modeGoogle: 100.0 / 3}[mode]
+		if d := points[0].BounceRate - wantBounce; d > 0.001 || d < -0.001 {
+			t.Errorf("%s hour 10 bounce: %v, want %v", mode, points[0].BounceRate, wantBounce)
+		}
 	}
 
 	for mode, want := range map[visitorMode]map[string]int64{
-		modePersistent: {"US": 2, "DE": 1},
-		modeSessions:   {"US": 3, "DE": 1},
+		modePlost:  {"US": 2, "DE": 1},
+		modeUmami:  {"US": 3, "DE": 1},
+		modeGoogle: {"US": 2, "DE": 1},
 	} {
 		rows, err := x.app.rows(ctx, site, rng, nil, "country_code", false, false, mode)
 		if err != nil {
@@ -180,7 +190,7 @@ func TestVisitorModesCountTheSameEventsTwoWays(t *testing.T) {
 	}
 
 	// Every event is on "/", so the entry page row is the number of visitors whose visit started there.
-	for mode, want := range map[visitorMode]int64{modePersistent: 3, modeSessions: 4} {
+	for mode, want := range map[visitorMode]int64{modePlost: 3, modeUmami: 4, modeGoogle: 3} {
 		details, err := x.app.reportDetails(ctx, Site{ID: site, Timezone: "UTC"}, rng, nil, mode)
 		if err != nil {
 			t.Fatal(err)
@@ -211,8 +221,8 @@ func TestVisitorModeSettingDrivesEveryReader(t *testing.T) {
 		Mode string `json:"mode"`
 	}
 	json.Unmarshal(x.call(t, "GET", "/api/visitor-mode", nil, 200), &mode)
-	if mode.Mode != "persistent" {
-		t.Fatalf("a new instance keeps the browser-based count, got %q", mode.Mode)
+	if mode.Mode != "plost" {
+		t.Fatalf("a new instance keeps this program's own count, got %q", mode.Mode)
 	}
 	read := func() Report {
 		var report Report
@@ -220,14 +230,16 @@ func TestVisitorModeSettingDrivesEveryReader(t *testing.T) {
 		return report
 	}
 	before := read()
-	if before.VisitorMode != "persistent" || before.Overview.Visitors != 3 {
-		t.Fatalf("persistent report: %q %+v", before.VisitorMode, before.Overview)
+	if before.VisitorMode != "plost" || before.Overview.Visitors != 3 {
+		t.Fatalf("plost report: %q %+v", before.VisitorMode, before.Overview)
 	}
-	x.call(t, "PUT", "/api/visitor-mode", map[string]string{"mode": "weekly"}, 400)
-	x.call(t, "PUT", "/api/visitor-mode", map[string]string{"mode": "sessions"}, 200)
+	for _, invalid := range []string{"weekly", "", "persistent", "sessions"} {
+		x.call(t, "PUT", "/api/visitor-mode", map[string]string{"mode": invalid}, 400)
+	}
+	x.call(t, "PUT", "/api/visitor-mode", map[string]string{"mode": "umami"}, 200)
 	after := read()
-	if after.VisitorMode != "sessions" || after.Overview.Visitors != 4 || after.Overview.Visits != 5 {
-		t.Fatalf("session report: %q %+v", after.VisitorMode, after.Overview)
+	if after.VisitorMode != "umami" || after.Overview.Visitors != 4 || after.Overview.Visits != 5 {
+		t.Fatalf("umami report: %q %+v", after.VisitorMode, after.Overview)
 	}
 	var list []struct {
 		Overview Overview `json:"overview"`
@@ -243,7 +255,7 @@ func TestVisitorModeSettingDrivesEveryReader(t *testing.T) {
 	json.Unmarshal(x.call(t, "POST", "/api/sites/example.com/shares", map[string]string{"name": "Read only"}, 200), &share)
 	var shared Report
 	json.Unmarshal(x.call(t, "GET", "/api/share/"+share.Token+query, nil, 200), &shared)
-	if shared.VisitorMode != "sessions" || shared.Overview.Visitors != 4 {
+	if shared.VisitorMode != "umami" || shared.Overview.Visitors != 4 {
 		t.Errorf("a shared page must show the same count: %q %+v", shared.VisitorMode, shared.Overview)
 	}
 	req, _ := http.NewRequest("GET", x.server.URL+"/api/v1/stats?period=yesterday", nil)
@@ -251,13 +263,30 @@ func TestVisitorModeSettingDrivesEveryReader(t *testing.T) {
 	resp := mustDo(t, x.client, req)
 	body, _ := io.ReadAll(resp.Body)
 	resp.Body.Close()
-	if resp.StatusCode != 200 || !strings.Contains(string(body), `"visitorMode":"sessions"`) {
+	if resp.StatusCode != 200 || !strings.Contains(string(body), `"visitorMode":"umami"`) {
 		t.Errorf("the API must say which count it returns: %d %s", resp.StatusCode, body)
 	}
 
-	x.call(t, "PUT", "/api/visitor-mode", map[string]string{"mode": "persistent"}, 200)
-	if got := read(); got.VisitorMode != "persistent" || got.Overview.Visitors != 3 {
+	x.call(t, "PUT", "/api/visitor-mode", map[string]string{"mode": "google"}, 200)
+	if got := read(); got.VisitorMode != "google" || got.Overview.Visitors != 3 || got.Overview.BounceRate != 50 {
+		t.Errorf("google report: %q %+v", got.VisitorMode, got.Overview)
+	}
+	x.call(t, "PUT", "/api/visitor-mode", map[string]string{"mode": "plost"}, 200)
+	if got := read(); got.VisitorMode != "plost" || got.Overview.Visitors != 3 || got.Overview.BounceRate != 75 {
 		t.Errorf("switching back: %q %+v", got.VisitorMode, got.Overview)
+	}
+}
+
+// An earlier build stored "persistent" and "sessions"; an instance that chose one keeps the same counting.
+func TestStoredLegacyModeNamesKeepTheirMeaning(t *testing.T) {
+	x := newTestApp(t)
+	for stored, want := range map[string]visitorMode{"persistent": modePlost, "sessions": modeUmami, "google": modeGoogle, "umami": modeUmami, "plost": modePlost, "garbage": modePlost} {
+		if _, err := x.app.db.Exec("INSERT INTO settings(key,value) VALUES('visitor_mode',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", stored); err != nil {
+			t.Fatal(err)
+		}
+		if got := x.app.visitorMode(context.Background()); got != want {
+			t.Errorf("stored %q should count as %q, got %q", stored, want, got)
+		}
 	}
 }
 

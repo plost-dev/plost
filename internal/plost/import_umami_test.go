@@ -398,7 +398,7 @@ func TestUmamiImportAppliesAndReconciles(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		o, err := app.overview(context.Background(), site.ID, all, nil, modePersistent)
+		o, err := app.overview(context.Background(), site.ID, all, nil, modePlost)
 		if err != nil {
 			t.Fatal(err)
 		}

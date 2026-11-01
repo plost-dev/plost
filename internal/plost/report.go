@@ -139,7 +139,7 @@ func (a *App) overview(ctx context.Context, site int64, r Range, q url.Values, m
 		return o, err
 	}
 	if o.Visits > 0 {
-		err = a.db.QueryRowContext(ctx, `SELECT COALESCE(100.0*sum(pv=1)/count(*),0),COALESCE(avg(dur),0) FROM (SELECT count(*) AS pv,max(timestamp)-min(timestamp) AS dur FROM events_v2 WHERE `+w+` AND name='pageview' GROUP BY `+mode.visit()+`)`, args...).Scan(&o.BounceRate, &o.Duration)
+		err = a.db.QueryRowContext(ctx, `SELECT COALESCE(100.0*sum(`+mode.bounced()+`)/count(*),0),COALESCE(avg(dur),0) FROM (SELECT `+visitColumns+` FROM events_v2 WHERE `+w+mode.visitScope()+` GROUP BY `+mode.visit()+` HAVING pv>0)`, args...).Scan(&o.BounceRate, &o.Duration)
 		if err != nil {
 			return o, err
 		}
@@ -248,7 +248,7 @@ func (a *App) series(ctx context.Context, site int64, r Range, q url.Values, mod
 	caseSQL += " ELSE -1 END"
 	w, wa := where(site, r, q)
 	args = append(args, wa...)
-	rows, err := a.db.QueryContext(ctx, "SELECT bucket,count(DISTINCT visitor),sum(pv),count(*),100.0*sum(pv=1)/count(*),avg(dur) FROM (SELECT "+caseSQL+" AS bucket,"+mode.visitor()+" AS visitor,"+mode.visit()+" AS visit,count(*) AS pv,max(timestamp)-min(timestamp) AS dur FROM events_v2 WHERE "+w+" AND name='pageview' GROUP BY bucket,visitor,visit) GROUP BY bucket", args...)
+	rows, err := a.db.QueryContext(ctx, "SELECT bucket,count(DISTINCT visitor),sum(pv),count(*),100.0*sum("+mode.bounced()+")/count(*),avg(dur) FROM (SELECT "+caseSQL+" AS bucket,"+mode.visitor()+" AS visitor,"+mode.visit()+" AS visit,"+visitColumns+" FROM events_v2 WHERE "+w+mode.visitScope()+" GROUP BY bucket,visitor,visit HAVING pv>0) GROUP BY bucket", args...)
 	if err != nil {
 		return nil, err
 	}

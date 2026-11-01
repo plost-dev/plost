@@ -5,7 +5,7 @@ import { formatClock, formatDayLong, formatDayShort, formatMonthYYYY } from "~/l
 import type { Interval } from "~/lib/range"
 import { INTERVAL_VIEW } from "~/lib/range"
 import type { Point } from "~/lib/ch"
-import { visitorLabel, type VisitorMode } from "~/lib/visitor-mode-preference"
+import { visitLabel, visitorLabel, type VisitorMode } from "~/lib/visitor-mode-preference"
 
 export type TrafficMetric = "visitors" | "visits" | "pageviews"
 export type TrafficSeries = Record<TrafficMetric, Point[]>
@@ -14,7 +14,7 @@ type HoverPoint = {index: number; x: number; persistent: boolean}
 export const TRAFFIC_KEYS: ReadonlyArray<TrafficMetric> = ["visitors", "visits", "pageviews"]
 export const trafficMetrics = (mode?: VisitorMode): ReadonlyArray<{key: TrafficMetric; label: string}> => [
   {key: "visitors", label: visitorLabel(mode)},
-  {key: "visits", label: "访问次数"},
+  {key: "visits", label: visitLabel(mode)},
   {key: "pageviews", label: "浏览量"},
 ]
 // Each metric keeps the original soft line and fading area treatment.
