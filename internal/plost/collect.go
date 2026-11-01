@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -190,16 +189,7 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	propsJSON, _ := json.Marshal(props)
-	country := ""
-	if a.cfg.TrustProxy {
-		ip, _, _ := net.SplitHostPort(r.RemoteAddr)
-		if p := net.ParseIP(ip); p != nil && p.IsLoopback() {
-			country = strings.ToUpper(r.Header.Get("CF-IPCountry"))
-			if !countryPattern.MatchString(country) {
-				country = ""
-			}
-		}
-	}
+	country := a.requestCountry(r, now)
 	browser, osName, device := parseUA(ua)
 	var width int
 	_ = json.Unmarshal(data["w"], &width)

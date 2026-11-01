@@ -1,0 +1,142 @@
+package plost
+
+import (
+	"errors"
+	"log"
+	"net/http"
+	"net/netip"
+	"os"
+	"strings"
+	"sync/atomic"
+	"time"
+
+	"github.com/oschwald/maxminddb-golang/v2"
+)
+
+// geoCheckEvery is how often the database file is looked at for a newer version. Providers publish a new file
+// every few days, so there is no need to look more often.
+const geoCheckEvery = time.Minute
+
+// geoIP looks up the country of an address in a MaxMind-format database (GeoLite2 City or Country, DB-IP). The file
+// is mapped rather than read, which keeps its tens of megabytes out of the Go heap and its memory limit, and it is
+// opened again when its size or modification time changes. The mapping is released once the previous reader is no
+// longer used. Updaters must replace the file by renaming a new one over it, as they all do; rewriting it in place
+// while it is mapped is not safe.
+type geoIP struct {
+	path      string
+	db        atomic.Pointer[geoDB]
+	failed    atomic.Pointer[fileSig] // the file that last could not be loaded, so it is not retried until it changes
+	checked   atomic.Int64            // unix time of the last look at the file
+	reloading atomic.Bool
+}
+
+type geoDB struct {
+	reader *maxminddb.Reader
+	sig    fileSig
+}
+
+type fileSig struct {
+	size int64
+	mod  time.Time
+}
+
+func sigOf(info os.FileInfo) fileSig { return fileSig{info.Size(), info.ModTime()} }
+
+func openGeoIP(path string) (*geoIP, error) {
+	g := &geoIP{path: path}
+	db, err := g.read()
+	if err != nil {
+		return nil, err
+	}
+	g.db.Store(db)
+	g.checked.Store(time.Now().Unix())
+	return g, nil
+}
+
+func (g *geoIP) read() (*geoDB, error) {
+	info, err := os.Stat(g.path)
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, errors.New("not a regular file")
+	}
+	reader, err := maxminddb.Open(g.path)
+	if err != nil {
+		return nil, err
+	}
+	return &geoDB{reader: reader, sig: sigOf(info)}, nil
+}
+
+// refresh loads the file again when it changed, without holding up the request that noticed. A file that cannot
+// be read, for example one that is still being written, leaves the database in use as it was.
+func (g *geoIP) refresh(now time.Time) {
+	last := g.checked.Load()
+	if now.Unix()-last < int64(geoCheckEvery/time.Second) || !g.checked.CompareAndSwap(last, now.Unix()) {
+		return
+	}
+	info, err := os.Stat(g.path)
+	if err != nil {
+		return
+	}
+	sig := sigOf(info)
+	if failed := g.failed.Load(); sig == g.db.Load().sig || (failed != nil && sig == *failed) || !g.reloading.CompareAndSwap(false, true) {
+		return
+	}
+	go func() {
+		defer g.reloading.Store(false)
+		db, err := g.read()
+		if err != nil {
+			log.Printf("GeoIP database not reloaded: %v", err)
+			g.failed.Store(&sig)
+			return
+		}
+		g.failed.Store(nil)
+		g.db.Store(db)
+	}()
+}
+
+type geoRecord struct {
+	Country struct {
+		ISOCode string `maxminddb:"iso_code"`
+	} `maxminddb:"country"`
+}
+
+// country returns the two-letter country code of a public address, or "" when the database does not know it.
+func (g *geoIP) country(ip netip.Addr, now time.Time) string {
+	g.refresh(now)
+	ip = ip.Unmap()
+	if !ip.IsValid() || !ip.IsGlobalUnicast() || ip.IsPrivate() {
+		return ""
+	}
+	var rec geoRecord
+	if err := g.db.Load().reader.Lookup(ip).Decode(&rec); err != nil {
+		return ""
+	}
+	code := strings.ToUpper(rec.Country.ISOCode)
+	if !countryPattern.MatchString(code) {
+		return ""
+	}
+	return code
+}
+
+// requestCountry names the visitor's country. A Cloudflare header counts when it comes through a proxy on this
+// machine that the program was told to trust; otherwise the address is looked up in the GeoIP database, if one was
+// given with -geoip-db and the address is really the visitor's.
+func (a *App) requestCountry(r *http.Request, now time.Time) string {
+	if a.cfg.TrustProxy {
+		if peer, err := netip.ParseAddrPort(r.RemoteAddr); err == nil && peer.Addr().IsLoopback() {
+			if code := strings.ToUpper(r.Header.Get("CF-IPCountry")); countryPattern.MatchString(code) {
+				return code
+			}
+		}
+	}
+	if a.geo == nil || !a.addressKnown(r) {
+		return ""
+	}
+	ip, err := netip.ParseAddr(a.clientIP(r))
+	if err != nil {
+		return ""
+	}
+	return a.geo.country(ip, now)
+}

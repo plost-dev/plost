@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"net/netip"
 	"net/url"
 	"os"
@@ -22,7 +23,10 @@ type Config struct {
 	DataDir    string
 	Origin     string
 	TrustProxy bool
-	Version    string
+	// GeoIPPath is an optional MaxMind-format database (GeoLite2 City or Country, DB-IP) used to tell the
+	// visitor's country when no Cloudflare header does.
+	GeoIPPath string
+	Version   string
 	// OutboundAllow lists networks that site checks and cloud backups may connect to although they are
 	// normally refused (private, loopback, reserved). It exists for setups such as a local proxy that
 	// answers every name with a fake address, and is only ever set by whoever starts the program.
@@ -41,6 +45,7 @@ type App struct {
 	limits   *limiter
 	closed   sync.Once
 	lockFile *os.File
+	geo      *geoIP
 
 	keyMu         sync.Mutex // Guards the lazily loaded key for stored backup credentials.
 	key           []byte
@@ -79,6 +84,13 @@ func Open(cfg Config) (*App, error) {
 			return nil, errors.New("origin must be an HTTP(S) origin without a path")
 		}
 		cfg.Origin = strings.TrimSuffix(cfg.Origin, "/")
+	}
+	var geo *geoIP
+	if cfg.GeoIPPath != "" {
+		var err error
+		if geo, err = openGeoIP(cfg.GeoIPPath); err != nil {
+			return nil, fmt.Errorf("geoip-db %s: %w", cfg.GeoIPPath, err)
+		}
 	}
 	dir, err := filepath.Abs(cfg.DataDir)
 	if err != nil {
@@ -128,7 +140,7 @@ func Open(cfg Config) (*App, error) {
 		db.Close()
 		return nil, errors.New("invalid visitor secret")
 	}
-	a := &App{cfg: cfg, db: db, secret: key, queue: make(chan *ingest, 1024), stop: make(chan struct{}), limits: newLimiter(), lockFile: lock}
+	a := &App{cfg: cfg, db: db, secret: key, queue: make(chan *ingest, 1024), stop: make(chan struct{}), limits: newLimiter(), lockFile: lock, geo: geo}
 	a.jobCtx, a.cancelJobs = context.WithCancel(context.Background())
 	a.outboundAllow = cfg.OutboundAllow
 	a.siteProbe = newSiteChecker(cfg.OutboundAllow)

@@ -24,6 +24,7 @@ func main() {
 	data := flag.String("data", "./data", "Private data directory")
 	origin := flag.String("origin", "", "Public origin, e.g. https://stats.example.com")
 	proxy := flag.Bool("trust-proxy", false, "Trust a local reverse proxy that overwrites forwarding headers")
+	geoip := flag.String("geoip-db", "", "MaxMind-format database (GeoLite2 City or Country, DB-IP) used to tell visitors' countries when no Cloudflare header does")
 	showVersion := flag.Bool("version", false, "Print version")
 	memory := flag.Int("memory", 64, "Go runtime soft memory limit in MiB (not a total process limit)")
 	allowOutbound := flag.String("allow-outbound", "", "Comma-separated networks that site checks and cloud backups may connect to although they are normally refused, e.g. 198.18.0.0/15 for a local proxy's fake-IP mode")
@@ -46,7 +47,7 @@ func main() {
 		}
 		allow = append(allow, network)
 	}
-	app, err := plost.Open(plost.Config{DataDir: *data, Origin: *origin, TrustProxy: *proxy, Version: version, OutboundAllow: allow})
+	app, err := plost.Open(plost.Config{DataDir: *data, Origin: *origin, TrustProxy: *proxy, GeoIPPath: *geoip, Version: version, OutboundAllow: allow})
 	if err != nil {
 		log.Fatal("Cannot open Plost: ", err)
 	}

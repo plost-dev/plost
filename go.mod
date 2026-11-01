@@ -5,6 +5,8 @@ go 1.27.0
 require (
 	github.com/fxamacker/cbor/v2 v2.9.4
 	github.com/go-webauthn/webauthn v0.18.2
+	github.com/maxmind/mmdbwriter v1.2.0
+	github.com/oschwald/maxminddb-golang/v2 v2.9.0
 	golang.org/x/crypto v0.58.0
 	golang.org/x/net v0.60.0
 	modernc.org/sqlite v1.61.0
@@ -23,6 +25,7 @@ require (
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/tinylib/msgp v1.6.4 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
+	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/text v0.43.0 // indirect
 	modernc.org/libc v1.79.0 // indirect

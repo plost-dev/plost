@@ -34,19 +34,28 @@ func (a *App) sessionVisitorID(site int64, ip, ua string, at time.Time) string {
 // reverse proxy that the program was not started to trust (-trust-proxy), every request arrives from the proxy, so
 // hashing would merge all visitors into one; those events count by browser id instead of collapsing.
 func (a *App) sessionVisitor(r *http.Request, site int64, ua string, at time.Time) string {
-	if !a.cfg.TrustProxy {
-		for _, header := range []string{"X-Forwarded-For", "X-Real-IP", "Forwarded", "CF-Connecting-IP", "True-Client-IP"} {
-			if r.Header.Get(header) != "" {
-				return ""
-			}
-		}
-		peer, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			peer = r.RemoteAddr
-		}
-		if p := net.ParseIP(peer); p != nil && p.IsLoopback() {
-			return ""
-		}
+	if !a.addressKnown(r) {
+		return ""
 	}
 	return a.sessionVisitorID(site, a.clientIP(r), ua, at)
+}
+
+// addressKnown reports whether clientIP is the visitor's own address. Without -trust-proxy that is not the case
+// when proxy headers are present or the request comes from the loopback address, where a reverse proxy on the same
+// machine would be the peer.
+func (a *App) addressKnown(r *http.Request) bool {
+	if a.cfg.TrustProxy {
+		return true
+	}
+	for _, header := range []string{"X-Forwarded-For", "X-Real-IP", "Forwarded", "CF-Connecting-IP", "True-Client-IP"} {
+		if r.Header.Get(header) != "" {
+			return false
+		}
+	}
+	peer, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		peer = r.RemoteAddr
+	}
+	p := net.ParseIP(peer)
+	return p == nil || !p.IsLoopback()
 }
