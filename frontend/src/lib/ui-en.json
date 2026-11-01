@@ -1138,19 +1138,5 @@
   "新密码至少需要 8 个字符（最长 72 字节）": "The new password needs at least 8 characters (at most 72 bytes)",
   "个人资料设置": "Profile settings",
   "如需更改邮箱，请到「安全」页。": "To change your email, go to the Security tab.",
-  "现在是用 IP 地址打开的，浏览器不允许在 IP 地址上创建 Passkey。请改用域名；在本机测试时打开 http://localhost:端口。": "You opened this page by IP address, and browsers do not allow Passkeys on an IP address. Use a domain name, or open http://localhost:port when testing on this machine.",
-  "会话访客": "Session visitors",
-  "访客统计": "Visitor counting",
-  "访客统计方式": "How visitors are counted",
-  "统计方式已保存，所有页面立即按新方式计数。": "Saved. Every page now counts the new way.",
-  "用户": "Users",
-  "会话": "Sessions",
-  "Plost 方式（默认）": "Plost way (default)",
-  "Umami 方式": "Umami way",
-  "Google Analytics 方式": "Google Analytics way",
-  "决定首页、统计页、分享页和 API 里的访客、访问次数和跳出率怎么数。三种方式用的是同一份数据，随时可以切换对比，已有数据不会改动。": "Decides how visitors, visits and the bounce rate are counted on the home page, reports, shared pages and the API. All three work from the same data, so you can switch and compare at any time; stored data is never changed.",
-  "本程序自己的算法。访客按浏览器里保存的匿名标识计数，同一个浏览器换了 IP 或代理仍算一位；30 分钟没有活动后算新的一次访问；只看了一页就离开算跳出。": "This program's own method. Visitors are counted by the anonymous id kept in the browser, so the same browser on a new IP address or proxy is still one visitor. A visit ends after 30 minutes without activity, and leaving after one page is a bounce.",
-  "与 Umami 一致。访客按 IP 地址、浏览器标识和月份去重，换 IP 或代理就多算一位；同一位访客每个小时算一次访问；只看了一页算跳出。数字通常最大。": "The same as Umami. Visitors are counted by IP address, user agent and month, so a new IP address or proxy counts again; one visitor makes one visit per hour; leaving after one page is a bounce. These numbers are usually the largest.",
-  "近似 Google Analytics 4。“用户”按浏览器里的匿名标识计数，不看 IP；30 分钟没有活动后算新的“会话”；跳出率按“未互动的会话”计算：浏览不到 2 页且持续不到 10 秒。没有测量页面停留时间，所以只是近似。": "An approximation of Google Analytics 4. “Users” are counted by the anonymous id kept in the browser, ignoring the IP address; a new “session” starts after 30 minutes without activity; the bounce rate is the share of sessions that were not engaged: fewer than 2 pages and under 10 seconds. Time on page is not measured, so this is only an approximation.",
-  "Umami 方式需要拿到真实的访客 IP：放在反向代理后面时，请用 -trust-proxy 启动并让代理覆盖 X-Forwarded-For，否则所有访客的 IP 相同，数字会偏小。升级之前已经记录的访问没有 IP 信息，仍按浏览器标识计数。": "The Umami way needs the real visitor IP address. Behind a reverse proxy, start with -trust-proxy and let the proxy overwrite X-Forwarded-For; otherwise every visitor shares one address and the number comes out too low. Visits recorded before the upgrade carry no IP information and still count by browser id."
+  "现在是用 IP 地址打开的，浏览器不允许在 IP 地址上创建 Passkey。请改用域名；在本机测试时打开 http://localhost:端口。": "You opened this page by IP address, and browsers do not allow Passkeys on an IP address. Use a domain name, or open http://localhost:port when testing on this machine."
 }

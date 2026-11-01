@@ -14,6 +14,8 @@ import (
 	"time"
 )
 
+const testChrome = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"
+
 func TestSessionVisitorIDIsMonthlySiteScopedAndHidesTheAddress(t *testing.T) {
 	x := newTestApp(t)
 	june := time.Date(2026, 6, 30, 23, 59, 0, 0, time.UTC)
@@ -40,6 +42,42 @@ func TestSessionVisitorIDIsMonthlySiteScopedAndHidesTheAddress(t *testing.T) {
 	}
 }
 
+// post sends one pageview as a tracker would, with the given forwarding header (empty for a direct request).
+func post(t *testing.T, x *testApp, visitor, forwarded string) {
+	t.Helper()
+	b, _ := json.Marshal(map[string]any{"d": "example.com", "u": "https://example.com/", "v": visitor, "n": "pageview"})
+	req, _ := http.NewRequest("POST", x.server.URL+"/api/event", bytes.NewReader(b))
+	req.Header.Set("User-Agent", testChrome)
+	req.Header.Set("Origin", "https://example.com")
+	if forwarded != "" {
+		req.Header.Set("X-Forwarded-For", forwarded)
+	}
+	resp := mustDo(t, x.client, req)
+	io.Copy(io.Discard, resp.Body)
+	resp.Body.Close()
+	if resp.StatusCode != 202 {
+		t.Fatalf("collection returned %d", resp.StatusCode)
+	}
+}
+
+// storedIDs returns the browser id and the session hash of every event, oldest first.
+func storedIDs(t *testing.T, a *App) (user, hash []string) {
+	t.Helper()
+	rows, err := a.db.Query("SELECT user_id,session_visitor_id FROM events_v2 ORDER BY id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var u, h string
+		if err := rows.Scan(&u, &h); err != nil {
+			t.Fatal(err)
+		}
+		user, hash = append(user, u), append(hash, h)
+	}
+	return user, hash
+}
+
 func TestCollectionStoresTheSessionHashNextToTheBrowserId(t *testing.T) {
 	a, err := Open(Config{DataDir: t.TempDir(), Version: "test", TrustProxy: true})
 	if err != nil {
@@ -51,37 +89,10 @@ func TestCollectionStoresTheSessionHashNextToTheBrowserId(t *testing.T) {
 	x := &testApp{a, server, &http.Client{Jar: jar, Timeout: 15 * time.Second}}
 	x.setup(t)
 	x.addSite(t, "example.com")
-	send := func(visitor, ip, agent string) {
-		t.Helper()
-		b, _ := json.Marshal(map[string]any{"d": "example.com", "u": "https://example.com/", "v": visitor, "n": "pageview"})
-		req, _ := http.NewRequest("POST", server.URL+"/api/event", bytes.NewReader(b))
-		req.Header.Set("User-Agent", agent)
-		req.Header.Set("Origin", "https://example.com")
-		req.Header.Set("X-Forwarded-For", ip)
-		resp := mustDo(t, x.client, req)
-		io.Copy(io.Discard, resp.Body)
-		resp.Body.Close()
-		if resp.StatusCode != 202 {
-			t.Fatalf("collection returned %d", resp.StatusCode)
-		}
-	}
-	const chrome = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/130.0.0.0 Safari/537.36"
-	send("browser-aaaaaaaa", "203.0.113.1", chrome)
-	send("browser-aaaaaaaa", "203.0.113.2", chrome) // the same browser on another network
-	send("browser-bbbbbbbb", "203.0.113.1", chrome) // another browser behind the first address
-	rows, err := a.db.Query("SELECT user_id,session_visitor_id FROM events_v2 ORDER BY id")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer rows.Close()
-	var user, hash []string
-	for rows.Next() {
-		var u, h string
-		if err := rows.Scan(&u, &h); err != nil {
-			t.Fatal(err)
-		}
-		user, hash = append(user, u), append(hash, h)
-	}
+	post(t, x, "browser-aaaaaaaa", "203.0.113.1")
+	post(t, x, "browser-aaaaaaaa", "203.0.113.2") // the same browser on another network
+	post(t, x, "browser-bbbbbbbb", "203.0.113.1") // another browser behind the first address
+	user, hash := storedIDs(t, a)
 	if len(user) != 3 || hash[0] == "" || hash[1] == "" || hash[2] == "" {
 		t.Fatalf("every event needs both ids, got %d rows %q", len(user), hash)
 	}
@@ -93,25 +104,44 @@ func TestCollectionStoresTheSessionHashNextToTheBrowserId(t *testing.T) {
 	}
 }
 
-// seed writes events with chosen identities and times, so the expectations do not depend on the clock.
+// Without -trust-proxy, a proxy in front hides every visitor's address. Hashing the proxy's address would merge all
+// visitors into one, so those events keep no hash and count by browser id.
+func TestCollectionDoesNotMergeVisitorsWhoseAddressIsUnknown(t *testing.T) {
+	x := newTestApp(t)
+	x.setup(t)
+	x.addSite(t, "example.com")
+	post(t, x, "browser-aaaaaaaa", "203.0.113.1") // forwarded by a proxy the program was not told to trust
+	post(t, x, "browser-bbbbbbbb", "")            // the test client itself connects from the loopback address
+	_, hash := storedIDs(t, x.app)
+	if len(hash) != 2 || hash[0] != "" || hash[1] != "" {
+		t.Fatalf("events with an unknown address must carry no hash: %q", hash)
+	}
+	var site int64
+	_ = x.app.db.QueryRow("SELECT id FROM sites").Scan(&site)
+	o, err := x.app.overview(context.Background(), site, Range{From: time.Now().Add(-time.Hour), To: time.Now().Add(time.Hour)}, nil)
+	if err != nil || o.Visitors != 2 {
+		t.Errorf("two browsers must stay two visitors: %+v %v", o, err)
+	}
+}
+
+// seedVisitors writes events with chosen identities and times, so the expectations do not depend on the clock.
 func seedVisitors(t *testing.T, x *testApp, site int64) (from, to time.Time) {
 	t.Helper()
 	ten := time.Date(2026, 11, 1, 10, 0, 0, 0, time.UTC)
 	for _, e := range []struct {
-		at                                time.Duration
-		name, user, session, hash, region string
+		at                                 time.Duration
+		name, user, session, hash, country string
 	}{
-		{5 * time.Minute, "pageview", "u1", "S1", "s1", "US"},
-		{20 * time.Minute, "pageview", "u1", "S1", "s1", "US"},
-		{40 * time.Minute, "pageview", "u1", "S1", "s2", "US"}, // the same browser after changing address
-		{10 * time.Minute, "pageview", "u2", "S2", "s3", "US"},
-		// A link click half a minute after landing: engaged for Google, still a single-pageview bounce for the others.
-		{10*time.Minute + 30*time.Second, "Outbound Link: Click", "u2", "S2", "s3", "US"},
-		{90 * time.Minute, "pageview", "u2", "S3", "s3", "US"}, // returns in the next hour
-		{15 * time.Minute, "pageview", "u3", "S4", "", "DE"},   // stored before the session hash existed
+		{5 * time.Minute, "pageview", "u1", "A1", "s1", "US"},
+		{20 * time.Minute, "pageview", "u1", "A1", "s1", "US"},
+		{40 * time.Minute, "pageview", "u1", "A2", "s2", "US"}, // the same browser after changing address: another visitor and visit
+		{10 * time.Minute, "pageview", "u2", "B1", "s3", "US"},
+		{10*time.Minute + 30*time.Second, "Outbound Link: Click", "u2", "B1", "s3", "US"}, // not a pageview
+		{90 * time.Minute, "pageview", "u2", "B2", "s3", "US"},                            // back after more than 30 minutes: a new visit
+		{15 * time.Minute, "pageview", "u3", "C1", "", "DE"},                              // stored before the session hash existed
 	} {
 		_, err := x.app.db.Exec("INSERT INTO events_v2(site_id,timestamp,name,hostname,pathname,user_id,session_id,session_visitor_id,country_code) VALUES(?,?,?,?,?,?,?,?,?)",
-			site, ten.Add(e.at).Unix(), e.name, "example.com", "/", e.user, e.session, e.hash, e.region)
+			site, ten.Add(e.at).Unix(), e.name, "example.com", "/", e.user, e.session, e.hash, e.country)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -119,7 +149,7 @@ func seedVisitors(t *testing.T, x *testApp, site int64) (from, to time.Time) {
 	return ten, ten.Add(2 * time.Hour)
 }
 
-func TestVisitorModesCountTheSameEventsThreeWays(t *testing.T) {
+func TestVisitorsAndVisitsAreCountedLikeUmami(t *testing.T) {
 	x := newTestApp(t)
 	x.setup(t)
 	x.addSite(t, "example.com")
@@ -129,171 +159,140 @@ func TestVisitorModesCountTheSameEventsThreeWays(t *testing.T) {
 	ctx := context.Background()
 	rng := Range{From: from, To: to}
 
-	for _, c := range []struct {
-		mode                        visitorMode
-		visitors, visits, pageviews int64
-		bounce, duration            float64
-	}{
-		// Browsers u1, u2, u3; visits S1..S4; S2, S3 and S4 have one pageview each.
-		{modePlost, 3, 4, 6, 75, 525},
-		// Hashes s1, s2, s3 plus u3 (no hash, so its browser id); visits (s1,10h) (s2,10h) (s3,10h) (s3,11h) (u3,10h).
-		{modeUmami, 4, 5, 6, 80, 180},
-		// The same browsers and visits as plost, but S2 is engaged: its click came 30 seconds after the pageview.
-		{modeGoogle, 3, 4, 6, 50, 525},
-	} {
-		o, err := x.app.overview(ctx, site, rng, nil, c.mode)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if o.Visitors != c.visitors || o.Visits != c.visits || o.Pageviews != c.pageviews || o.BounceRate != c.bounce || o.Duration != c.duration {
-			t.Errorf("%s overview: %+v", c.mode, o)
-		}
+	// Visitors: hashes s1, s2, s3 and u3 (no hash, so its browser id). Visits A1, A2, B1, B2, C1, of which all but A1
+	// have a single pageview. Only A1 has a duration: 15 minutes over five visits.
+	o, err := x.app.overview(ctx, site, rng, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if o.Visitors != 4 || o.Visits != 5 || o.Pageviews != 6 || o.BounceRate != 80 || o.Duration != 180 {
+		t.Errorf("overview: %+v", o)
 	}
 
-	for mode, want := range map[visitorMode][2][2]int64{
-		modePlost:  {{3, 3}, {1, 1}}, // [hour 10: visitors, visits] [hour 11: visitors, visits]
-		modeUmami:  {{4, 4}, {1, 1}},
-		modeGoogle: {{3, 3}, {1, 1}},
-	} {
-		points, err := x.app.series(ctx, site, Range{From: from, To: to, Period: "custom"}, url.Values{"interval": {"hour"}}, mode)
-		if err != nil || len(points) != 2 {
-			t.Fatalf("%s series: %v %d", mode, err, len(points))
-		}
-		for i := range points {
-			if points[i].Visitors != want[i][0] || points[i].Visits != want[i][1] {
-				t.Errorf("%s hour %d: visitors %d visits %d, want %v", mode, 10+i, points[i].Visitors, points[i].Visits, want[i])
-			}
-		}
-		// The first hour holds S1, S2 and S4 (plost, google) or four visits (umami): bounces are 2/3, 3/4 and 1/3.
-		wantBounce := map[visitorMode]float64{modePlost: 200.0 / 3, modeUmami: 75, modeGoogle: 100.0 / 3}[mode]
-		if d := points[0].BounceRate - wantBounce; d > 0.001 || d < -0.001 {
-			t.Errorf("%s hour 10 bounce: %v, want %v", mode, points[0].BounceRate, wantBounce)
+	points, err := x.app.series(ctx, site, Range{From: from, To: to, Period: "custom"}, url.Values{"interval": {"hour"}})
+	if err != nil || len(points) != 2 {
+		t.Fatalf("series: %v %d", err, len(points))
+	}
+	for i, want := range [][2]int64{{4, 4}, {1, 1}} { // [visitors, visits] for the hours starting at 10:00 and 11:00
+		if points[i].Visitors != want[0] || points[i].Visits != want[1] {
+			t.Errorf("hour %d: visitors %d visits %d, want %v", 10+i, points[i].Visitors, points[i].Visits, want)
 		}
 	}
-
-	for mode, want := range map[visitorMode]map[string]int64{
-		modePlost:  {"US": 2, "DE": 1},
-		modeUmami:  {"US": 3, "DE": 1},
-		modeGoogle: {"US": 2, "DE": 1},
-	} {
-		rows, err := x.app.rows(ctx, site, rng, nil, "country_code", false, false, mode)
-		if err != nil {
-			t.Fatal(err)
-		}
-		got := map[string]int64{}
-		for _, r := range rows {
-			got[r.Name] = r.Value
-		}
-		if got["US"] != want["US"] || got["DE"] != want["DE"] {
-			t.Errorf("%s countries: %v, want %v", mode, got, want)
-		}
+	if points[0].BounceRate != 75 {
+		t.Errorf("hour 10 bounce: %v", points[0].BounceRate)
 	}
 
-	// Every event is on "/", so the entry page row is the number of visitors whose visit started there.
-	for mode, want := range map[visitorMode]int64{modePlost: 3, modeUmami: 4, modeGoogle: 3} {
-		details, err := x.app.reportDetails(ctx, Site{ID: site, Timezone: "UTC"}, rng, nil, mode)
-		if err != nil {
-			t.Fatal(err)
-		}
-		entries, _ := details["entryPages"].([]Row)
-		if len(entries) != 1 || entries[0].Value != want {
-			t.Errorf("%s entry pages: %v, want %d visitors", mode, entries, want)
-		}
-		pages, _ := details["pageVisitors"].([]Row)
-		if len(pages) != 1 || pages[0].Value != want {
-			t.Errorf("%s page visitors: %v, want %d", mode, pages, want)
+	rows, err := x.app.rows(ctx, site, rng, nil, "country_code", false, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := map[string]int64{}
+	for _, r := range rows {
+		got[r.Name] = r.Value
+	}
+	if got["US"] != 3 || got["DE"] != 1 {
+		t.Errorf("countries: %v", got)
+	}
+
+	// Every event is on "/", so these rows are the number of visitors.
+	details, err := x.app.reportDetails(ctx, Site{ID: site, Timezone: "UTC"}, rng, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"entryPages", "pageVisitors"} {
+		list, _ := details[key].([]Row)
+		if len(list) != 1 || list[0].Value != 4 {
+			t.Errorf("%s: %v, want 4 visitors", key, list)
 		}
 	}
 }
 
-func TestVisitorModeSettingDrivesEveryReader(t *testing.T) {
+// A visit continues for as long as the same address hash stays active, and ends after 30 minutes without activity.
+func TestAVisitFollowsTheAddressHashAndEndsAfterThirtyMinutes(t *testing.T) {
+	a, err := Open(Config{DataDir: t.TempDir(), Version: "test", TrustProxy: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	server := httptest.NewServer(a.Handler())
+	t.Cleanup(func() { server.Close(); a.Close() })
+	jar, _ := cookiejar.New(nil)
+	x := &testApp{a, server, &http.Client{Jar: jar, Timeout: 15 * time.Second}}
+	x.setup(t)
+	x.addSite(t, "example.com")
+	var site int64
+	_ = a.db.QueryRow("SELECT id FROM sites").Scan(&site)
+	now := time.Now()
+	for _, old := range []struct {
+		ip, session string
+		age         time.Duration
+	}{{"203.0.113.1", "STALE", 31 * time.Minute}, {"203.0.113.2", "ACTIVE", 10 * time.Minute}} {
+		_, err := a.db.Exec("INSERT INTO events_v2(site_id,timestamp,name,hostname,pathname,user_id,session_id,session_visitor_id) VALUES(?,?,?,?,?,?,?,?)",
+			site, now.Add(-old.age).Unix(), "pageview", "example.com", "/", "earlier", old.session, a.sessionVisitorID(site, old.ip, testChrome, now))
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	post(t, x, "browser-aaaaaaaa", "203.0.113.1") // its last visit ended 31 minutes ago
+	post(t, x, "browser-bbbbbbbb", "203.0.113.2") // another browser, but the same address and agent: still in the visit
+	post(t, x, "browser-bbbbbbbb", "203.0.113.9") // the same browser on a new address: a new visit
+	rows, err := a.db.Query("SELECT session_id FROM events_v2 WHERE user_id<>'earlier' ORDER BY id")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var sessions []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		sessions = append(sessions, id)
+	}
+	if len(sessions) != 3 || sessions[0] == "STALE" || sessions[1] != "ACTIVE" || sessions[2] == "ACTIVE" || sessions[2] == sessions[0] {
+		t.Errorf("visits did not follow the address hash: %q", sessions)
+	}
+}
+
+// The site list, the report, shared pages and the stats API all go through the same counting.
+func TestEveryReaderShowsTheSameVisitors(t *testing.T) {
 	x := newTestApp(t)
-	x.call(t, "GET", "/api/visitor-mode", nil, 401)
 	x.setup(t)
 	x.addSite(t, "example.com")
 	var site int64
 	_ = x.app.db.QueryRow("SELECT id FROM sites").Scan(&site)
 	seedVisitors(t, x, site)
-	// The seed lies in the past, so read it back with an explicit range.
-	query := "?period=custom&from=2026-11-01&to=2026-11-01"
 	// The test site is in Tashkent (UTC+5), so its 2026-11-01 holds the whole seed (10:00-12:00 UTC).
-	var mode struct {
-		Mode string `json:"mode"`
-	}
-	json.Unmarshal(x.call(t, "GET", "/api/visitor-mode", nil, 200), &mode)
-	if mode.Mode != "plost" {
-		t.Fatalf("a new instance keeps this program's own count, got %q", mode.Mode)
-	}
-	read := func() Report {
-		var report Report
-		json.Unmarshal(x.call(t, "GET", "/api/sites/example.com/report"+query, nil, 200), &report)
-		return report
-	}
-	before := read()
-	if before.VisitorMode != "plost" || before.Overview.Visitors != 3 {
-		t.Fatalf("plost report: %q %+v", before.VisitorMode, before.Overview)
-	}
-	for _, invalid := range []string{"weekly", "", "persistent", "sessions"} {
-		x.call(t, "PUT", "/api/visitor-mode", map[string]string{"mode": invalid}, 400)
-	}
-	x.call(t, "PUT", "/api/visitor-mode", map[string]string{"mode": "umami"}, 200)
-	after := read()
-	if after.VisitorMode != "umami" || after.Overview.Visitors != 4 || after.Overview.Visits != 5 {
-		t.Fatalf("umami report: %q %+v", after.VisitorMode, after.Overview)
+	query := "?period=custom&from=2026-11-01&to=2026-11-01"
+	var report Report
+	json.Unmarshal(x.call(t, "GET", "/api/sites/example.com/report"+query, nil, 200), &report)
+	if report.Overview.Visitors != 4 || report.Overview.Visits != 5 {
+		t.Fatalf("report: %+v", report.Overview)
 	}
 	var list []struct {
 		Overview Overview `json:"overview"`
 	}
 	json.Unmarshal(x.call(t, "GET", "/api/sites"+query, nil, 200), &list)
-	if len(list) != 1 || list[0].Overview.Visitors != 4 {
-		t.Errorf("the site list must follow the mode too: %+v", list)
+	if len(list) != 1 || list[0].Overview.Visitors != 4 || list[0].Overview.Visits != 5 {
+		t.Errorf("site list: %+v", list)
 	}
-
 	var share struct {
 		Token string `json:"token"`
 	}
 	json.Unmarshal(x.call(t, "POST", "/api/sites/example.com/shares", map[string]string{"name": "Read only"}, 200), &share)
 	var shared Report
 	json.Unmarshal(x.call(t, "GET", "/api/share/"+share.Token+query, nil, 200), &shared)
-	if shared.VisitorMode != "umami" || shared.Overview.Visitors != 4 {
-		t.Errorf("a shared page must show the same count: %q %+v", shared.VisitorMode, shared.Overview)
-	}
-	req, _ := http.NewRequest("GET", x.server.URL+"/api/v1/stats?period=yesterday", nil)
-	req.Header.Set("Authorization", "Bearer "+share.Token)
-	resp := mustDo(t, x.client, req)
-	body, _ := io.ReadAll(resp.Body)
-	resp.Body.Close()
-	if resp.StatusCode != 200 || !strings.Contains(string(body), `"visitorMode":"umami"`) {
-		t.Errorf("the API must say which count it returns: %d %s", resp.StatusCode, body)
-	}
-
-	x.call(t, "PUT", "/api/visitor-mode", map[string]string{"mode": "google"}, 200)
-	if got := read(); got.VisitorMode != "google" || got.Overview.Visitors != 3 || got.Overview.BounceRate != 50 {
-		t.Errorf("google report: %q %+v", got.VisitorMode, got.Overview)
-	}
-	x.call(t, "PUT", "/api/visitor-mode", map[string]string{"mode": "plost"}, 200)
-	if got := read(); got.VisitorMode != "plost" || got.Overview.Visitors != 3 || got.Overview.BounceRate != 75 {
-		t.Errorf("switching back: %q %+v", got.VisitorMode, got.Overview)
-	}
-}
-
-// An earlier build stored "persistent" and "sessions"; an instance that chose one keeps the same counting.
-func TestStoredLegacyModeNamesKeepTheirMeaning(t *testing.T) {
-	x := newTestApp(t)
-	for stored, want := range map[string]visitorMode{"persistent": modePlost, "sessions": modeUmami, "google": modeGoogle, "umami": modeUmami, "plost": modePlost, "garbage": modePlost} {
-		if _, err := x.app.db.Exec("INSERT INTO settings(key,value) VALUES('visitor_mode',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", stored); err != nil {
-			t.Fatal(err)
-		}
-		if got := x.app.visitorMode(context.Background()); got != want {
-			t.Errorf("stored %q should count as %q, got %q", stored, want, got)
-		}
+	if shared.Overview.Visitors != 4 {
+		t.Errorf("shared page: %+v", shared.Overview)
 	}
 }
 
 func TestMigrationAddsTheSessionHashToAnOlderDatabase(t *testing.T) {
 	x := newTestApp(t)
-	if _, err := x.app.db.Exec("ALTER TABLE events_v2 DROP COLUMN session_visitor_id"); err != nil {
-		t.Fatal(err)
+	// A database from before the column has neither the column nor the index that uses it.
+	for _, statement := range []string{"DROP INDEX events_hash_time", "ALTER TABLE events_v2 DROP COLUMN session_visitor_id"} {
+		if _, err := x.app.db.Exec(statement); err != nil {
+			t.Fatal(err)
+		}
 	}
 	if err := migrate(x.app.db); err != nil {
 		t.Fatal(err)
@@ -301,5 +300,8 @@ func TestMigrationAddsTheSessionHashToAnOlderDatabase(t *testing.T) {
 	var n int
 	if err := x.app.db.QueryRow("SELECT count(*) FROM pragma_table_info('events_v2') WHERE name='session_visitor_id'").Scan(&n); err != nil || n != 1 {
 		t.Fatalf("migration did not restore the column: %d %v", n, err)
+	}
+	if err := x.app.db.QueryRow("SELECT count(*) FROM pragma_index_list('events_v2') WHERE name='events_hash_time'").Scan(&n); err != nil || n != 1 {
+		t.Fatalf("migration did not restore the index: %d %v", n, err)
 	}
 }

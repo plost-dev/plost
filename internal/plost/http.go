@@ -138,8 +138,6 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/account", a.api(a.profile, true))
 	mux.HandleFunc("POST /api/account/totp", a.api(a.manageTOTP, true))
 	mux.HandleFunc("GET /api/preferences", a.api(a.preferences, false))
-	mux.HandleFunc("GET /api/visitor-mode", a.api(a.visitorModeSettings, true))
-	mux.HandleFunc("PUT /api/visitor-mode", a.api(a.visitorModeSettings, true))
 	mux.HandleFunc("PUT /api/mapbox", a.api(a.mapboxSettings, true))
 	mux.HandleFunc("GET /api/mapbox", a.api(a.mapboxSettings, true))
 	mux.HandleFunc("PUT /api/map-style", a.api(a.mapStyle, true))
@@ -323,14 +321,13 @@ func (a *App) listSites(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	expiries := a.certificateExpiries(r.Context())
-	mode := a.visitorMode(r.Context())
 	result := []map[string]any{}
 	for _, s := range sites {
 		rng, err := parseRange(r.URL.Query(), s.Timezone)
 		if err != nil {
 			return err
 		}
-		over, err := a.overview(r.Context(), s.ID, rng, nil, mode)
+		over, err := a.overview(r.Context(), s.ID, rng, nil)
 		if err != nil {
 			return err
 		}
@@ -340,12 +337,12 @@ func (a *App) listSites(w http.ResponseWriter, r *http.Request) error {
 		}
 		item := map[string]any{"site": s, "overview": over, "certificateExpiresAt": expiry}
 		if r.URL.Query().Get("ui") == "1" {
-			series, err := a.series(r.Context(), s.ID, rng, nil, mode)
+			series, err := a.series(r.Context(), s.ID, rng, nil)
 			if err != nil {
 				return err
 			}
 			prev := Range{From: rng.From.Add(-rng.To.Sub(rng.From)), To: rng.From}
-			old, err := a.overview(r.Context(), s.ID, prev, nil, mode)
+			old, err := a.overview(r.Context(), s.ID, prev, nil)
 			if err != nil {
 				return err
 			}

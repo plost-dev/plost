@@ -132,7 +132,7 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 	h := hmac.New(sha256.New, a.secret)
 	h.Write([]byte(strconvID(site.ID) + "|" + identity))
 	userID := hex.EncodeToString(h.Sum(nil))
-	sessionVisitor := a.sessionVisitorID(site.ID, a.clientIP(r), ua, now)
+	sessionVisitor := a.sessionVisitor(r, site.ID, ua, now)
 	epoch := a.epoch
 	a.mu.RUnlock()
 	name := first(data, "n", "name")
@@ -311,7 +311,13 @@ func (a *App) persistBatch(batch []*ingest) error {
 		}
 		e := req.event
 		var session string
-		err = tx.QueryRowContext(ctx, "SELECT session_id FROM events_v2 WHERE site_id=? AND user_id=? AND timestamp>=? ORDER BY timestamp DESC,id DESC LIMIT 1", e.SiteID, e.UserID, e.At-1800).Scan(&session)
+		// A visit continues while the same visitor stays active: the visitor is the address hash when the event has one,
+		// otherwise the browser id. A new address starts a new visit, which is what makes it a new visitor.
+		if e.SessionVisitor != "" {
+			err = tx.QueryRowContext(ctx, "SELECT session_id FROM events_v2 WHERE site_id=? AND session_visitor_id=? AND session_visitor_id<>'' AND timestamp>=? ORDER BY timestamp DESC,id DESC LIMIT 1", e.SiteID, e.SessionVisitor, e.At-1800).Scan(&session)
+		} else {
+			err = tx.QueryRowContext(ctx, "SELECT session_id FROM events_v2 WHERE site_id=? AND user_id=? AND timestamp>=? ORDER BY timestamp DESC,id DESC LIMIT 1", e.SiteID, e.UserID, e.At-1800).Scan(&session)
+		}
 		if err != nil && !errors.Is(err, sql.ErrNoRows) {
 			return err
 		}

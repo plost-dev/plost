@@ -238,6 +238,10 @@ func migrate(db *sql.DB) error {
 			}
 		}
 	}
+	// Finding the visit an address hash is still in; only events that have a hash need an entry.
+	if _, err := db.Exec("CREATE INDEX IF NOT EXISTS events_hash_time ON events_v2(site_id,session_visitor_id,timestamp DESC) WHERE session_visitor_id<>''"); err != nil {
+		return err
+	}
 	// Imported history carries the id of its source row, which makes a repeated import a no-op and lets it be rolled back.
 	if _, err := db.Exec("CREATE UNIQUE INDEX IF NOT EXISTS events_source ON events_v2(site_id,source_id) WHERE source_id<>''"); err != nil {
 		return err

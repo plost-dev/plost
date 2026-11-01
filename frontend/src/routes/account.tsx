@@ -6,7 +6,6 @@ import { ApiDocsContent } from "~/components/ApiDocs"
 import { PasskeyPanel } from "~/components/PasskeyPanel"
 import { BackupPanel } from "~/components/BackupPanel"
 import { MapboxSettingsPanel } from "~/components/MapboxSettingsPanel"
-import { VisitorModePanel } from "~/components/VisitorModePanel"
 import { SettingsHeader } from "~/components/SettingsChrome"
 import { SettingsLayout, SettingsNav } from "~/components/SettingsLayout"
 import { Shell } from "~/components/Shell"
@@ -14,7 +13,6 @@ import { UIIcon as TabIcon } from "~/components/UIIcon"
 import { accountSettingsFn } from "~/lib/actions"
 import { useT } from "~/lib/i18n"
 import { mapboxSettingsFn } from "~/lib/mapbox-actions"
-import { visitorModeFn } from "~/lib/visitor-mode-actions"
 
 const ACCOUNT_TABS = [
   { id: "preferences", label: "个人资料" },
@@ -22,7 +20,6 @@ const ACCOUNT_TABS = [
   { id: "api", label: "API" },
 ]
 const SYSTEM_TABS = [
-  { id: "system/visitors", label: "访客统计" },
   { id: "system/mapbox", label: "访客地图" },
   { id: "system/backup", label: "备份与恢复" },
 ]
@@ -45,14 +42,13 @@ export const Route = createFileRoute("/account")({
       throw redirect({ to: "/login" })
     }
     const mapbox = deps.tab === "system/mapbox" ? await mapboxSettingsFn() : null
-    const visitors = deps.tab === "system/visitors" ? await visitorModeFn() : null
-    return { data, mapbox, visitors }
+    return { data, mapbox }
   },
   component: AccountPage,
 })
 
 function AccountPage() {
-  const { data, mapbox, visitors } = Route.useLoaderData()
+  const { data, mapbox } = Route.useLoaderData()
   const { tab } = Route.useSearch()
   const router = useRouter()
   const { t } = useT()
@@ -84,7 +80,6 @@ function AccountPage() {
           {tab === "preferences" ? <><AccountPreferences user={user} onSaved={() => router.invalidate()} /><PasskeyPanel /></> : null}
           {tab === "security" ? <AccountSecurity user={user} onSaved={() => router.invalidate()} /> : null}
           {tab === "api" ? <ApiDocsContent embedded /> : null}
-          {tab === "system/visitors" && visitors ? <VisitorModePanel initial={visitors.mode} /> : null}
           {tab === "system/mapbox" && mapbox ? <MapboxSettingsPanel initial={mapbox} /> : null}
           {tab === "system/backup" ? <BackupPanel /> : null}
         </SettingsLayout>
