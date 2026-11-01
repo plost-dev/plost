@@ -227,7 +227,7 @@ func migrate(db *sql.DB) error {
 	if _, err := db.Exec(schema); err != nil {
 		return err
 	}
-	for _, column := range []struct{ table, name, kind string }{{"users", "avatar", "TEXT NOT NULL DEFAULT ''"}, {"shared_links", "slug", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "source_id", "TEXT NOT NULL DEFAULT ''"}} {
+	for _, column := range []struct{ table, name, kind string }{{"users", "avatar", "TEXT NOT NULL DEFAULT ''"}, {"shared_links", "slug", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "source_id", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "session_visitor_id", "TEXT NOT NULL DEFAULT ''"}} {
 		var n int
 		if err := db.QueryRow("SELECT count(*) FROM pragma_table_info(?) WHERE name=?", column.table, column.name).Scan(&n); err != nil {
 			return err

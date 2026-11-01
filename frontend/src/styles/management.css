@@ -300,3 +300,15 @@ html.dark .api-doc-table td { border-bottom-color:var(--color-gray-700); }
 html.dark .api-doc-table td code { background:var(--color-gray-800); color:var(--color-gray-200); }
 html.dark .tag-optional { background:var(--color-gray-700); color:var(--color-gray-300); }
 html.dark .tag-required { background:#450a0a; color:#fca5a5; }
+
+/* Instance-wide choice of what a visitor is: two cards, the same selection colours as the map style picker. */
+.visitor-mode-picker { min-width:0; margin:0; padding:0; border:0; }
+.visitor-mode-options { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.visitor-mode-option { position:relative; display:flex; flex-direction:column; gap:6px; min-width:0; padding:16px; border:1px solid var(--color-gray-200); background:var(--surface); color:var(--color-gray-700); cursor:pointer; --sq-r:20px; }
+.visitor-mode-option:hover { border-color:var(--color-gray-400); }
+.visitor-mode-option > strong { font-size:14px; line-height:22px; font-weight:600; }
+.visitor-mode-option > span { font-size:13px; line-height:20px; overflow-wrap:anywhere; }
+.visitor-mode-option.is-selected { background:var(--ui-selection-bg); border-color:var(--ui-selection-bg); color:var(--ui-selection-text); }
+.visitor-mode-option:has(input:focus-visible) { outline:2px solid var(--accent-focus); outline-offset:3px; }
+.visitor-mode-picker:disabled .visitor-mode-option { cursor:wait; }
+@media(max-width:639px) { .visitor-mode-options { grid-template-columns:minmax(0,1fr); } }

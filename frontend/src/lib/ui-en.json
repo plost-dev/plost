@@ -1138,5 +1138,13 @@
   "新密码至少需要 8 个字符（最长 72 字节）": "The new password needs at least 8 characters (at most 72 bytes)",
   "个人资料设置": "Profile settings",
   "如需更改邮箱，请到「安全」页。": "To change your email, go to the Security tab.",
-  "现在是用 IP 地址打开的，浏览器不允许在 IP 地址上创建 Passkey。请改用域名；在本机测试时打开 http://localhost:端口。": "You opened this page by IP address, and browsers do not allow Passkeys on an IP address. Use a domain name, or open http://localhost:port when testing on this machine."
+  "现在是用 IP 地址打开的，浏览器不允许在 IP 地址上创建 Passkey。请改用域名；在本机测试时打开 http://localhost:端口。": "You opened this page by IP address, and browsers do not allow Passkeys on an IP address. Use a domain name, or open http://localhost:port when testing on this machine.",
+  "会话访客": "Session visitors",
+  "访客统计": "Visitor counting",
+  "访客统计方式": "How visitors are counted",
+  "决定首页、统计页、分享页和 API 里的“访客”怎么数。随时可以切换，已有数据不会改动。": "Decides how “visitors” are counted on the home page, reports, shared pages and the API. You can switch at any time; stored data is never changed.",
+  "按浏览器里保存的匿名标识计数。同一个浏览器换了 IP 或代理，仍然算一位访客；访问在 30 分钟没有活动后结束。": "Counted by the anonymous id kept in the visitor's browser. The same browser on a new IP address or proxy is still one visitor, and a visit ends after 30 minutes without activity.",
+  "按 IP 地址、浏览器标识和月份去重，一位访客在同一个小时内算一次访问，与 Umami 的算法一致。换 IP 或代理会重新计数，数字通常更大。": "Counted by IP address, user agent and month, with one visit per visitor per hour, the same way Umami does it. Changing IP address or proxy counts again, so numbers are usually higher.",
+  "统计方式已保存，所有页面立即按新方式计数。": "Saved. Every page now counts the new way.",
+  "会话访客需要拿到真实的访客 IP：放在反向代理后面时，请用 -trust-proxy 启动并让代理覆盖 X-Forwarded-For，否则所有访客的 IP 相同，数字会偏小。切换之前已经记录的访问没有 IP 信息，仍按浏览器标识计数。": "Session visitors need the real visitor IP address. Behind a reverse proxy, start with -trust-proxy and let the proxy overwrite X-Forwarded-For; otherwise every visitor shares one address and the number comes out too low. Visits recorded before the switch carry no IP information and still count by browser id."
 }

@@ -18,9 +18,9 @@ import (
 )
 
 type Event struct {
-	SiteID                                                                                                                                                     int64
-	At                                                                                                                                                         int64
-	Name, Hostname, Path, Source, Referrer, UserID, SessionID, Country, Browser, OS, Device, Language, Screen, Title, UTMSource, UTMMedium, UTMCampaign, Props string
+	SiteID                                                                                                                                                                     int64
+	At                                                                                                                                                                         int64
+	Name, Hostname, Path, Source, Referrer, UserID, SessionID, SessionVisitor, Country, Browser, OS, Device, Language, Screen, Title, UTMSource, UTMMedium, UTMCampaign, Props string
 }
 type ingest struct {
 	event Event
@@ -132,6 +132,7 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 	h := hmac.New(sha256.New, a.secret)
 	h.Write([]byte(strconvID(site.ID) + "|" + identity))
 	userID := hex.EncodeToString(h.Sum(nil))
+	sessionVisitor := a.sessionVisitorID(site.ID, a.clientIP(r), ua, now)
 	epoch := a.epoch
 	a.mu.RUnlock()
 	name := first(data, "n", "name")
@@ -219,7 +220,7 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 	if pathname == "" {
 		pathname = "/"
 	}
-	ev := Event{SiteID: site.ID, At: now.Unix(), Name: name, Hostname: canonicalHost(u.Hostname()), Path: short(pathname, 2048), Source: source, Referrer: short(ref, 2048), UserID: userID, Country: country, Browser: browser, OS: osName, Device: device, Language: short(first(data, "l", "language"), 64), Screen: screen, Title: short(first(data, "t", "title"), 500), UTMSource: short(q.Get("utm_source"), 200), UTMMedium: short(q.Get("utm_medium"), 200), UTMCampaign: short(q.Get("utm_campaign"), 200), Props: string(propsJSON)}
+	ev := Event{SiteID: site.ID, At: now.Unix(), Name: name, Hostname: canonicalHost(u.Hostname()), Path: short(pathname, 2048), Source: source, Referrer: short(ref, 2048), UserID: userID, SessionVisitor: sessionVisitor, Country: country, Browser: browser, OS: osName, Device: device, Language: short(first(data, "l", "language"), 64), Screen: screen, Title: short(first(data, "t", "title"), 500), UTMSource: short(q.Get("utm_source"), 200), UTMMedium: short(q.Get("utm_medium"), 200), UTMCampaign: short(q.Get("utm_campaign"), 200), Props: string(propsJSON)}
 	req := &ingest{event: ev, done: make(chan error, 1), epoch: epoch}
 	select {
 	case <-a.stop:
@@ -299,7 +300,7 @@ func (a *App) persistBatch(batch []*ingest) error {
 		return err
 	}
 	defer tx.Rollback()
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO events_v2(site_id,timestamp,name,hostname,pathname,referrer_source,referrer,user_id,session_id,country_code,browser,os,device,language,screen,title,utm_source,utm_medium,utm_campaign,props) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO events_v2(site_id,timestamp,name,hostname,pathname,referrer_source,referrer,user_id,session_id,session_visitor_id,country_code,browser,os,device,language,screen,title,utm_source,utm_medium,utm_campaign,props) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
 	if err != nil {
 		return err
 	}
@@ -317,7 +318,7 @@ func (a *App) persistBatch(batch []*ingest) error {
 		if session == "" {
 			session = randomHex(16)
 		}
-		_, err = stmt.ExecContext(ctx, e.SiteID, e.At, e.Name, e.Hostname, e.Path, e.Source, e.Referrer, e.UserID, session, e.Country, e.Browser, e.OS, e.Device, e.Language, e.Screen, e.Title, e.UTMSource, e.UTMMedium, e.UTMCampaign, e.Props)
+		_, err = stmt.ExecContext(ctx, e.SiteID, e.At, e.Name, e.Hostname, e.Path, e.Source, e.Referrer, e.UserID, session, e.SessionVisitor, e.Country, e.Browser, e.OS, e.Device, e.Language, e.Screen, e.Title, e.UTMSource, e.UTMMedium, e.UTMCampaign, e.Props)
 		if err != nil {
 			return err
 		}

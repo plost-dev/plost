@@ -133,14 +133,14 @@ func (a *App) groupRows(ctx context.Context, site int64, rng Range, q url.Values
 	return result, rows.Err()
 }
 
-func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Values) (map[string]any, error) {
+func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Values, mode visitorMode) (map[string]any, error) {
 	result := map[string]any{"mapboxToken": a.setting(ctx, "mapbox_public_token", "")}
 	if a.setting(ctx, "mapbox_enabled", "true") != "true" {
 		result["mapboxToken"] = ""
 	}
 	channel := `CASE WHEN referrer_source IN ('','Direct') THEN 'direct' WHEN referrer_source IN ('google.com','bing.com','baidu.com','duckduckgo.com','yahoo.com','yandex.com','yandex.ru','search.brave.com','ecosia.org','sogou.com','so.com') THEN 'organic_search' WHEN referrer_source IN ('twitter.com','x.com','t.co','facebook.com','instagram.com','reddit.com','weibo.com','youtube.com','bsky.app','threads.net','tiktok.com') THEN 'organic_social' WHEN referrer_source IN ('chatgpt.com','chat.openai.com','perplexity.ai','claude.ai','gemini.google.com','copilot.microsoft.com','grok.com','deepseek.com','chat.deepseek.com') THEN 'ai' ELSE 'referral' END`
 	w0, a0 := where(site.ID, rng, q)
-	channelRows, err := a.db.QueryContext(ctx, "SELECT "+channel+",count(DISTINCT user_id) AS n FROM events_v2 WHERE "+w0+" AND name='pageview' GROUP BY 1 ORDER BY n DESC,1", a0...)
+	channelRows, err := a.db.QueryContext(ctx, "SELECT "+channel+",count(DISTINCT "+mode.visitor()+") AS n FROM events_v2 WHERE "+w0+" AND name='pageview' GROUP BY 1 ORDER BY n DESC,1", a0...)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +173,7 @@ func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Val
 	}
 	w, args := where(site.ID, rng, q)
 	for _, dim := range []struct{ key, column string }{{"pageVisitors", "pathname"}, {"titles", "title"}, {"hostnames", "hostname"}} {
-		rows, err := a.db.QueryContext(ctx, "SELECT "+dim.column+",count(DISTINCT user_id) AS n FROM events_v2 WHERE "+w+" AND name='pageview' AND "+dim.column+"<>'' GROUP BY 1 ORDER BY n DESC,1 LIMIT 200", args...)
+		rows, err := a.db.QueryContext(ctx, "SELECT "+dim.column+",count(DISTINCT "+mode.visitor()+") AS n FROM events_v2 WHERE "+w+" AND name='pageview' AND "+dim.column+"<>'' GROUP BY 1 ORDER BY n DESC,1 LIMIT 200", args...)
 		if err != nil {
 			return nil, err
 		}
@@ -219,7 +219,7 @@ func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Val
 			order = "DESC"
 			key = "exitPages"
 		}
-		rows, err := a.db.QueryContext(ctx, "SELECT pathname,count(DISTINCT user_id) AS n FROM (SELECT pathname,user_id,row_number() OVER (PARTITION BY session_id ORDER BY timestamp "+order+",id "+order+") AS rn FROM events_v2 WHERE "+w+" AND name='pageview') WHERE rn=1 GROUP BY pathname ORDER BY n DESC,pathname LIMIT 200", args...)
+		rows, err := a.db.QueryContext(ctx, "SELECT pathname,count(DISTINCT visitor) AS n FROM (SELECT pathname,"+mode.visitor()+" AS visitor,row_number() OVER (PARTITION BY "+mode.visit()+" ORDER BY timestamp "+order+",id "+order+") AS rn FROM events_v2 WHERE "+w+" AND name='pageview') WHERE rn=1 GROUP BY pathname ORDER BY n DESC,pathname LIMIT 200", args...)
 		if err != nil {
 			return nil, err
 		}
@@ -240,7 +240,7 @@ func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Val
 		result[key] = list
 	}
 	heatArgs := append([]any{site.Timezone}, args...)
-	rows, err := a.db.QueryContext(ctx, "SELECT plost_local_hour(timestamp,?) AS slot,count(DISTINCT user_id) FROM events_v2 WHERE "+w+" AND name='pageview' GROUP BY slot", heatArgs...)
+	rows, err := a.db.QueryContext(ctx, "SELECT plost_local_hour(timestamp,?) AS slot,count(DISTINCT "+mode.visitor()+") FROM events_v2 WHERE "+w+" AND name='pageview' GROUP BY slot", heatArgs...)
 	if err != nil {
 		return nil, err
 	}

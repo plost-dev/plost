@@ -1,19 +1,21 @@
 import { Surface } from "~/components/Surface"
 import { UIIcon } from "~/components/UIIcon"
 import { useT } from "~/lib/i18n"
-import { TRAFFIC_METRICS, TrendChart } from "~/components/TrendChart"
+import { TRAFFIC_KEYS, trafficMetrics, TrendChart } from "~/components/TrendChart"
+import type { VisitorMode } from "~/lib/visitor-mode-preference"
 import { formatDuration, numberShort } from "~/lib/format"
 import { delta, type Interval } from "~/lib/range"
 import type { MetricKey, Overview, SeriesBy } from "~/lib/ch"
 import "~/styles/traffic-overview.css"
 
-const SUMMARY_METRICS: ReadonlyArray<{
+type SummaryMetric = {
   key: MetricKey
   label: string
   format?: (value: number) => string
   invertChange?: boolean
-}> = [
-  ...TRAFFIC_METRICS,
+}
+const summaryMetrics = (mode?: VisitorMode): ReadonlyArray<SummaryMetric> => [
+  ...trafficMetrics(mode),
   {key: "views_per_visit", label: "每次访问浏览量", format: value => value.toFixed(2)},
   {key: "bounce_rate", label: "跳出率", format: value => `${Math.round(value * 10) / 10}%`, invertChange: true},
   {key: "visit_duration", label: "访问时长", format: formatDuration},
@@ -25,6 +27,7 @@ export function VisitorGraph({
   seriesBy,
   interval = "day",
   realtime = false,
+  visitorMode,
   onZoom,
 }: {
   overview: Overview
@@ -32,18 +35,19 @@ export function VisitorGraph({
   seriesBy: SeriesBy
   interval?: Interval
   realtime?: boolean
+  visitorMode?: VisitorMode
   onZoom?: (date: string) => void
 }) {
   const { t, locale } = useT()
   return (
     <Surface className="visitor-graph traffic-overview analytics-panel col-span-full">
       <dl className="metric-grid traffic-summary">
-        {SUMMARY_METRICS.map(({ key, label, format, invertChange }) => {
+        {summaryMetrics(visitorMode).map(({ key, label, format, invertChange }) => {
           const value = overview[key]
           const change = delta(value, compare[key])
           const improved = change && (invertChange ? change.diff < 0 : change.diff > 0)
           const text = format ? format(value) : numberShort(value)
-          const plotted = TRAFFIC_METRICS.some(metric => metric.key === key)
+          const plotted = TRAFFIC_KEYS.some(metric => metric === key)
           return <div key={key} className="metric-item traffic-summary-item" data-metric={key}>
             <dt className="traffic-summary-label">{plotted ? <span className="traffic-series-dot" aria-hidden="true" /> : null}{t(label)}</dt>
             <dd className="metric-value-row traffic-summary-values">
@@ -58,7 +62,7 @@ export function VisitorGraph({
       </dl>
       <div className="trend-section">
         <div className="analytics-heading"><h3>{t("访问趋势")}</h3></div>
-        <TrendChart series={{visitors: seriesBy.visitors, visits: seriesBy.visits, pageviews: seriesBy.pageviews}} interval={interval} realtime={realtime} onZoom={onZoom} />
+        <TrendChart series={{visitors: seriesBy.visitors, visits: seriesBy.visits, pageviews: seriesBy.pageviews}} interval={interval} realtime={realtime} visitorMode={visitorMode} onZoom={onZoom} />
       </div>
     </Surface>
   )

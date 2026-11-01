@@ -1,1 +1,0 @@
-import{M as e}from"./index-DAWTF8Z4.js";var t=e;export{t as component};

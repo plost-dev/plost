@@ -441,7 +441,7 @@ func TestTimezoneAndDSTBoundaries(t *testing.T) {
 	x.addSite(t, "example.com")
 	var id int64
 	_ = x.app.db.QueryRow("SELECT id FROM sites LIMIT 1").Scan(&id)
-	points, err := x.app.series(context.Background(), id, Range{From: from, To: to, Period: "yesterday"}, nil)
+	points, err := x.app.series(context.Background(), id, Range{From: from, To: to, Period: "yesterday"}, nil, modePersistent)
 	if err != nil || len(points) != 23 {
 		t.Fatal("DST day buckets incorrect")
 	}

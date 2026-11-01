@@ -40,22 +40,23 @@ type Point struct {
 	Duration   float64 `json:"duration"`
 }
 type Report struct {
-	Site      Site           `json:"site"`
-	Range     Range          `json:"range"`
-	Overview  Overview       `json:"overview"`
-	Previous  Overview       `json:"previous"`
-	Series    []Point        `json:"series"`
-	Sources   []Row          `json:"sources"`
-	Pages     []Row          `json:"pages"`
-	Countries []Row          `json:"countries"`
-	Browsers  []Row          `json:"browsers"`
-	OS        []Row          `json:"os"`
-	Devices   []Row          `json:"devices"`
-	Languages []Row          `json:"languages"`
-	Screens   []Row          `json:"screens"`
-	Events    []Row          `json:"events"`
-	Readonly  bool           `json:"readonly"`
-	Details   map[string]any `json:"details,omitempty"`
+	Site        Site           `json:"site"`
+	Range       Range          `json:"range"`
+	Overview    Overview       `json:"overview"`
+	Previous    Overview       `json:"previous"`
+	Series      []Point        `json:"series"`
+	Sources     []Row          `json:"sources"`
+	Pages       []Row          `json:"pages"`
+	Countries   []Row          `json:"countries"`
+	Browsers    []Row          `json:"browsers"`
+	OS          []Row          `json:"os"`
+	Devices     []Row          `json:"devices"`
+	Languages   []Row          `json:"languages"`
+	Screens     []Row          `json:"screens"`
+	Events      []Row          `json:"events"`
+	VisitorMode string         `json:"visitorMode"`
+	Readonly    bool           `json:"readonly"`
+	Details     map[string]any `json:"details,omitempty"`
 }
 
 func parseRange(q url.Values, zone string) (Range, error) {
@@ -130,32 +131,32 @@ func where(site int64, r Range, q url.Values) (string, []any) {
 	return w, args
 }
 
-func (a *App) overview(ctx context.Context, site int64, r Range, q url.Values) (Overview, error) {
+func (a *App) overview(ctx context.Context, site int64, r Range, q url.Values, mode visitorMode) (Overview, error) {
 	w, args := where(site, r, q)
 	var o Overview
-	err := a.db.QueryRowContext(ctx, "SELECT count(DISTINCT user_id),count(DISTINCT session_id),count(*) FROM events_v2 WHERE "+w+" AND name='pageview'", args...).Scan(&o.Visitors, &o.Visits, &o.Pageviews)
+	err := a.db.QueryRowContext(ctx, "SELECT count(DISTINCT "+mode.visitor()+"),count(DISTINCT "+mode.visit()+"),count(*) FROM events_v2 WHERE "+w+" AND name='pageview'", args...).Scan(&o.Visitors, &o.Visits, &o.Pageviews)
 	if err != nil {
 		return o, err
 	}
 	if o.Visits > 0 {
-		err = a.db.QueryRowContext(ctx, `SELECT COALESCE(100.0*sum(pv=1)/count(*),0),COALESCE(avg(dur),0) FROM (SELECT count(*) AS pv,max(timestamp)-min(timestamp) AS dur FROM events_v2 WHERE `+w+` AND name='pageview' GROUP BY session_id)`, args...).Scan(&o.BounceRate, &o.Duration)
+		err = a.db.QueryRowContext(ctx, `SELECT COALESCE(100.0*sum(pv=1)/count(*),0),COALESCE(avg(dur),0) FROM (SELECT count(*) AS pv,max(timestamp)-min(timestamp) AS dur FROM events_v2 WHERE `+w+` AND name='pageview' GROUP BY `+mode.visit()+`)`, args...).Scan(&o.BounceRate, &o.Duration)
 		if err != nil {
 			return o, err
 		}
 	}
 	live := Range{From: time.Now().Add(-5 * time.Minute), To: time.Now().Add(time.Second)}
 	lw, la := where(site, live, q)
-	err = a.db.QueryRowContext(ctx, "SELECT count(DISTINCT user_id) FROM events_v2 WHERE "+lw, la...).Scan(&o.Online)
+	err = a.db.QueryRowContext(ctx, "SELECT count(DISTINCT "+mode.visitor()+") FROM events_v2 WHERE "+lw, la...).Scan(&o.Online)
 	return o, err
 }
 
-func (a *App) rows(ctx context.Context, site int64, r Range, q url.Values, column string, pageviews bool, events bool) ([]Row, error) {
+func (a *App) rows(ctx context.Context, site int64, r Range, q url.Values, column string, pageviews bool, events bool, mode visitorMode) ([]Row, error) {
 	allowed := map[string]bool{"referrer_source": true, "pathname": true, "country_code": true, "browser": true, "os": true, "device": true, "language": true, "screen": true, "name": true}
 	if !allowed[column] {
 		return nil, fmt.Errorf("invalid dimension")
 	}
 	w, args := where(site, r, q)
-	metric := "count(DISTINCT user_id)"
+	metric := "count(DISTINCT " + mode.visitor() + ")"
 	if pageviews || events {
 		metric = "count(*)"
 	}
@@ -180,7 +181,7 @@ func (a *App) rows(ctx context.Context, site int64, r Range, q url.Values, colum
 	return result, rows.Err()
 }
 
-func (a *App) series(ctx context.Context, site int64, r Range, q url.Values) ([]Point, error) {
+func (a *App) series(ctx context.Context, site int64, r Range, q url.Values, mode visitorMode) ([]Point, error) {
 	start := r.From
 	if r.Period == "all" {
 		var earliest sql.NullInt64
@@ -247,7 +248,7 @@ func (a *App) series(ctx context.Context, site int64, r Range, q url.Values) ([]
 	caseSQL += " ELSE -1 END"
 	w, wa := where(site, r, q)
 	args = append(args, wa...)
-	rows, err := a.db.QueryContext(ctx, "SELECT bucket,count(DISTINCT user_id),sum(pv),count(*),100.0*sum(pv=1)/count(*),avg(dur) FROM (SELECT "+caseSQL+" AS bucket,user_id,session_id,count(*) AS pv,max(timestamp)-min(timestamp) AS dur FROM events_v2 WHERE "+w+" AND name='pageview' GROUP BY bucket,user_id,session_id) GROUP BY bucket", args...)
+	rows, err := a.db.QueryContext(ctx, "SELECT bucket,count(DISTINCT visitor),sum(pv),count(*),100.0*sum(pv=1)/count(*),avg(dur) FROM (SELECT "+caseSQL+" AS bucket,"+mode.visitor()+" AS visitor,"+mode.visit()+" AS visit,count(*) AS pv,max(timestamp)-min(timestamp) AS dur FROM events_v2 WHERE "+w+" AND name='pageview' GROUP BY bucket,visitor,visit) GROUP BY bucket", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -277,8 +278,9 @@ func (a *App) report(r *http.Request, site Site, readonly bool) (Report, error) 
 	if err != nil {
 		return Report{}, err
 	}
-	result := Report{Site: site, Range: rng, Readonly: readonly}
-	result.Overview, err = a.overview(r.Context(), site.ID, rng, q)
+	mode := a.visitorMode(r.Context())
+	result := Report{Site: site, Range: rng, Readonly: readonly, VisitorMode: string(mode)}
+	result.Overview, err = a.overview(r.Context(), site.ID, rng, q, mode)
 	if err != nil {
 		return result, err
 	}
@@ -288,12 +290,12 @@ func (a *App) report(r *http.Request, site Site, readonly bool) (Report, error) 
 		if rng.Period == "yesterday" {
 			prev.From = rng.From.AddDate(0, 0, -1)
 		}
-		result.Previous, err = a.overview(r.Context(), site.ID, prev, q)
+		result.Previous, err = a.overview(r.Context(), site.ID, prev, q, mode)
 		if err != nil {
 			return result, err
 		}
 	}
-	result.Series, err = a.series(r.Context(), site.ID, rng, q)
+	result.Series, err = a.series(r.Context(), site.ID, rng, q, mode)
 	if err != nil {
 		return result, err
 	}
@@ -304,13 +306,13 @@ func (a *App) report(r *http.Request, site Site, readonly bool) (Report, error) 
 	}{
 		{"referrer_source", &result.Sources, false, false}, {"pathname", &result.Pages, true, false}, {"country_code", &result.Countries, false, false}, {"browser", &result.Browsers, false, false}, {"os", &result.OS, false, false}, {"device", &result.Devices, false, false}, {"language", &result.Languages, false, false}, {"screen", &result.Screens, false, false}, {"name", &result.Events, false, true},
 	} {
-		*v.out, err = a.rows(r.Context(), site.ID, rng, q, v.col, v.pv, v.events)
+		*v.out, err = a.rows(r.Context(), site.ID, rng, q, v.col, v.pv, v.events, mode)
 		if err != nil {
 			return result, err
 		}
 	}
 	if q.Get("ui") == "1" {
-		result.Details, err = a.reportDetails(r.Context(), site, rng, q)
+		result.Details, err = a.reportDetails(r.Context(), site, rng, q, mode)
 		if err != nil {
 			return result, err
 		}
@@ -405,11 +407,12 @@ func (a *App) statsAPI(w http.ResponseWriter, r *http.Request) error {
 	}
 	today, _ := parseRange(url.Values{"period": {"today"}}, s.Timezone)
 	yesterday, _ := parseRange(url.Values{"period": {"yesterday"}}, s.Timezone)
-	t, err := a.overview(r.Context(), s.ID, today, nil)
+	mode := a.visitorMode(r.Context())
+	t, err := a.overview(r.Context(), s.ID, today, nil, mode)
 	if err != nil {
 		return err
 	}
-	y, err := a.overview(r.Context(), s.ID, yesterday, nil)
+	y, err := a.overview(r.Context(), s.ID, yesterday, nil, mode)
 	if err != nil {
 		return err
 	}
@@ -424,7 +427,7 @@ func (a *App) statsAPI(w http.ResponseWriter, r *http.Request) error {
 	case "yesterday":
 		data = yesterdayData
 	}
-	return jsonResponse(w, map[string]any{"apiVersion": "1", "site": map[string]string{"domain": s.Domain, "timezone": s.Timezone}, "period": period, "generatedAt": time.Now().UTC().Format(time.RFC3339), "onlineWindowSeconds": 300, "data": data})
+	return jsonResponse(w, map[string]any{"apiVersion": "1", "site": map[string]string{"domain": s.Domain, "timezone": s.Timezone}, "period": period, "generatedAt": time.Now().UTC().Format(time.RFC3339), "onlineWindowSeconds": 300, "visitorMode": string(mode), "data": data})
 }
 
 func (a *App) exportCSV(w http.ResponseWriter, r *http.Request) error {

@@ -5,13 +5,15 @@ import { formatClock, formatDayLong, formatDayShort, formatMonthYYYY } from "~/l
 import type { Interval } from "~/lib/range"
 import { INTERVAL_VIEW } from "~/lib/range"
 import type { Point } from "~/lib/ch"
+import { visitorLabel, type VisitorMode } from "~/lib/visitor-mode-preference"
 
 export type TrafficMetric = "visitors" | "visits" | "pageviews"
 export type TrafficSeries = Record<TrafficMetric, Point[]>
 type TrafficPoint = {date: string; values: Record<TrafficMetric, number>}
 type HoverPoint = {index: number; x: number; persistent: boolean}
-export const TRAFFIC_METRICS: ReadonlyArray<{key: TrafficMetric; label: string}> = [
-  {key: "visitors", label: "独立访客"},
+export const TRAFFIC_KEYS: ReadonlyArray<TrafficMetric> = ["visitors", "visits", "pageviews"]
+export const trafficMetrics = (mode?: VisitorMode): ReadonlyArray<{key: TrafficMetric; label: string}> => [
+  {key: "visitors", label: visitorLabel(mode)},
   {key: "visits", label: "访问次数"},
   {key: "pageviews", label: "浏览量"},
 ]
@@ -79,14 +81,17 @@ export function TrendChart({
   series,
   interval = "day",
   realtime = false,
+  visitorMode,
   onZoom,
 }: {
   series: TrafficSeries
   interval?: Interval
   realtime?: boolean
+  visitorMode?: VisitorMode
   onZoom?: (date: string) => void
 }) {
   const { t, locale } = useT()
+  const metrics = useMemo(() => trafficMetrics(visitorMode), [visitorMode])
   const gradientId = useId()
   const box = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(320)
@@ -96,8 +101,8 @@ export function TrendChart({
   const pointerIndex = useRef<number | null>(null)
   const dismissedIndex = useRef<number | null>(null)
   const points = useMemo<TrafficPoint[]>(() => {
-    const dates = [...new Set(TRAFFIC_METRICS.flatMap(({key}) => series[key].map(point => point.date)))].sort()
-    const values = Object.fromEntries(TRAFFIC_METRICS.map(({key}) => [key, new Map(series[key].map(point => [point.date, point.value]))])) as Record<TrafficMetric, Map<string, number>>
+    const dates = [...new Set(TRAFFIC_KEYS.flatMap(key => series[key].map(point => point.date)))].sort()
+    const values = Object.fromEntries(TRAFFIC_KEYS.map(key => [key, new Map(series[key].map(point => [point.date, point.value]))])) as Record<TrafficMetric, Map<string, number>>
     return dates.map(date => ({date, values: {
       visitors: values.visitors.get(date) ?? 0,
       visits: values.visits.get(date) ?? 0,
@@ -147,10 +152,10 @@ export function TrendChart({
 
   const withYear = new Set(points.map((p) => p.date.slice(0, 4))).size > 1
   const canZoom = (interval === "day" || interval === "month") && points.length > 1 && !!onZoom
-  const label = TRAFFIC_METRICS.map(metric => t(metric.label)).join(" / ")
+  const label = metrics.map(metric => t(metric.label)).join(" / ")
 
   const layout = useMemo(() => {
-    const scale = integerScale(Math.max(0, ...points.flatMap(point => TRAFFIC_METRICS.map(({key}) => point.values[key]))))
+    const scale = integerScale(Math.max(0, ...points.flatMap(point => TRAFFIC_KEYS.map(key => point.values[key]))))
     const yMax = scale.max
     const yTickVals = scale.ticks
     // Keep the original axis inset, chart height, tick typography and date spacing.
@@ -250,7 +255,7 @@ export function TrendChart({
       {points.length === 0 ? <p className="flex h-full items-center justify-center text-sm font-medium text-gray-500">{t("暂无数据")}</p> : (
         <svg role="img" aria-label={label} width="100%" height={HEIGHT} viewBox={`0 0 ${width} ${HEIGHT}`} className="overflow-visible">
           <defs>
-            {TRAFFIC_METRICS.map(({key}) => <linearGradient key={key} id={`${gradientId}-${key}`} x1="0" x2="0" y1="0" y2="1">
+            {TRAFFIC_KEYS.map(key => <linearGradient key={key} id={`${gradientId}-${key}`} x1="0" x2="0" y1="0" y2="1">
               <stop offset="0%" stopColor={`var(--traffic-${key})`} stopOpacity="0.14" />
               <stop offset="100%" stopColor={`var(--traffic-${key})`} stopOpacity="0.01" />
             </linearGradient>)}
@@ -284,7 +289,7 @@ export function TrendChart({
           onContextMenu={event => event.stopPropagation()}>
           <aside className="flex flex-col gap-2 text-sm font-normal text-gray-100">
             <div className="traffic-tooltip-date">{tooltipLabel(selected.date, interval, withYear, hover.index, points.length, realtime, locale)}</div>
-            <dl className="traffic-tooltip-metrics">{TRAFFIC_METRICS.map(({key, label}) => <div key={key} data-metric={key}>
+            <dl className="traffic-tooltip-metrics">{metrics.map(({key, label}) => <div key={key} data-metric={key}>
               <dt><span className="traffic-series-dot" aria-hidden="true" />{t(label)}</dt>
               <dd>{selected.values[key].toLocaleString(locale)}</dd>
             </div>)}</dl>
