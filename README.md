@@ -59,7 +59,7 @@ go build -trimpath -ldflags='-s -w' -o plost ./cmd/plost
 <script defer data-domain="example.com" src="https://stats.example.com/script.js"></script>
 ```
 
-后台的网站设置会自动生成实际地址。保留 `/js/script.js`、`/tracker.js`、`window.plost`、`window.litestats` 和 `litestats:visitor-id` 兼容。追踪脚本支持 SPA 页面切换、外链和文件下载事件。
+后台的网站设置会自动生成实际地址。保留 `/js/script.js`、`/tracker.js`、`window.plost`、`window.litestats` 和 `litestats:visitor-id` 兼容。追踪脚本支持 SPA 页面切换、外链和文件下载事件。每个事件带一个随机编号；发往 `/api/event` 的请求在浏览器里失败（被拦截插件或网络拒绝）时，脚本会把同一事件改发到 `/e`，先用图片请求，再用 Beacon，服务器按编号只保留第一份，不会重复计数。重发到达的事件在 `events_v2.via` 里记为 `img` 或 `beacon`，可用来估计有多少事件靠重发才收到。反向代理需要把 `/e` 和 `/api/event` 一起转发给 Plost；指定了 `data-api` 时，重发也走那个地址。
 
 采集会检查页面域名与站点匹配；浏览器跨域采集不携带 Cookie。匿名访客 ID 保存在被统计网站的 localStorage，服务器只保存按站点生成的 HMAC 摘要。原始 IP 不写入统计；为了按访客去重，每个事件另存一个按站点、IP、浏览器标识和 UTC 月份生成的 HMAC 摘要，换月即不同，无法还原 IP，也无法跨月追踪同一人。页面只保存路径和单独的 UTM 字段，不保存整段查询参数；自定义事件属性由调用方负责避免发送敏感内容。不宣称“不使用 Cookie 就自动免除所有同意要求”。
 

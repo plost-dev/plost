@@ -13,13 +13,14 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 )
 
 type Event struct {
-	SiteID                                                                                                                                                                     int64
-	At                                                                                                                                                                         int64
-	Name, Hostname, Path, Source, Referrer, UserID, SessionID, SessionVisitor, Country, Browser, OS, Device, Language, Screen, Title, UTMSource, UTMMedium, UTMCampaign, Props string
+	SiteID                                                                                                                                                                          int64
+	At                                                                                                                                                                              int64
+	Name, Hostname, Path, Source, Referrer, UserID, SessionID, SessionVisitor, Country, Browser, OS, Device, Language, Screen, Title, UTMSource, UTMMedium, UTMCampaign, Props, Via string
 }
 type ingest struct {
 	event Event
@@ -31,6 +32,65 @@ var visitorPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{8,64}$`)
 var screenPattern = regexp.MustCompile(`^[0-9]{1,5}x[0-9]{1,5}$`)
 var countryPattern = regexp.MustCompile(`^[A-Z]{2}$`)
 var botPattern = regexp.MustCompile(`(?i)bot\b|spider|crawler|headless|lighthouse|facebookexternalhit|preview|monitor|uptime`)
+var eventIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{8,40}$`)
+
+// When the tracker's normal request fails (a content blocker or a broken network refuses it), it sends the same
+// event again to /e, first as an image and then as a Beacon, and says which with "x". The value is stored with the
+// event so the share of events that only arrived that way can be counted; anything else counts as the normal way.
+var retryTransports = map[string]bool{"img": true, "beacon": true}
+
+// pixel is the 1×1 transparent GIF returned to image requests, so the tracker can tell a delivered event (load) from a
+// refused one (error) and only then try a Beacon.
+var pixel = []byte("GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\x00\x00\x00!\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00\x00\x02\x02D\x01\x00;")
+
+// accepted answers a stored or quietly ignored event: 202 for the tracker's requests, the pixel for an image request.
+func accepted(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		w.Header().Set("Content-Type", "image/gif")
+		w.WriteHeader(200)
+		_, _ = w.Write(pixel)
+		return
+	}
+	w.WriteHeader(202)
+}
+
+// recentEvents remembers the ids of events stored in the last quarter of an hour, so a retry of an event that did
+// arrive (the tracker cannot always tell) is not stored twice.
+type recentEvents struct {
+	mu   sync.Mutex
+	seen map[string]int64
+}
+
+const recentEventTTL = 15 * 60
+
+func newRecentEvents() *recentEvents { return &recentEvents{seen: make(map[string]int64)} }
+
+// claim reserves an id and reports whether it was free. A claim that does not end in a stored event is released.
+func (r *recentEvents) claim(key string, now int64) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if at, ok := r.seen[key]; ok && now-at < recentEventTTL {
+		return false
+	}
+	if len(r.seen) >= 200_000 {
+		for k, at := range r.seen {
+			if now-at >= recentEventTTL {
+				delete(r.seen, k)
+			}
+		}
+		if len(r.seen) >= 200_000 {
+			return true // too busy to remember; storing a rare duplicate beats losing the event
+		}
+	}
+	r.seen[key] = now
+	return true
+}
+
+func (r *recentEvents) release(key string) {
+	r.mu.Lock()
+	delete(r.seen, key)
+	r.mu.Unlock()
+}
 
 func short(s string, max int) string {
 	if len(s) > max {
@@ -63,11 +123,21 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(204)
 		return
 	}
-	r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
-	b, err := io.ReadAll(r.Body)
-	if err != nil {
-		writeError(w, failure(413, "请求过大"))
-		return
+	var b []byte
+	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		// An image request carries the event in the query string instead of a body.
+		b = []byte(r.URL.Query().Get("p"))
+		if len(b) > 16<<10 {
+			writeError(w, failure(413, "请求过大"))
+			return
+		}
+	} else {
+		r.Body = http.MaxBytesReader(w, r.Body, 64<<10)
+		var err error
+		if b, err = io.ReadAll(r.Body); err != nil {
+			writeError(w, failure(413, "请求过大"))
+			return
+		}
 	}
 	var data map[string]json.RawMessage
 	if json.Unmarshal(b, &data) != nil {
@@ -76,7 +146,7 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 	}
 	ua := r.UserAgent()
 	if botPattern.MatchString(ua) {
-		w.WriteHeader(202)
+		accepted(w, r)
 		return
 	}
 	u, err := url.Parse(first(data, "u", "url"))
@@ -90,13 +160,13 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 	}
 	domain, err = normalizeDomain(domain)
 	if err != nil || canonicalHost(u.Hostname()) != domain {
-		w.WriteHeader(202)
+		accepted(w, r)
 		return
 	}
 	if o := r.Header.Get("Origin"); o != "" {
 		origin, err := url.Parse(o)
 		if err != nil || canonicalHost(origin.Hostname()) != domain || (origin.Scheme != "http" && origin.Scheme != "https") {
-			w.WriteHeader(202)
+			accepted(w, r)
 			return
 		}
 	}
@@ -109,7 +179,7 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 		if !errors.Is(err, sql.ErrNoRows) {
 			writeError(w, err)
 		} else {
-			w.WriteHeader(202)
+			accepted(w, r)
 		}
 		return
 	}
@@ -211,9 +281,27 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 		pathname = "/"
 	}
 	ev := Event{SiteID: site.ID, At: now.Unix(), Name: name, Hostname: canonicalHost(u.Hostname()), Path: short(pathname, 2048), Source: source, Referrer: short(ref, 2048), UserID: userID, SessionVisitor: sessionVisitor, Country: country, Browser: browser, OS: osName, Device: device, Language: short(first(data, "l", "language"), 64), Screen: screen, Title: short(first(data, "t", "title"), 500), UTMSource: short(q.Get("utm_source"), 200), UTMMedium: short(q.Get("utm_medium"), 200), UTMCampaign: short(q.Get("utm_campaign"), 200), Props: string(propsJSON)}
+	if via := first(data, "x"); retryTransports[via] {
+		ev.Via = via
+	}
+	// An event that carries an id is stored once, however many of the tracker's retries reach us.
+	claimed := ""
+	if id := first(data, "i"); eventIDPattern.MatchString(id) {
+		claimed = strconvID(site.ID) + ":" + id
+		if !a.recent.claim(claimed, now.Unix()) {
+			accepted(w, r)
+			return
+		}
+	}
+	release := func() {
+		if claimed != "" {
+			a.recent.release(claimed)
+		}
+	}
 	req := &ingest{event: ev, done: make(chan error, 1), epoch: epoch}
 	select {
 	case <-a.stop:
+		release()
 		writeError(w, failure(503, "服务正在关闭"))
 		return
 	default:
@@ -221,6 +309,7 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 	select {
 	case a.queue <- req:
 	default:
+		release()
 		w.Header().Set("Retry-After", "1")
 		w.WriteHeader(503)
 		_ = jsonResponse(w, map[string]string{"error": "event_buffer_full"})
@@ -229,11 +318,13 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 	select {
 	case err := <-req.done:
 		if err != nil {
+			release()
 			writeError(w, err)
 			return
 		}
-		w.WriteHeader(202)
+		accepted(w, r)
 	case <-ctx.Done():
+		// The worker may still store it, so the id stays claimed.
 		writeError(w, failure(503, "采集超时"))
 	}
 }
@@ -290,7 +381,7 @@ func (a *App) persistBatch(batch []*ingest) error {
 		return err
 	}
 	defer tx.Rollback()
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO events_v2(site_id,timestamp,name,hostname,pathname,referrer_source,referrer,user_id,session_id,session_visitor_id,country_code,browser,os,device,language,screen,title,utm_source,utm_medium,utm_campaign,props) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO events_v2(site_id,timestamp,name,hostname,pathname,referrer_source,referrer,user_id,session_id,session_visitor_id,country_code,browser,os,device,language,screen,title,utm_source,utm_medium,utm_campaign,props,via) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
 	if err != nil {
 		return err
 	}
@@ -314,7 +405,7 @@ func (a *App) persistBatch(batch []*ingest) error {
 		if session == "" {
 			session = randomHex(16)
 		}
-		_, err = stmt.ExecContext(ctx, e.SiteID, e.At, e.Name, e.Hostname, e.Path, e.Source, e.Referrer, e.UserID, session, e.SessionVisitor, e.Country, e.Browser, e.OS, e.Device, e.Language, e.Screen, e.Title, e.UTMSource, e.UTMMedium, e.UTMCampaign, e.Props)
+		_, err = stmt.ExecContext(ctx, e.SiteID, e.At, e.Name, e.Hostname, e.Path, e.Source, e.Referrer, e.UserID, session, e.SessionVisitor, e.Country, e.Browser, e.OS, e.Device, e.Language, e.Screen, e.Title, e.UTMSource, e.UTMMedium, e.UTMCampaign, e.Props, e.Via)
 		if err != nil {
 			return err
 		}

@@ -46,6 +46,7 @@ type App struct {
 	closed   sync.Once
 	lockFile *os.File
 	geo      *geoIP
+	recent   *recentEvents
 
 	keyMu         sync.Mutex // Guards the lazily loaded key for stored backup credentials.
 	key           []byte
@@ -140,7 +141,7 @@ func Open(cfg Config) (*App, error) {
 		db.Close()
 		return nil, errors.New("invalid visitor secret")
 	}
-	a := &App{cfg: cfg, db: db, secret: key, queue: make(chan *ingest, 1024), stop: make(chan struct{}), limits: newLimiter(), lockFile: lock, geo: geo}
+	a := &App{cfg: cfg, db: db, secret: key, queue: make(chan *ingest, 1024), stop: make(chan struct{}), limits: newLimiter(), lockFile: lock, geo: geo, recent: newRecentEvents()}
 	a.jobCtx, a.cancelJobs = context.WithCancel(context.Background())
 	a.outboundAllow = cfg.OutboundAllow
 	a.siteProbe = newSiteChecker(cfg.OutboundAllow)
@@ -239,7 +240,7 @@ func migrate(db *sql.DB) error {
 	if _, err := db.Exec(schema); err != nil {
 		return err
 	}
-	for _, column := range []struct{ table, name, kind string }{{"users", "avatar", "TEXT NOT NULL DEFAULT ''"}, {"shared_links", "slug", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "source_id", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "session_visitor_id", "TEXT NOT NULL DEFAULT ''"}} {
+	for _, column := range []struct{ table, name, kind string }{{"users", "avatar", "TEXT NOT NULL DEFAULT ''"}, {"shared_links", "slug", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "source_id", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "session_visitor_id", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "via", "TEXT NOT NULL DEFAULT ''"}} {
 		var n int
 		if err := db.QueryRow("SELECT count(*) FROM pragma_table_info(?) WHERE name=?", column.table, column.name).Scan(&n); err != nil {
 			return err

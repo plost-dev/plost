@@ -160,6 +160,10 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("GET /api/export/{domain}", a.api(a.exportCSV, true))
 	mux.HandleFunc("POST /api/event", a.collect)
 	mux.HandleFunc("OPTIONS /api/event", a.collect)
+	// The tracker's second address, used only when a request to /api/event fails: an image (GET) or a Beacon (POST).
+	mux.HandleFunc("GET /e", a.collect)
+	mux.HandleFunc("POST /e", a.collect)
+	mux.HandleFunc("OPTIONS /e", a.collect)
 	mux.HandleFunc("GET /api/backup/settings", a.api(a.backupSettingsGet, true))
 	mux.HandleFunc("PUT /api/backup/settings", a.api(a.backupSettingsPut, true))
 	mux.HandleFunc("POST /api/backup/cloud/test", a.apiOpen(a.cloudTest, 30*time.Second))
@@ -202,7 +206,7 @@ func (a *App) Handler() http.Handler {
 				return
 			}
 		}
-		if r.URL.Path != "/api/event" {
+		if r.URL.Path != "/api/event" && r.URL.Path != "/e" {
 			w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://favicon.la https://*.favicon.la; font-src 'self'; connect-src 'self' https://api.mapbox.com https://*.tiles.mapbox.com https://events.mapbox.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
 			if r.Method != "GET" && r.Method != "HEAD" && r.Method != "OPTIONS" {
 				origin := a.cfg.Origin

@@ -2,8 +2,12 @@
   const s = document.currentScript;
   if (!s || !s.src) return;
   const domain = s.getAttribute("data-domain");
-  let endpoint;
-  try { endpoint = new URL(s.getAttribute("data-api") || "/api/event", s.src).href; } catch (e) { return; }
+  let endpoint, retryEndpoint;
+  try {
+    endpoint = new URL(s.getAttribute("data-api") || "/api/event", s.src).href;
+    // A custom data-api (a proxy on the site itself) is used for retries too, since /e may not exist there.
+    retryEndpoint = new URL(s.getAttribute("data-api") || "/e", s.src).href;
+  } catch (e) { return; }
   const installed = window.__litestatsTrackers || (window.__litestatsTrackers = Object.create(null));
   const trackerKey = JSON.stringify([endpoint, domain]);
   if (installed[trackerKey]) return;
@@ -22,31 +26,47 @@
   })();
   let pageKey = "";
   const entryReferrer = document.referrer;
-  function beacon(body) {
-    try { if (navigator.sendBeacon) navigator.sendBeacon(endpoint, new Blob([body], { type: "text/plain;charset=UTF-8" })); } catch (e) {}
+  function beacon(data, url) {
+    try { return !!navigator.sendBeacon && navigator.sendBeacon(url, new Blob([JSON.stringify(data)], { type: "text/plain;charset=UTF-8" })); } catch (e) { return false; }
   }
-  function deliver(body, attempt) {
-    if (typeof fetch !== "function") { beacon(body); return; }
+  // When the request to /api/event fails before any answer (a content blocker or a broken network refused it), the
+  // event goes again to the second address as an image, and if that is refused too, as a Beacon. Each retry says how it
+  // travelled ("x"), and the server keeps only the first copy of an event id ("i"), so nothing is counted twice.
+  function retry(data) {
+    const viaBeacon = function () { beacon(Object.assign({}, data, { x: "beacon" }), retryEndpoint); };
+    try {
+      const copy = Object.assign({}, data, { x: "img" });
+      let query = JSON.stringify(copy);
+      if (query.length > 6000) { copy.t = ""; copy.r = String(copy.r || "").slice(0, 500); copy.u = String(copy.u).slice(0, 2000); query = JSON.stringify(copy); }
+      const img = new Image();
+      img.onerror = viaBeacon;
+      img.src = retryEndpoint + (retryEndpoint.indexOf("?") < 0 ? "?" : "&") + "p=" + encodeURIComponent(query);
+    } catch (e) { viaBeacon(); }
+  }
+  function deliver(data, attempt) {
+    const body = JSON.stringify(data);
+    if (typeof fetch !== "function") { if (!beacon(data, endpoint)) retry(data); return; }
     try {
       fetch(endpoint, { method: "POST", body, headers: { "Content-Type": "text/plain;charset=UTF-8" }, credentials: "omit", keepalive: true }).then(function (response) {
         // Only this explicit rejection guarantees that the event was not queued.
-        // Network failures, generic 5xx responses and queued Beacons are ambiguous.
+        // Generic 5xx responses are ambiguous and are not repeated.
         if (response.status !== 503 || attempt >= 2) return;
         return response.json().then(function (result) {
-          if (result && result.error === "event_buffer_full") window.setTimeout(function () { deliver(body, attempt + 1); }, (attempt + 1) * 1000);
+          if (result && result.error === "event_buffer_full") window.setTimeout(function () { deliver(data, attempt + 1); }, (attempt + 1) * 1000);
         });
-      }).catch(function () {});
-    } catch (e) { beacon(body); }
+      }, function () { retry(data); }).catch(function () {});
+    } catch (e) { if (!beacon(data, endpoint)) retry(data); }
   }
   function send(payload) {
     if (document.prerendering) return;
     try {
-      const body = JSON.stringify(Object.assign({
+      const data = Object.assign({
         n: "pageview", d: domain, u: location.href, r: entryReferrer, w: innerWidth,
         v: visitor || undefined, t: document.title || "", l: navigator.language || "",
-        s: (screen.width && screen.height) ? (screen.width + "x" + screen.height) : ""
-      }, payload || {}));
-      deliver(body, 0);
+        s: (screen.width && screen.height) ? (screen.width + "x" + screen.height) : "",
+        i: Date.now().toString(36) + Math.random().toString(36).slice(2, 10)
+      }, payload || {});
+      deliver(data, 0);
     } catch (e) {}
   }
   function pageview(force) {
