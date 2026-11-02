@@ -1,6 +1,11 @@
 (() => {
   const s = document.currentScript;
   if (!s || !s.src) return;
+  // A browser driven by automation (Selenium, Puppeteer, Playwright) says so here; people's browsers never do.
+  if (navigator.webdriver) {
+    if (!window.plost) window.plost = window.litestats = { track: function () {} };
+    return;
+  }
   const domain = s.getAttribute("data-domain");
   // Events go out exactly as Umami's tracker sends them: a JSON POST to /api/send. Some content blockers refuse
   // requests shaped like other analytics tools but let Umami's through. A custom data-api (a proxy on the site itself)
@@ -78,8 +83,11 @@
       deliver(data, 0);
     } catch (e) {}
   }
+  // Pages count once they have finished loading, as Umami counts them: someone who closes the tab before that has
+  // not seen the page. Navigation inside the page before then is folded into that first pageview.
+  let ready = false;
   function pageview(force) {
-    if (document.prerendering) return;
+    if (!ready || document.prerendering) return;
     const url = location.href;
     const key = url.split("#")[0];
     if (!force && key === pageKey) return;
@@ -87,11 +95,17 @@
     send({ u: url });
   }
   function start() {
+    if (ready || document.readyState !== "complete") return;
+    ready = true;
     pageview();
     if (document.documentElement && /404|not found/i.test(document.title)) send({ n: "404", p: { path: location.pathname } });
   }
-  if (document.prerendering) document.addEventListener("prerenderingchange", start, { once: true });
-  else start();
+  function begin() {
+    if (document.readyState === "complete") start();
+    else document.addEventListener("readystatechange", start);
+  }
+  if (document.prerendering) document.addEventListener("prerenderingchange", begin, { once: true });
+  else begin();
   ["pushState", "replaceState"].forEach(function (name) {
     const original = history[name];
     history[name] = function () { const result = original.apply(this, arguments); pageview(); return result; };

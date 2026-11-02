@@ -31,7 +31,21 @@ type ingest struct {
 var visitorPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{8,64}$`)
 var screenPattern = regexp.MustCompile(`^[0-9]{1,5}x[0-9]{1,5}$`)
 var countryPattern = regexp.MustCompile(`^[A-Z]{2}$`)
-var botPattern = regexp.MustCompile(`(?i)bot\b|spider|crawler|headless|lighthouse|facebookexternalhit|preview|monitor|uptime`)
+
+// botPattern names crawlers, link previews, monitors and scripted clients. Most crawlers never run the tracker at all;
+// this catches the ones that do and say who they are. Browsers driven by automation that pose as Chrome are left
+// out by the tracker itself (navigator.webdriver).
+var botPattern = regexp.MustCompile(`(?i)bot\b|spider|crawl|headless|lighthouse|pagespeed|gtmetrix|facebookexternalhit|facebookcatalog|meta-externalagent|preview|monitor|uptime|pingdom|statuscake|site24x7|slurp|bingpreview|yandex(?:bot|images|metrika)|baiduspider|bytespider|petalbot|semrush|ahrefs|mj12|dotbot|ia_archiver|archive\.org|gptbot|chatgpt-user|claudebot|anthropic-ai|perplexity|ccbot|amazonbot|cohere-ai|applebot|duckduckbot|googleother|google-inspectiontool|feedfetcher|embedly|whatsapp/|telegrambot|discordbot|slack-imgproxy|skypeuripreview|validator|scanner|python-requests|python-urllib|aiohttp|httpx|curl/|wget/|go-http-client|okhttp|java/|libwww|httpclient|axios/|node-fetch|undici|scrapy|phantomjs|puppeteer|playwright|selenium`)
+
+// isBot reports whether a request comes from a client that should not count as a visitor. A request without a user
+// agent never comes from a browser. "CUBOT" is a phone maker whose model names would otherwise read as "…bot".
+func isBot(ua string) bool {
+	if strings.TrimSpace(ua) == "" {
+		return true
+	}
+	return botPattern.MatchString(strings.ReplaceAll(strings.ToLower(ua), "cubot", ""))
+}
+
 var eventIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{8,40}$`)
 
 // When the tracker's normal request fails (a content blocker or a broken network refuses it), it sends the same
@@ -160,7 +174,7 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ua := r.UserAgent()
-	if botPattern.MatchString(ua) {
+	if isBot(ua) {
 		accepted(w, r)
 		return
 	}

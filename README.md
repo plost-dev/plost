@@ -59,7 +59,7 @@ go build -trimpath -ldflags='-s -w' -o plost ./cmd/plost
 <script defer data-domain="example.com" src="https://stats.example.com/script.js"></script>
 ```
 
-后台的网站设置会自动生成实际地址。保留 `/js/script.js`、`/tracker.js`、`window.plost`、`window.litestats` 和 `litestats:visitor-id` 兼容。追踪脚本支持 SPA 页面切换、外链和文件下载事件。脚本发送事件的方式与 Umami 的追踪脚本一致：JSON POST 到 `/api/send`，请求体是 `{"type":"event","payload":{...}}`（Umami 自己的脚本发来的也能收）；有些拦截插件会拦截长得像其他统计工具的请求，却放行 Umami 的请求。每个事件带一个随机编号；正常请求在浏览器里失败（被拦截插件或网络拒绝）时，脚本会把同一事件改发到 `/e`，先用图片请求，再用 Beacon，服务器按编号只保留第一份，不会重复计数。`events_v2.via` 记录事件怎么到达：`send` 为正常请求，`img`、`beacon` 为重发，空值是旧版脚本发到 `/api/event` 的请求（仍然支持）。反向代理需要把 `/api/send`、`/e` 和 `/api/event` 一起转发给 Plost；指定了 `data-api` 时，脚本用原来的格式发到那个地址，重发也走那里。
+后台的网站设置会自动生成实际地址。保留 `/js/script.js`、`/tracker.js`、`window.plost`、`window.litestats` 和 `litestats:visitor-id` 兼容。追踪脚本支持 SPA 页面切换、外链和文件下载事件。页面完全加载完（`document.readyState` 为 complete）才计一次浏览，和 Umami 相同，没等页面打开就关掉的人不算；受程序控制的浏览器（`navigator.webdriver` 为真，例如 Selenium、Puppeteer、Playwright）不发送任何事件；服务端还会丢弃自报为爬虫、预览、监控或脚本客户端的请求和没有浏览器标识的请求。脚本发送事件的方式与 Umami 的追踪脚本一致：JSON POST 到 `/api/send`，请求体是 `{"type":"event","payload":{...}}`（Umami 自己的脚本发来的也能收）；有些拦截插件会拦截长得像其他统计工具的请求，却放行 Umami 的请求。每个事件带一个随机编号；正常请求在浏览器里失败（被拦截插件或网络拒绝）时，脚本会把同一事件改发到 `/e`，先用图片请求，再用 Beacon，服务器按编号只保留第一份，不会重复计数。`events_v2.via` 记录事件怎么到达：`send` 为正常请求，`img`、`beacon` 为重发，空值是旧版脚本发到 `/api/event` 的请求（仍然支持）。反向代理需要把 `/api/send`、`/e` 和 `/api/event` 一起转发给 Plost；指定了 `data-api` 时，脚本用原来的格式发到那个地址，重发也走那里。
 
 采集会检查页面域名与站点匹配；浏览器跨域采集不携带 Cookie。匿名访客 ID 保存在被统计网站的 localStorage，服务器只保存按站点生成的 HMAC 摘要。原始 IP 不写入统计；为了按访客去重，每个事件另存一个按站点、IP、浏览器标识和 UTC 月份生成的 HMAC 摘要，换月即不同，无法还原 IP，也无法跨月追踪同一人。页面只保存路径和单独的 UTM 字段，不保存整段查询参数；自定义事件属性由调用方负责避免发送敏感内容。不宣称“不使用 Cookie 就自动免除所有同意要求”。
 
