@@ -57,3 +57,5 @@
 - 2026-11-02 用户要求追踪请求 1:1 模仿 Umami（用户判断不是域名问题；数据也显示被拦的是正常请求、同域名的图片请求能过）：脚本的正常请求改成和 Umami 追踪脚本一样的 JSON POST 到 `/api/send`（`Content-Type: application/json`、`keepalive`、`credentials: omit`，请求体 `{"type":"event","payload":{website,hostname,screen,language,title,url,referrer,name,data}}`，另带 Plost 自己的 `v`、`i`、`w`），服务端 `umami_send.go` 把它转成原来的字段走同一套校验和存储，`identify` 只应答不存，Umami 自己的脚本发来的也能收；`/api/send` 与 `/api/event`、`/e` 一样免于后台来源检查，预检返回 `Access-Control-Max-Age`。`events_v2.via`：`send` 正常请求、`img`/`beacon` 重发、空值为旧脚本的 `/api/event`。`data-api` 自定义地址仍用原格式。无界面 Chrome 的标识含 HeadlessChrome，会被机器人过滤静默丢弃，本机实测要加 `--user-agent` 换成普通 Chrome 标识。
 
 - 2026-11-02 用户觉得访客地图悬停时国家外面的粗描边太粗：本地地图（`WorldMap.tsx`）悬停时不再加描边，改成把该国家的填色加深一档（`d3.color(...).darker(0.45)`），国家之间原来 0.55 的细边界不变。不要再加悬停描边。
+
+- 2026-11-02 用户要求访问时长的单位之间加空格：显示为 `2m 00s`、`1h 05m`，不写成 `2m00s`（`lib/format.ts` 的 `formatDuration`）。

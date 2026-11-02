@@ -65,8 +65,8 @@ export function formatDuration(sec: number) {
   const h = Math.floor(s / 3600)
   const m = Math.floor((s % 3600) / 60)
   const r = s % 60
-  if (h) return `${h}h${String(m).padStart(2, "0")}m`
-  if (m) return `${m}m${String(r).padStart(2, "0")}s`
+  if (h) return `${h}h ${String(m).padStart(2, "0")}m`
+  if (m) return `${m}m ${String(r).padStart(2, "0")}s`
   return `${s}s`
 }
 
