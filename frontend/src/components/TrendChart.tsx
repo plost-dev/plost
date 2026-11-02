@@ -22,21 +22,11 @@ export const TRAFFIC_METRICS: ReadonlyArray<{key: TrafficMetric; label: string}>
 // Visitors is drawn last so the headline metric is on top where it equals visits.
 const DRAW_ORDER: TrafficMetric[] = ["pageviews", "visits", "visitors"]
 const FILL_ORDER: TrafficMetric[] = ["pageviews", "visits", "visitors"]
-// Bars are nested: the tallest metric is the widest and sits at the back, so a narrower one is never hidden behind it,
-// even when two metrics have the same value.
+// Visitors never outnumber visits, nor visits pageviews, so the bars stand in front of each other at the same width,
+// the smallest at the front, as Umami draws visitors over views.
 const BAR_ORDER: TrafficMetric[] = ["pageviews", "visits", "visitors"]
-const BAR_SHARE: Record<TrafficMetric, number> = {pageviews: 1, visits: 0.62, visitors: 0.3}
 const BAR_MAX_WIDTH = 40
 const NONE: ReadonlyArray<TrafficMetric> = []
-
-// With three bars they are nested. With two, the shorter one is simply drawn in front of the taller at the same
-// width, which is how Umami draws visitors over views; only visitors against visits, which are almost equal,
-// stay nested so one does not hide the other.
-function barShares(visible: ReadonlyArray<TrafficMetric>): Record<TrafficMetric, number> {
-  if (visible.length >= 3) return BAR_SHARE
-  if (visible.includes("pageviews")) return {pageviews: 1, visits: 1, visitors: 1}
-  return {pageviews: 1, visits: 1, visitors: 0.5}
-}
 // Point rings use their own outer-to-inner order so the surface-filled outer
 // circle cannot cover the other two metrics when all values match.
 const POINT_ORDER: TrafficMetric[] = ["pageviews", "visitors", "visits"]
@@ -180,12 +170,10 @@ export function TrendChart({
       return {key, path: points.length ? `${path} L${x(points.length - 1)},${baseline} L${x(0)},${baseline} Z` : ""}
     })
     const barWidth = Math.max(2, Math.min(slot * 0.72, BAR_MAX_WIDTH))
-    const shares = barShares(visible)
     const columns = !bars ? [] : points.map((point, i) => BAR_ORDER.filter(key => visible.includes(key)).map(key => {
       const value = point.values[key]
-      const width = Math.max(1, barWidth * shares[key])
       const top = value > 0 ? Math.min(y(value), baseline - 1) : baseline
-      return {key, i, path: value > 0 ? barPath(x(i) - width / 2, width, top, baseline) : ""}
+      return {key, i, path: value > 0 ? barPath(x(i) - barWidth / 2, barWidth, top, baseline) : ""}
     })).flat()
     const xTickCount = Math.min(Math.max(2, Math.floor(innerW / (withYear ? 110 : 76))), 8, points.length)
     const xTicks = points.length ? Array.from({ length: xTickCount }, (_, i) => {

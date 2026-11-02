@@ -6,7 +6,19 @@ import type { ChartType } from "~/lib/chart-type-preference"
 import { formatDuration, numberShort } from "~/lib/format"
 import { delta, type Interval } from "~/lib/range"
 import type { MetricKey, Overview, SeriesBy } from "~/lib/ch"
+import type { CSSProperties } from "react"
 import "~/styles/traffic-overview.css"
+
+// Bars stand in front of each other in one hue, so the shown metrics take depths from the front (visitors, the
+// smallest) to the back: one is solid, two are dark and light, three dark, mid and light. The tooltip is dark, so its
+// shades are mixed towards its own background.
+const BAR_SHADES = [[100], [100, 30], [100, 60, 30]]
+const TOOLTIP_SHADES = [[100], [100, 58], [100, 80, 58]]
+function barShades(hidden: ReadonlyArray<TrafficMetric>): CSSProperties {
+  const shown = TRAFFIC_METRICS.map(metric => metric.key).filter(key => !hidden.includes(key))
+  const n = Math.max(1, shown.length) - 1
+  return Object.fromEntries(shown.flatMap((key, i) => [[`--bar-${key}`, `${BAR_SHADES[n][i]}%`], [`--bar-${key}-tooltip`, `${TOOLTIP_SHADES[n][i]}%`]]))
+}
 
 const SUMMARY_METRICS: ReadonlyArray<{
   key: MetricKey
@@ -43,7 +55,7 @@ export function VisitorGraph({
 }) {
   const { t, locale } = useT()
   return (
-    <Surface className="visitor-graph traffic-overview analytics-panel col-span-full">
+    <Surface className="visitor-graph traffic-overview analytics-panel col-span-full" data-chart={chartType} style={chartType === "bar" ? barShades(hiddenSeries) : undefined}>
       <dl className="metric-grid traffic-summary">
         {SUMMARY_METRICS.map(({ key, label, format, invertChange }) => {
           const value = overview[key]

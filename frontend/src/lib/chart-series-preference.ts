@@ -2,8 +2,8 @@ import type { TrafficMetric } from "~/components/TrendChart"
 
 /**
  * Which trend series are left out of the chart. Visits start hidden: within an hour it is nearly always equal to
- * visitors, so it only sits behind that line, while the totals above the chart still show all three. The legend turns
- * each one on or off. Kept per browser, like the chart type.
+ * visitors, so it only sits behind that line, while the totals above the chart still show all three. The legend and the
+ * options menu turn each one on or off. Kept per browser, like the chart type.
  */
 export const DEFAULT_HIDDEN_SERIES: ReadonlyArray<TrafficMetric> = ["visits"]
 

@@ -1,0 +1,1 @@
+import{M as e}from"./index-DKEl_Efu.js";var t=e;export{t as component};

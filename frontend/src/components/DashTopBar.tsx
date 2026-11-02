@@ -8,6 +8,7 @@ import { ReportFilter } from "./ReportFilter"
 import { expiryState } from "~/lib/site-check-view"
 import type { SiteCheckReport } from "~/lib/site-checks"
 import { CHART_TYPES, CHART_TYPE_LABEL, type ChartType } from "~/lib/chart-type-preference"
+import { TRAFFIC_METRICS, type TrafficMetric } from "~/components/TrendChart"
 import { INTERVAL_LABEL, PERIOD_LABEL, availableIntervals, intervalStorageKey, periodLabel, type DashSearch, type Interval, type Period } from "~/lib/range"
 
 const GROUPS: Period[][] = [
@@ -53,6 +54,8 @@ export function DashTopBar({
   onExport,
   chartType = "line",
   onChartType,
+  hiddenSeries = [],
+  onToggleSeries,
   filterOptions = {},
   health = null,
 }: {
@@ -66,6 +69,8 @@ export function DashTopBar({
   onExport?: () => void
   chartType?: ChartType
   onChartType?: (next: ChartType) => void
+  hiddenSeries?: ReadonlyArray<TrafficMetric>
+  onToggleSeries?: (key: TrafficMetric) => void
   health?: SiteCheckReport | null
 }) {
   const { t } = useT()
@@ -280,6 +285,30 @@ export function DashTopBar({
                           {t(CHART_TYPE_LABEL[id])}
                         </button>
                       ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {onToggleSeries ? (
+                  <div className="flex w-full items-center justify-between gap-x-2 py-1 pr-2 pl-4">
+                    <span className="shrink-0 text-sm font-medium text-gray-700">{t("显示数据")}</span>
+                    <div className="squircle segmented-control flex rounded-md bg-gray-100">
+                      {TRAFFIC_METRICS.map(({ key, label }) => {
+                        const on = !hiddenSeries.includes(key)
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            aria-pressed={on}
+                            // One series always stays on, otherwise the chart would be empty.
+                            disabled={on && hiddenSeries.length >= TRAFFIC_METRICS.length - 1}
+                            className="squircle rounded px-2 py-1 text-xs font-medium text-gray-600 hover:text-gray-900 disabled:cursor-default"
+                            onClick={() => onToggleSeries(key)}
+                          >
+                            {t(label)}
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 ) : null}

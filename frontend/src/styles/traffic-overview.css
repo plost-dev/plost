@@ -7,6 +7,16 @@
 }
 html[data-theme="dark"] .traffic-overview,
 .traffic-overview .traffic-tooltip { --traffic-visitors: #a78bfa; --traffic-visits: #60a5fa; --traffic-pageviews: #4ade80; }
+/* The bars stand in front of each other, so they share one hue, darkest at the front, as Umami draws them; the
+   depths (--bar-*) come from VisitorGraph. "html" keeps this above the dark theme's colors. */
+html .traffic-overview[data-chart="bar"] {
+  --traffic-visits: color-mix(in srgb, var(--traffic-visitors) var(--bar-visits, 60%), var(--surface));
+  --traffic-pageviews: color-mix(in srgb, var(--traffic-visitors) var(--bar-pageviews, 30%), var(--surface));
+}
+.traffic-overview[data-chart="bar"] .traffic-tooltip {
+  --traffic-visits: color-mix(in srgb, var(--traffic-visitors) var(--bar-visits-tooltip, 80%), var(--color-gray-800));
+  --traffic-pageviews: color-mix(in srgb, var(--traffic-visitors) var(--bar-pageviews-tooltip, 58%), var(--color-gray-800));
+}
 .traffic-overview .traffic-summary,
 .traffic-overview-skeleton .metric-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .traffic-overview .traffic-summary { margin: 0; }
@@ -62,7 +72,7 @@ html[data-theme="dark"] .traffic-overview,
 .traffic-series-halo { pointer-events: none; }
 /* Bars are nested, tallest and widest at the back; lighter tints sit behind, the full colour in front. */
 .traffic-bar { pointer-events: none; stroke: none; }
-.traffic-bar[data-metric="pageviews"] { fill: color-mix(in srgb, var(--traffic-pageviews) 30%, var(--surface)); }
-.traffic-bar[data-metric="visits"] { fill: color-mix(in srgb, var(--traffic-visits) 62%, var(--surface)); }
+.traffic-bar[data-metric="pageviews"] { fill: var(--traffic-pageviews); }
+.traffic-bar[data-metric="visits"] { fill: var(--traffic-visits); }
 .traffic-bar[data-metric="visitors"] { fill: var(--traffic-visitors); }
 .traffic-hover-band { fill: var(--color-gray-100); pointer-events: none; }
