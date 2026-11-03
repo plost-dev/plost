@@ -8,7 +8,7 @@ import { COUNTRIES_BY_TWO_LETTER_CODE, countryCentroids, loadWorldMap, type Worl
 
 /** Visitors online now at one place; a place without coordinates is a whole country. */
 export type OverviewPlace = { lat?: number, lon?: number, country: string, visitors: number, sites: Array<{ name: string, visitors: number }> }
-type Mode = "globe" | "map"
+export type OverviewMapMode = "globe" | "map"
 type Marker = OverviewPlace & { key: string, lonLat: [number, number] }
 type Dots = { globe: Array<[number, number]>, map: Array<[number, number]> }
 
@@ -53,9 +53,9 @@ function cssColor(el: Element, name: string, fallback: string) {
   return getComputedStyle(el).getPropertyValue(name).trim() || fallback
 }
 
-export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
+/** The mode is chosen with the other buttons in the overview's top-right corner. */
+export function OverviewGlobe({ places, mode }: { places: OverviewPlace[], mode: OverviewMapMode }) {
   const { t, locale } = useT()
-  const [mode, setMode] = useState<Mode>("globe")
   const [data, setData] = useState<{ dots: Dots, features: WorldJsonCountryData[] } | null>(null)
   const [failed, setFailed] = useState(false)
   const [tip, setTip] = useState<Marker | null>(null)
@@ -187,7 +187,7 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
         const tipWidth = tipRef.current?.offsetWidth || 160, tipHeight = tipRef.current?.offsetHeight || 44
         const gap = label.r + 10
         const x = labelRef.current.right ? label.x + gap : label.x - tipWidth - gap
-        // Stay below the mode and full-screen buttons in the top corner.
+        // Stay below the buttons in the top corner.
         const y = Math.max(60, Math.min(height - tipHeight - 8, label.y - tipHeight / 2))
         tipAt.current = [Math.max(8, Math.min(width - tipWidth - 8, x)), y]
         if (tipRef.current) tipRef.current.style.transform = `translate(${Math.round(tipAt.current[0])}px, ${Math.round(tipAt.current[1])}px)`
@@ -264,12 +264,6 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
           <span><i aria-hidden="true" />{(tip.sites.length > 1 ? t("{n} 人在线 · {k} 个站点").replace("{k}", String(tip.sites.length)) : t("{n} 人在线 · {site}").replace("{site}", top.name)).replace("{n}", numberShort(tip.visitors))}</span>
         </div>
       ) : null}
-      <div className="overview-globe-tools">
-        <div className="squircle overview-globe-mode" role="group" aria-label={t("地图样式")}>
-          <button type="button" className="squircle" aria-pressed={mode === "globe"} onClick={() => setMode("globe")}>{t("地球")}</button>
-          <button type="button" className="squircle" aria-pressed={mode === "map"} onClick={() => setMode("map")}>{t("平面")}</button>
-        </div>
-      </div>
     </div>
   )
 }

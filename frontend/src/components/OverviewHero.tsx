@@ -1,7 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { UIIcon } from "~/components/UIIcon"
-import { OverviewGlobe, type OverviewPlace } from "~/components/OverviewGlobe"
+import { OverviewGlobe, type OverviewMapMode, type OverviewPlace } from "~/components/OverviewGlobe"
 import { overviewChartsFn, overviewLiveFn, type OverviewCharts, type sitesFn } from "~/lib/actions"
 import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
@@ -16,6 +16,7 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
   const router = useRouter()
   const [places, setPlaces] = useState<OverviewPlace[]>([])
   const [charts, setCharts] = useState<OverviewCharts | null>(null)
+  const [mode, setMode] = useState<OverviewMapMode>("globe")
   const [updatedAt, setUpdatedAt] = useState(() => Date.now())
   const [now, setNow] = useState(() => Date.now())
   const [refreshing, setRefreshing] = useState(false)
@@ -44,29 +45,33 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
   }
   return (
     <section className="squircle overview-hero" aria-labelledby="overview-hero-title">
-      <div className="overview-hero-body">
-        <div className="overview-hero-head">
-          <div className="overview-hero-heading">
-            <span className="squircle overview-hero-badge" aria-hidden="true"><UIIcon name="globe" /></span>
-            <h1 id="overview-hero-title" className="overview-hero-title">{t("nav.sites")}</h1>
-            <p className="overview-hero-sub">
-              {t("footer.sites").replace("{n}", numberShort(sites.length))} · <span role="status">{minutes < 1 ? t("刚刚更新") : t("{n} 分钟前更新").replace("{n}", String(minutes))}</span>
-            </p>
-          </div>
-          <div className="overview-hero-tools">
-            <div className="squircle overview-hero-seg" role="group" aria-label={t("站点显示方式")}>
-              <button type="button" className="squircle" aria-pressed={layout === "grid"} onClick={() => onLayout("grid")} aria-label={t("卡片")} title={t("卡片")}><UIIcon name="grid" /></button>
-              <button type="button" className="squircle" aria-pressed={layout === "compact"} onClick={() => onLayout("compact")} aria-label={t("紧凑")} title={t("紧凑")}><UIIcon name="list" /></button>
-            </div>
-            <button type="button" className="squircle overview-hero-icon" disabled={refreshing} onClick={refresh} aria-label={t("刷新")} title={t("刷新")}>
-              <UIIcon name="refresh" className={refreshing ? "is-spinning" : undefined} />
-            </button>
-            <Link to="/sites/new" className="squircle overview-hero-icon is-primary" aria-label={t("添加网站")} title={t("添加网站")}><UIIcon name="plus" /></Link>
-          </div>
+      <div className="overview-hero-head">
+        <div className="overview-hero-heading">
+          <span className="squircle overview-hero-badge" aria-hidden="true"><UIIcon name="globe" /></span>
+          <h1 id="overview-hero-title" className="overview-hero-title">{t("nav.sites")}</h1>
+          <p className="overview-hero-sub">
+            {t("footer.sites").replace("{n}", numberShort(sites.length))} · <span role="status">{minutes < 1 ? t("刚刚更新") : t("{n} 分钟前更新").replace("{n}", String(minutes))}</span>
+          </p>
         </div>
+        <div className="overview-hero-tools">
+          <div className="squircle overview-hero-seg is-text" role="group" aria-label={t("地图样式")}>
+            <button type="button" className="squircle" aria-pressed={mode === "globe"} onClick={() => setMode("globe")}>{t("地球")}</button>
+            <button type="button" className="squircle" aria-pressed={mode === "map"} onClick={() => setMode("map")}>{t("平面")}</button>
+          </div>
+          <div className="squircle overview-hero-seg" role="group" aria-label={t("站点显示方式")}>
+            <button type="button" className="squircle" aria-pressed={layout === "grid"} onClick={() => onLayout("grid")} aria-label={t("卡片")} title={t("卡片")}><UIIcon name="grid" /></button>
+            <button type="button" className="squircle" aria-pressed={layout === "compact"} onClick={() => onLayout("compact")} aria-label={t("紧凑")} title={t("紧凑")}><UIIcon name="list" /></button>
+          </div>
+          <button type="button" className="squircle overview-hero-icon" disabled={refreshing} onClick={refresh} aria-label={t("刷新")} title={t("刷新")}>
+            <UIIcon name="refresh" className={refreshing ? "is-spinning" : undefined} />
+          </button>
+          <Link to="/sites/new" className="squircle overview-hero-icon is-primary" aria-label={t("添加网站")} title={t("添加网站")}><UIIcon name="plus" /></Link>
+        </div>
+      </div>
+      <div className="overview-hero-body">
         {charts ? <MetricsChart charts={charts} /> : <div className="overview-hero-loading" aria-hidden="true" />}
       </div>
-      <OverviewGlobe places={places} />
+      <OverviewGlobe places={places} mode={mode} />
     </section>
   )
 }
