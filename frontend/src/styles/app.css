@@ -1227,6 +1227,15 @@ html { scrollbar-gutter: stable; }
 .activity-record-details { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px 24px; padding:20px; background:var(--color-gray-50); border-top:1px solid var(--color-gray-100); }
 .activity-record-details dt { font-size:12px; color:var(--color-gray-500); margin-bottom:5px; }
 .activity-record-details dd { font-size:13px; overflow-wrap:anywhere; }
+/* An opened record (2026-11-03): what the row above cannot show in full, one small tile per fact with its icon. */
+.activity-detail-facts { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:0; padding:16px 20px 18px; background:var(--color-gray-50); border-top:1px solid var(--color-gray-100); }
+.activity-detail-facts > div { min-width:0; padding:10px 12px; --sq-r:12px; border:1px solid var(--color-gray-200); background:var(--surface); }
+.activity-detail-facts > .is-wide { grid-column:span 2; }
+.activity-detail-facts dt { font-size:11px; line-height:16px; color:var(--color-gray-500); }
+.activity-detail-facts dd { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 8px; margin:6px 0 0; font-size:13px; line-height:20px; color:var(--color-gray-900); overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
+.activity-detail-facts code { font-size:12px; color:var(--color-gray-800); overflow-wrap:anywhere; }
+.activity-detail-zone { font-size:11px; color:var(--color-gray-400); }
+.activity-detail-unknown { color:var(--color-gray-400); }
 .activity-pagination { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; padding:16px 20px; border-top:1px solid var(--color-gray-200); }
 .activity-pagination p { max-width:480px; font-size:12px; line-height:1.7; color:var(--color-gray-500); }
 .activity-pagination > div { display:flex; align-items:center; gap:12px; font-size:12px; font-variant-numeric:tabular-nums; }
@@ -1242,6 +1251,7 @@ html { scrollbar-gutter: stable; }
   .activity-event, .activity-country, .activity-device { grid-column:1; }
   .activity-record > summary::after { grid-column:2; grid-row:1 / 5; }
   .activity-record-details { grid-template-columns:minmax(0,1fr); }
+  .activity-detail-facts { grid-template-columns:repeat(2,minmax(0,1fr)); padding:14px 16px; }
   .activity-search { max-width:none; }
   .activity-page-toolbar > div { width:100%; }
   .activity-log-tools, .activity-log-caption, .activity-pagination { padding-inline:16px; }

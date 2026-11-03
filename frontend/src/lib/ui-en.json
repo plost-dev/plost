@@ -1309,5 +1309,10 @@
   "位访客（近 24 小时，全部站点）": "visitors in the last 24 hours, all sites",
   "{n} 人在线 · {site}": "{n} online on {site}",
   "当前在线访客位置": "Where visitors online now are",
-  "{n} 人在线 · {k} 个站点": "{n} online on {k} sites"
+  "{n} 人在线 · {k} 个站点": "{n} online on {k} sites",
+  "桌面电脑": "Desktop",
+  "笔记本电脑": "Laptop",
+  "手机": "Mobile",
+  "平板": "Tablet",
+  "超宽屏": "Ultra-wide"
 }
