@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/http"
 	"net/netip"
 	"net/url"
 	"os"
@@ -31,8 +32,8 @@ type Config struct {
 	// ClientIPHeader optionally names the header a trusted proxy sets to the visitor's address alone, such as
 	// CF-Connecting-IP; without it the X-Forwarded-For chain is read.
 	ClientIPHeader string
-	// GeoIPPath is an optional MaxMind-format database (GeoLite2 City or Country, DB-IP) used to tell the
-	// visitor's country when no Cloudflare header does.
+	// GeoIPPath is an optional MaxMind-format database (GeoLite2 City or Country) used to tell the visitor's
+	// country when no Cloudflare header does. Without it Plost downloads and updates one itself (geoip_update.go).
 	GeoIPPath string
 	Version   string
 	// OutboundAllow lists networks that site checks and cloud backups may connect to although they are
@@ -43,11 +44,13 @@ type Config struct {
 	// restore or a new data directory cannot lose them: the visitor map's MapboxToken (PLOST_MAPBOX_TOKEN)
 	// and GoogleMapsKey (PLOST_GOOGLE_MAPS_KEY), and the cloud backup's BackupAccessKey
 	// (PLOST_BACKUP_ACCESS_KEY), BackupSecretKey (PLOST_BACKUP_SECRET_KEY) and BackupPassword
-	// (PLOST_BACKUP_PASSWORD).
+	// (PLOST_BACKUP_PASSWORD), and the GeoLite2 download's MaxMindAccount (PLOST_MAXMIND_ACCOUNT_ID) and
+	// MaxMindKey (PLOST_MAXMIND_LICENSE_KEY).
 	MapboxToken, GoogleMapsKey                       string
+	MaxMindAccount, MaxMindKey                       string
 	BackupAccessKey, BackupSecretKey, BackupPassword string
 	// EnvFile is the env file the service starts with (-env-file); when set, the settings page may save the
-	// map keys into it.
+	// map keys and the MaxMind keys into it.
 	EnvFile string
 }
 
@@ -87,6 +90,12 @@ type App struct {
 
 	siteProbe     siteChecker // Network probes behind the site check; tests replace them.
 	outboundAllow []netip.Prefix
+
+	geoUpdating   atomic.Bool  // A GeoLite2 download is running (geoip_update.go).
+	geoAgain      atomic.Bool  // Settings changed while it ran; run once more.
+	geoHTTP       *http.Client // Test seams: a local fake for the download servers.
+	geoMirrorURL  string
+	geoMaxMindURL string
 }
 
 func Open(cfg Config) (*App, error) {
@@ -121,6 +130,9 @@ func Open(cfg Config) (*App, error) {
 		return nil, err
 	}
 	cfg.DataDir = dir
+	if cfg.GeoIPPath == "" {
+		geo = newManagedGeoIP(filepath.Join(dir, "geoip", "GeoLite2.mmdb"))
+	}
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return nil, err
 	}
@@ -170,10 +182,11 @@ func Open(cfg Config) (*App, error) {
 	a.siteProbe = newSiteChecker(cfg.OutboundAllow)
 	// Google Maps counts as on only with a key, so the page policy never allows its hosts for nothing.
 	a.googleMaps.Store(cfg.GoogleMapsKey != "" && a.setting(context.Background(), "google_maps_enabled", "false") == "true")
-	a.workers.Add(3)
+	a.workers.Add(4)
 	go a.ingestLoop()
 	go a.scheduleLoop()
 	go a.siteCheckLoop()
+	go a.geoipLoop()
 	opened = true
 	return a, nil
 }

@@ -100,7 +100,7 @@ func (l *livePlaces) points(site int64, now time.Time, country string) []LivePoi
 
 // recordPlace notes where a pageview's visitor is, when the GeoIP database can place their address.
 func (a *App) recordPlace(r *http.Request, site int64, visitor, country string, now time.Time) {
-	if a.geo == nil || !a.visitorKnown(r) {
+	if !a.geo.ready() || !a.visitorKnown(r) {
 		return
 	}
 	addr, _ := a.visitorAddr(r)
@@ -169,7 +169,7 @@ func (a *App) overviewLive(w http.ResponseWriter, r *http.Request) error {
 	// Visitors the City database placed sit at their city; the rest of a country's online visitors (no
 	// database, or an address it knows only the country of) sit at the country itself.
 	placed := map[int64]map[string]int{}
-	if a.geo != nil {
+	if a.geo.ready() {
 		for id, name := range names {
 			placed[id] = map[string]int{}
 			for _, pt := range a.live.points(id, now, "") {

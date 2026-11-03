@@ -7,6 +7,7 @@ import { ActionLink } from "~/components/ActionButton"
 import { ApiKeyPanel } from "~/components/ApiKeyPanel"
 import { PasskeyPanel } from "~/components/PasskeyPanel"
 import { BackupPanel } from "~/components/BackupPanel"
+import { GeoIPSettingsPage } from "~/components/GeoIPSettingsPanel"
 import { SparklineStylePicker } from "~/components/SparklineStylePicker"
 import { SettingsTips } from "~/components/SettingsTips"
 import { loadMapServices, MapServicesPage } from "~/components/MapServicesSettings"
@@ -27,6 +28,7 @@ const SYSTEM_TABS = [
   { id: "system/appearance", label: "界面外观" },
   { id: "system/sparkline", label: "站点走势图" },
   { id: "system/mapbox", label: "访客地图" },
+  { id: "system/geoip", label: "IP 数据库" },
   { id: "system/backup", label: "备份与恢复" },
 ]
 
@@ -104,6 +106,7 @@ function AccountPage() {
             "走势图的 24 小时按小时、30 天按天显示访客。",
           ]} /></> : null}
           {tab === "system/mapbox" ? <MapServicesPage onSaved={() => router.invalidate()} /> : null}
+          {tab === "system/geoip" ? <GeoIPSettingsPage /> : null}
           {tab === "system/backup" ? <BackupPanel /> : null}
         </SettingsLayout>
       </div>

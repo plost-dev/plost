@@ -18,7 +18,7 @@ import (
 // every few days, so there is no need to look more often.
 const geoCheckEvery = time.Minute
 
-// geoIP looks up the country of an address in a MaxMind-format database (GeoLite2 City or Country, DB-IP). The file
+// geoIP looks up the country of an address in a MaxMind-format database (GeoLite2 City or Country). The file
 // is mapped rather than read, which keeps its tens of megabytes out of the Go heap and its memory limit, and it is
 // opened again when its size or modification time changes. The mapping is released once the previous reader is no
 // longer used. Updaters must replace the file by renaming a new one over it, as they all do; rewriting it in place
@@ -54,6 +54,39 @@ func openGeoIP(path string) (*geoIP, error) {
 	return g, nil
 }
 
+// newManagedGeoIP is for the database Plost downloads itself (geoip_update.go): the file may not exist yet, and
+// lookups find nothing until the first download is in place.
+func newManagedGeoIP(path string) *geoIP {
+	g := &geoIP{path: path}
+	if db, err := g.read(); err == nil {
+		g.db.Store(db)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		log.Printf("GeoIP database not loaded: %v", err)
+	}
+	g.checked.Store(time.Now().Unix())
+	return g
+}
+
+// ready reports whether a database is loaded; a nil geoIP (no database configured) is not ready.
+func (g *geoIP) ready() bool { return g != nil && g.db.Load() != nil }
+
+// load switches to the file now, rather than when the next lookup notices it changed.
+func (g *geoIP) load() error {
+	db, err := g.read()
+	if err != nil {
+		return err
+	}
+	g.failed.Store(nil)
+	g.db.Store(db)
+	return nil
+}
+
+// unload stops using the database, whose mapping is released once no lookup holds it.
+func (g *geoIP) unload() {
+	g.failed.Store(nil)
+	g.db.Store(nil)
+}
+
 func (g *geoIP) read() (*geoDB, error) {
 	info, err := os.Stat(g.path)
 	if err != nil {
@@ -81,7 +114,7 @@ func (g *geoIP) refresh(now time.Time) {
 		return
 	}
 	sig := sigOf(info)
-	if failed := g.failed.Load(); sig == g.db.Load().sig || (failed != nil && sig == *failed) || !g.reloading.CompareAndSwap(false, true) {
+	if cur, failed := g.db.Load(), g.failed.Load(); (cur != nil && sig == cur.sig) || (failed != nil && sig == *failed) || !g.reloading.CompareAndSwap(false, true) {
 		return
 	}
 	go func() {
@@ -116,8 +149,12 @@ func (g *geoIP) location(ip netip.Addr, now time.Time) (lat, lon float64, ok boo
 	if !ip.IsValid() || !ip.IsGlobalUnicast() || ip.IsPrivate() {
 		return 0, 0, false
 	}
+	db := g.db.Load()
+	if db == nil {
+		return 0, 0, false
+	}
 	var rec geoRecord
-	if err := g.db.Load().reader.Lookup(ip).Decode(&rec); err != nil || rec.Location.Latitude == nil || rec.Location.Longitude == nil {
+	if err := db.reader.Lookup(ip).Decode(&rec); err != nil || rec.Location.Latitude == nil || rec.Location.Longitude == nil {
 		return 0, 0, false
 	}
 	round := func(v float64) float64 { return math.Round(v*100) / 100 }
@@ -131,8 +168,12 @@ func (g *geoIP) country(ip netip.Addr, now time.Time) string {
 	if !ip.IsValid() || !ip.IsGlobalUnicast() || ip.IsPrivate() {
 		return ""
 	}
+	db := g.db.Load()
+	if db == nil {
+		return ""
+	}
 	var rec geoRecord
-	if err := g.db.Load().reader.Lookup(ip).Decode(&rec); err != nil {
+	if err := db.reader.Lookup(ip).Decode(&rec); err != nil {
 		return ""
 	}
 	code := strings.ToUpper(rec.Country.ISOCode)
@@ -143,13 +184,13 @@ func (g *geoIP) country(ip netip.Addr, now time.Time) string {
 }
 
 // requestCountry names the visitor's country: a CDN's country header when one counts (visitorCountryHeader),
-// otherwise the visitor's address looked up in the GeoIP database, if one was given with -geoip-db and the address
+// otherwise the visitor's address looked up in the GeoIP database (-geoip-db, or the one downloaded on the settings page), if the address
 // is really the visitor's.
 func (a *App) requestCountry(r *http.Request, now time.Time) string {
 	if code := a.visitorCountryHeader(r); code != "" {
 		return code
 	}
-	if a.geo == nil || !a.visitorKnown(r) {
+	if !a.geo.ready() || !a.visitorKnown(r) {
 		return ""
 	}
 	ip, _ := a.visitorAddr(r)

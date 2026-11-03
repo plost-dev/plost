@@ -26,7 +26,7 @@ func main() {
 	proxy := flag.Bool("trust-proxy", false, "Trust a reverse proxy on this machine (same as -trusted-proxies loopback)")
 	trusted := flag.String("trusted-proxies", "", "Comma-separated proxies and CDNs whose forwarding headers count: loopback, private (Docker, LAN), cloudflare, networks such as 203.0.113.0/24, or @file with one per line")
 	ipHeader := flag.String("client-ip-header", "", "Header a trusted proxy sets to the visitor's address alone, e.g. CF-Connecting-IP or Ali-CDN-Real-IP; by default X-Forwarded-For is read")
-	geoip := flag.String("geoip-db", "", "MaxMind-format database (GeoLite2 City or Country, DB-IP) used to tell visitors' countries when no CDN header does")
+	geoip := flag.String("geoip-db", "", "MaxMind-format database (GeoLite2 City or Country) you keep up to date yourself; without it Plost downloads and updates one (Settings → IP database)")
 	showVersion := flag.Bool("version", false, "Print version")
 	memory := flag.Int("memory", 64, "Go runtime soft memory limit in MiB (not a total process limit)")
 	envFile := flag.String("env-file", os.Getenv("PLOST_ENV_FILE"), "The service's env file (systemd EnvironmentFile); the settings page saves the map keys into it. Defaults to $PLOST_ENV_FILE")

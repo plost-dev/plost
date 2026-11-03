@@ -78,3 +78,5 @@
 - 2026-11-04 用户要求 Mapbox Token 和 Google Key 在「访客地图」里仍有输入框，并强调 Key 只存 env 文件、不存数据库。现在页面显示已设置 Key 的前几位（`maskKey`），保存时 `writeEnvKey` 原地改写 `-env-file`/`PLOST_ENV_FILE` 指向的 env 文件中对应一行并立即生效（`App.mapKeys` 加锁读取），不重启；没有指定 env 文件时输入框禁用。云备份凭据仍只在 env 文件中手动修改。地图页使用提示精简为两条。
 
 - 2026-11-04 用户要求访问趋势图纵轴与云版一致：刻度数字写在各自网格线上方、图内左端（带底色描边，曲线穿过也不挡字），不标 0，不再画刻度小横杠，图表左右与卡片内边距等宽。上面 2026-11-01「每个刻度画一小段横杠」一条被这条取代；整千取整规则不变。
+
+- 2026-11-04 用户要求 Go 版自己下载并更新 GeoLite2，取代 2026-11-01「程序不下载、不内置 GeoIP 库」的说法：「设置 → IP 数据库」（`system/geoip`，`GeoIPSettingsPanel.tsx`；服务端 `geoip_update.go`，接口 `GET/PUT /api/geoip`、`POST /api/geoip/update`）。来源默认 Plost 镜像 `https://ipdata.plost.io/<库名>.tar.gz` 与 `.tar.gz.sha256`（R2 桶，与 MaxMind 原包一致），也可填自己的 MaxMind 账号 ID 和 License Key（只写 env 文件：`PLOST_MAXMIND_ACCOUNT_ID`、`PLOST_MAXMIND_LICENSE_KEY`），或关闭；库默认 GeoLite2-City，可改 Country。每天检查一次，失败一小时后重试；下载必须核对 SHA-256、解压、`Verify()` 并确认 `DatabaseType` 后才改名替换 `<数据目录>/geoip/GeoLite2.mmdb`，随后删除目录里其他所有文件（旧版本、未完成的下载），关闭时删除库文件，用户明确要求不要让旧版本越积越多。下载走与站点检查相同的公网地址限制。指定 `-geoip-db` 时完全不下载，沿用每分钟查看文件的做法。访客 IP 仍只在本机查询；在线查询服务 `geo.plost.io` 还没接入，接口定下来之前不要在界面上加这个选项。测试用本地假服务器（`geoHTTP`、`geoMirrorURL`、`geoMaxMindURL`），`geoFirstCheck` 在测试里推迟，不访问真实网络。
