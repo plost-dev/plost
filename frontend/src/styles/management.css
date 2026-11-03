@@ -299,14 +299,18 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 .overview-hero-badge { --sq-r:10px; display:grid; place-items:center; width:32px; height:32px; flex:none; background:color-mix(in srgb, var(--accent-color) 12%, var(--surface)); color:var(--accent-color); }
 .overview-hero-badge .ui-icon { width:16px; height:16px; }
 .overview-hero-title { font-size:24px; line-height:1.2; font-weight:700; letter-spacing:-.025em; color:var(--color-gray-900); }
-.overview-hero-sub { font-size:13px; color:var(--color-gray-500); white-space:nowrap; }
+.overview-hero-sub { display:flex; align-items:center; gap:4px; font-size:13px; color:var(--color-gray-500); white-space:nowrap; }
+/* A small round refresh button right after the update time, without a border. */
+.overview-hero-refresh { display:grid; place-items:center; width:22px; height:22px; border-radius:50%; color:var(--color-gray-400); transition:background-color 120ms, color 120ms; }
+.overview-hero-refresh:hover { background:var(--color-gray-100); color:var(--color-gray-700); }
+.overview-hero-refresh .ui-icon { width:12px; height:12px; }
+.overview-hero-refresh .is-spinning { animation:overview-spin .8s linear infinite; }
 .overview-hero-tools { display:flex; align-items:center; gap:6px; flex:none; margin-left:auto; }
 .overview-hero-icon { --sq-r:10px; display:grid; place-items:center; width:32px; height:32px; border:1px solid var(--color-gray-200); background:var(--surface); color:var(--color-gray-600); }
 .overview-hero-icon:hover { color:var(--color-gray-900); }
 .overview-hero-icon.is-primary { border-color:var(--accent-color); background:var(--accent-color); color:var(--accent-on-solid); }
 .overview-hero-icon.is-primary:hover { background:var(--accent-hover); color:var(--accent-on-solid); }
 .overview-hero-icon .ui-icon, .overview-hero-seg .ui-icon { width:15px; height:15px; }
-.overview-hero-icon .is-spinning { animation:overview-spin .8s linear infinite; }
 .overview-hero-seg { --sq-r:10px; display:flex; gap:2px; height:32px; padding:2px; border:1px solid var(--color-gray-200); background:var(--color-gray-100); }
 .overview-hero-seg button { --sq-r:8px; display:grid; place-items:center; width:28px; color:var(--color-gray-500); }
 .overview-hero-seg button:hover { color:var(--color-gray-900); }

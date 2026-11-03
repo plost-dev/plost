@@ -51,6 +51,9 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
           <h1 id="overview-hero-title" className="overview-hero-title">{t("nav.sites")}</h1>
           <p className="overview-hero-sub">
             {t("footer.sites").replace("{n}", numberShort(sites.length))} · <span role="status">{minutes < 1 ? t("刚刚更新") : t("{n} 分钟前更新").replace("{n}", String(minutes))}</span>
+            <button type="button" className="overview-hero-refresh" disabled={refreshing} onClick={refresh} aria-label={t("刷新")} title={t("刷新")}>
+              <UIIcon name="refresh" className={refreshing ? "is-spinning" : undefined} />
+            </button>
           </p>
         </div>
         <div className="overview-hero-tools">
@@ -62,9 +65,6 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
             <button type="button" className="squircle" aria-pressed={layout === "grid"} onClick={() => onLayout("grid")} aria-label={t("卡片")} title={t("卡片")}><UIIcon name="grid" /></button>
             <button type="button" className="squircle" aria-pressed={layout === "compact"} onClick={() => onLayout("compact")} aria-label={t("紧凑")} title={t("紧凑")}><UIIcon name="list" /></button>
           </div>
-          <button type="button" className="squircle overview-hero-icon" disabled={refreshing} onClick={refresh} aria-label={t("刷新")} title={t("刷新")}>
-            <UIIcon name="refresh" className={refreshing ? "is-spinning" : undefined} />
-          </button>
           <Link to="/sites/new" className="squircle overview-hero-icon is-primary" aria-label={t("添加网站")} title={t("添加网站")}><UIIcon name="plus" /></Link>
         </div>
       </div>
