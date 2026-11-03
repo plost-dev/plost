@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import * as d3 from "d3"
 import { CountryFlag } from "~/components/icons"
+import { UIIcon } from "~/components/UIIcon"
 import { countryName } from "~/lib/countries"
 import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
@@ -8,7 +9,7 @@ import { COUNTRIES_BY_TWO_LETTER_CODE, countryCentroids, loadWorldMap, type Worl
 
 /** Visitors online now at one place; a place without coordinates is a whole country. */
 export type OverviewPlace = { lat?: number, lon?: number, country: string, visitors: number, sites: Array<{ name: string, visitors: number }> }
-export type OverviewMapMode = "globe" | "map"
+type Mode = "globe" | "map"
 type Marker = OverviewPlace & { key: string, lonLat: [number, number] }
 type Dots = { globe: Array<[number, number]>, map: Array<[number, number]> }
 
@@ -53,9 +54,12 @@ function cssColor(el: Element, name: string, fallback: string) {
   return getComputedStyle(el).getPropertyValue(name).trim() || fallback
 }
 
-/** The mode is chosen with the other buttons in the overview's top-right corner. */
-export function OverviewGlobe({ places, mode }: { places: OverviewPlace[], mode: OverviewMapMode }) {
+/** Right-clicking the map (or the context-menu key while it has focus) opens a small menu to switch globe and flat map. */
+export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
   const { t, locale } = useT()
+  const [mode, setMode] = useState<Mode>("globe")
+  const [menu, setMenu] = useState<{ x: number, y: number } | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
   const [data, setData] = useState<{ dots: Dots, features: WorldJsonCountryData[] } | null>(null)
   const [failed, setFailed] = useState(false)
   const [tip, setTip] = useState<Marker | null>(null)
@@ -65,6 +69,27 @@ export function OverviewGlobe({ places, mode }: { places: OverviewPlace[], mode:
   const frameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const hoverRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!menu) return
+    menuRef.current?.querySelector<HTMLButtonElement>("[aria-checked='true']")?.focus()
+    const close = (event: Event) => { if (!(event.target instanceof Node && menuRef.current?.contains(event.target))) setMenu(null) }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return
+      setMenu(null)
+      frameRef.current?.focus()
+    }
+    document.addEventListener("pointerdown", close, true)
+    document.addEventListener("scroll", close, true)
+    document.addEventListener("keydown", onKey)
+    window.addEventListener("blur", close)
+    return () => {
+      document.removeEventListener("pointerdown", close, true)
+      document.removeEventListener("scroll", close, true)
+      document.removeEventListener("keydown", onKey)
+      window.removeEventListener("blur", close)
+    }
+  }, [menu])
 
   useEffect(() => {
     let alive = true
@@ -204,7 +229,7 @@ export function OverviewGlobe({ places, mode }: { places: OverviewPlace[], mode:
     const start = () => { if (!raf) raf = requestAnimationFrame(tick) }
 
     const onDown = (event: PointerEvent) => {
-      if (mode !== "globe") return
+      if (mode !== "globe" || event.button !== 0) return
       drag = { x: event.clientX, y: event.clientY, rotation }
       canvas.setPointerCapture(event.pointerId)
     }
@@ -255,13 +280,35 @@ export function OverviewGlobe({ places, mode }: { places: OverviewPlace[], mode:
 
   const top = tip?.sites[0]
   return (
-    <div ref={frameRef} className={`overview-globe is-${mode}`}>
+    <div ref={frameRef} className={`overview-globe is-${mode}`} tabIndex={0} title={t("右键切换地球或平面地图")}
+      onContextMenu={(event) => {
+        event.preventDefault()
+        // Kept inside the map, since the card clips anything past its edge.
+        const rect = event.currentTarget.getBoundingClientRect()
+        setMenu({ x: Math.min(event.clientX - rect.left, rect.width - 136), y: Math.min(event.clientY - rect.top, rect.height - 88) })
+      }}
+      onKeyDown={(event) => {
+        if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return
+        event.preventDefault()
+        setMenu({ x: event.currentTarget.clientWidth / 2, y: event.currentTarget.clientHeight / 2 })
+      }}>
       <canvas ref={canvasRef} className="overview-globe-canvas" role="img" aria-label={t("当前在线访客位置")} />
       {failed ? <p className="overview-globe-state" role="status">{t("地图加载失败")}</p> : null}
       {tip && top ? (
         <div ref={tipRef} key={tip.key} className="squircle overview-globe-tip" style={{ transform: `translate(${Math.round(tipAt.current[0])}px, ${Math.round(tipAt.current[1])}px)` }}>
           <strong><CountryFlag code={tip.country} shape="rect" className="overview-globe-flag" />{countryName(tip.country, locale)}</strong>
           <span><i aria-hidden="true" />{(tip.sites.length > 1 ? t("{n} 人在线 · {k} 个站点").replace("{k}", String(tip.sites.length)) : t("{n} 人在线 · {site}").replace("{site}", top.name)).replace("{n}", numberShort(tip.visitors))}</span>
+        </div>
+      ) : null}
+      {menu ? (
+        <div ref={menuRef} role="menu" aria-label={t("地图样式")} className="squircle overview-globe-menu" style={{ left: menu.x, top: menu.y }}>
+          {(["globe", "map"] as const).map((value) => (
+            <button key={value} type="button" role="menuitemradio" aria-checked={mode === value} className="squircle"
+              onClick={() => { setMode(value); setMenu(null); frameRef.current?.focus() }}>
+              {t(value === "globe" ? "地球" : "平面")}
+              {mode === value ? <UIIcon name="check" /> : null}
+            </button>
+          ))}
         </div>
       ) : null}
     </div>

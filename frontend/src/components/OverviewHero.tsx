@@ -1,7 +1,7 @@
 import { Link, useRouter } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { UIIcon } from "~/components/UIIcon"
-import { OverviewGlobe, type OverviewMapMode, type OverviewPlace } from "~/components/OverviewGlobe"
+import { OverviewGlobe, type OverviewPlace } from "~/components/OverviewGlobe"
 import { overviewChartsFn, overviewLiveFn, type OverviewCharts, type sitesFn } from "~/lib/actions"
 import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
@@ -16,7 +16,6 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
   const router = useRouter()
   const [places, setPlaces] = useState<OverviewPlace[]>([])
   const [charts, setCharts] = useState<OverviewCharts | null>(null)
-  const [mode, setMode] = useState<OverviewMapMode>("globe")
   const [updatedAt, setUpdatedAt] = useState(() => Date.now())
   const [now, setNow] = useState(() => Date.now())
   const [refreshing, setRefreshing] = useState(false)
@@ -54,13 +53,10 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
             <button type="button" className="overview-hero-refresh" disabled={refreshing} onClick={refresh} aria-label={t("刷新")} title={t("刷新")}>
               <UIIcon name="refresh" className={refreshing ? "is-spinning" : undefined} />
             </button>
+            · {t("近 24 小时 · 全部站点")}
           </p>
         </div>
         <div className="overview-hero-tools">
-          <div className="squircle overview-hero-seg is-text" role="group" aria-label={t("地图样式")}>
-            <button type="button" className="squircle" aria-pressed={mode === "globe"} onClick={() => setMode("globe")}>{t("地球")}</button>
-            <button type="button" className="squircle" aria-pressed={mode === "map"} onClick={() => setMode("map")}>{t("平面")}</button>
-          </div>
           <div className="squircle overview-hero-seg" role="group" aria-label={t("站点显示方式")}>
             <button type="button" className="squircle" aria-pressed={layout === "grid"} onClick={() => onLayout("grid")} aria-label={t("卡片")} title={t("卡片")}><UIIcon name="grid" /></button>
             <button type="button" className="squircle" aria-pressed={layout === "compact"} onClick={() => onLayout("compact")} aria-label={t("紧凑")} title={t("紧凑")}><UIIcon name="list" /></button>
@@ -71,7 +67,7 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
       <div className="overview-hero-body">
         {charts ? <MetricsChart charts={charts} /> : <div className="overview-hero-loading" aria-hidden="true" />}
       </div>
-      <OverviewGlobe places={places} mode={mode} />
+      <OverviewGlobe places={places} />
     </section>
   )
 }
@@ -96,7 +92,6 @@ function MetricsChart({ charts }: { charts: OverviewCharts }) {
   ]
   return (
     <>
-      <p className="overview-hero-note">{t("近 24 小时 · 全部站点")}</p>
       <div className="overview-hero-tiles">
         {tiles.map(tile => (
           <div key={tile.label} className={`squircle overview-hero-tile${tile.delta === undefined ? " is-online" : ""}`}>

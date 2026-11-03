@@ -1299,6 +1299,7 @@
   "已关闭 Google 地图，统计页使用内置地图。": "Google Maps is off; the statistics page uses the built-in map.",
   "{0} 位访客在线": "{0} visitors online",
   "地球": "Globe",
+  "右键切换地球或平面地图": "Right-click to switch between globe and flat map",
   "平面": "Map",
   "刚刚更新": "Updated just now",
   "{n} 分钟前更新": "Updated {n} min ago",
