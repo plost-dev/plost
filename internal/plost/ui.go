@@ -135,21 +135,28 @@ func (a *App) googleMapStyle(w http.ResponseWriter, r *http.Request) error {
 }
 func (a *App) mapboxSettings(w http.ResponseWriter, r *http.Request) error {
 	// The token itself is only ever in the env file (env_keys.go); the database keeps the switch.
-	token := a.cfg.MapboxToken
+	token, _ := a.mapKeys()
 	enabled := a.setting(r.Context(), "mapbox_enabled", "true") == "true"
 	if r.Method == "GET" {
-		return jsonResponse(w, map[string]any{"enabled": enabled, "configured": token != ""})
+		return jsonResponse(w, a.mapKeyState(enabled, token))
 	}
 	var in struct {
-		Enabled *bool `json:"enabled"`
+		Enabled *bool   `json:"enabled"`
+		Token   *string `json:"token"`
 	}
 	if err := readJSON(w, r, &in); err != nil {
 		return err
 	}
+	if in.Token != nil {
+		if err := a.saveMapKey(EnvMapboxToken, *in.Token); err != nil {
+			return err
+		}
+		token, _ = a.mapKeys()
+	}
 	if in.Enabled != nil {
 		enabled = *in.Enabled
 		if enabled && token == "" {
-			return failure(400, "请先在 env 文件里设置 "+EnvMapboxToken+" 并重启服务")
+			return failure(400, "请先填写并保存 Mapbox Token")
 		}
 	}
 	tx, err := a.db.BeginTx(r.Context(), nil)
@@ -176,7 +183,7 @@ func (a *App) mapboxSettings(w http.ResponseWriter, r *http.Request) error {
 	if enabled {
 		a.googleMaps.Store(false)
 	}
-	return jsonResponse(w, map[string]bool{"enabled": enabled, "configured": token != ""})
+	return jsonResponse(w, a.mapKeyState(enabled, token))
 }
 
 func (a *App) groupRows(ctx context.Context, site int64, rng Range, q url.Values, expression, extra string) ([]Row, error) {
@@ -198,12 +205,13 @@ func (a *App) groupRows(ctx context.Context, site int64, rng Range, q url.Values
 }
 
 func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Values) (map[string]any, error) {
-	result := map[string]any{"mapboxToken": a.cfg.MapboxToken, "googleMapsKey": ""}
+	mapboxToken, googleKey := a.mapKeys()
+	result := map[string]any{"mapboxToken": mapboxToken, "googleMapsKey": ""}
 	if a.setting(ctx, "mapbox_enabled", "true") != "true" {
 		result["mapboxToken"] = ""
 	}
 	if a.googleMaps.Load() {
-		result["googleMapsKey"] = a.cfg.GoogleMapsKey
+		result["googleMapsKey"] = googleKey
 		result["mapboxToken"] = ""
 	}
 	channel := `CASE WHEN referrer_source IN ('','Direct') THEN 'direct' WHEN referrer_source IN ('google.com','bing.com','baidu.com','duckduckgo.com','yahoo.com','yandex.com','yandex.ru','search.brave.com','ecosia.org','sogou.com','so.com') THEN 'organic_search' WHEN referrer_source IN ('twitter.com','x.com','t.co','facebook.com','instagram.com','reddit.com','weibo.com','youtube.com','bsky.app','threads.net','tiktok.com') THEN 'organic_social' WHEN referrer_source IN ('chatgpt.com','chat.openai.com','perplexity.ai','claude.ai','gemini.google.com','copilot.microsoft.com','grok.com','deepseek.com','chat.deepseek.com') THEN 'ai' ELSE 'referral' END`
@@ -436,22 +444,29 @@ var googleMapsKey = regexp.MustCompile(`^AIza[0-9A-Za-z_-]{35}$`)
 // dashboard and share page that shows the map, so it must be a browser key limited to this site's referrer.
 func (a *App) googleMapsSettings(w http.ResponseWriter, r *http.Request) error {
 	// The key itself is only ever in the env file (env_keys.go); the database keeps the switch.
-	key := a.cfg.GoogleMapsKey
+	_, key := a.mapKeys()
 	enabled := a.googleMaps.Load()
 	if r.Method == "GET" {
-		return jsonResponse(w, googleMapsState(enabled, key))
+		return jsonResponse(w, a.mapKeyState(enabled, key))
 	}
 	var in struct {
-		Enabled *bool `json:"enabled"`
+		Enabled *bool   `json:"enabled"`
+		Key     *string `json:"key"`
 	}
 	if err := readJSON(w, r, &in); err != nil {
 		return err
+	}
+	if in.Key != nil {
+		if err := a.saveMapKey(EnvGoogleMapsKey, *in.Key); err != nil {
+			return err
+		}
+		_, key = a.mapKeys()
 	}
 	if in.Enabled != nil {
 		enabled = *in.Enabled
 	}
 	if enabled && key == "" {
-		return failure(400, "请先在 env 文件里设置 "+EnvGoogleMapsKey+" 并重启服务")
+		return failure(400, "请先填写并保存 Google Maps API Key")
 	}
 	tx, err := a.db.BeginTx(r.Context(), nil)
 	if err != nil {
@@ -475,10 +490,11 @@ func (a *App) googleMapsSettings(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	a.googleMaps.Store(enabled)
-	return jsonResponse(w, googleMapsState(enabled, key))
+	return jsonResponse(w, a.mapKeyState(enabled, key))
 }
 
-// googleMapsState is what the settings page sees: whether Google Maps is on and whether a key is saved, never the key.
-func googleMapsState(enabled bool, key string) map[string]any {
-	return map[string]any{"enabled": enabled, "configured": key != ""}
+// mapKeyState is what the settings page sees of a map service: whether it is on, whether a key is set (shown only
+// by its start), and whether the page may save one into the env file.
+func (a *App) mapKeyState(enabled bool, key string) map[string]any {
+	return map[string]any{"enabled": enabled, "configured": key != "", "masked": maskKey(key), "editable": a.cfg.EnvFile != ""}
 }

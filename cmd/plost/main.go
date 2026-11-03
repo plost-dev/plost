@@ -29,6 +29,7 @@ func main() {
 	geoip := flag.String("geoip-db", "", "MaxMind-format database (GeoLite2 City or Country, DB-IP) used to tell visitors' countries when no CDN header does")
 	showVersion := flag.Bool("version", false, "Print version")
 	memory := flag.Int("memory", 64, "Go runtime soft memory limit in MiB (not a total process limit)")
+	envFile := flag.String("env-file", os.Getenv("PLOST_ENV_FILE"), "The service's env file (systemd EnvironmentFile); the settings page saves the map keys into it. Defaults to $PLOST_ENV_FILE")
 	allowOutbound := flag.String("allow-outbound", "", "Comma-separated networks that site checks and cloud backups may connect to although they are normally refused, e.g. 198.18.0.0/15 for a local proxy's fake-IP mode")
 	flag.Parse()
 	if *showVersion {
@@ -60,7 +61,7 @@ func main() {
 	if header != "" && !*proxy && len(trustedNets) == 0 {
 		log.Fatal("-client-ip-header only applies behind a trusted proxy; add -trusted-proxies")
 	}
-	cfg := plost.Config{DataDir: *data, Origin: *origin, TrustProxy: *proxy, TrustedProxies: trustedNets, TrustedProxyNames: trustedNames, ClientIPHeader: header, GeoIPPath: *geoip, Version: version, OutboundAllow: allow}
+	cfg := plost.Config{DataDir: *data, Origin: *origin, TrustProxy: *proxy, TrustedProxies: trustedNets, TrustedProxyNames: trustedNames, ClientIPHeader: header, GeoIPPath: *geoip, Version: version, OutboundAllow: allow, EnvFile: *envFile}
 	if err := plost.EnvKeys(&cfg); err != nil {
 		log.Fatal(err)
 	}

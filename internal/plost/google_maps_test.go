@@ -3,6 +3,8 @@ package plost
 import (
 	"encoding/json"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -76,8 +78,25 @@ func TestEnvKeys(t *testing.T) {
 	}
 	x := newTestApp(t)
 	x.setup(t)
-	x.call(t, "PUT", "/api/mapbox", map[string]any{"token": "pk.from-the-page"}, 400) // The page cannot send a key any more.
-	x.call(t, "PUT", "/api/google-maps", map[string]any{"key": "AIza" + strings.Repeat("C", 35)}, 400)
+	x.call(t, "PUT", "/api/mapbox", map[string]any{"token": "pk.from-the-page"}, 400) // No env file to save it in.
+	// With an env file, a key saved on the page goes into it, in place of its old line, and is used at once.
+	env := filepath.Join(t.TempDir(), "plost.env")
+	os.WriteFile(env, []byte("# keys\nPLOST_MAPBOX_TOKEN=pk.old\nPLOST_BACKUP_PASSWORD=keep-this-password\n"), 0o600)
+	x.app.cfg.EnvFile = env
+	x.call(t, "PUT", "/api/mapbox", map[string]any{"token": "sk.secret"}, 400)
+	var mapbox map[string]any
+	json.Unmarshal(x.call(t, "PUT", "/api/mapbox", map[string]any{"token": " pk.from-the-page "}, 200), &mapbox)
+	google := "AIza" + strings.Repeat("C", 35)
+	x.call(t, "PUT", "/api/google-maps", map[string]any{"key": google}, 200)
+	if mapbox["masked"] != "pk.from-••••••••" || mapbox["editable"] != true || strings.Contains(string(x.call(t, "GET", "/api/google-maps", nil, 200)), google) {
+		t.Fatalf("the settings answer must show only the start of a key: %v", mapbox)
+	}
+	if got, _ := os.ReadFile(env); string(got) != "# keys\nPLOST_MAPBOX_TOKEN=pk.from-the-page\nPLOST_BACKUP_PASSWORD=keep-this-password\nPLOST_GOOGLE_MAPS_KEY="+google+"\n" {
+		t.Fatalf("env file: %q", got)
+	}
+	if token, key := x.app.mapKeys(); token != "pk.from-the-page" || key != google {
+		t.Fatal("saved keys are not used at once")
+	}
 	var n int
 	x.app.db.QueryRow("SELECT count(*) FROM settings WHERE key IN ('mapbox_public_token','google_maps_key')").Scan(&n)
 	if n != 0 {

@@ -35,14 +35,16 @@ export function MapServicesPage({ onSaved }: { onSaved: () => void }) {
  * The visitor map services. Both may be off, and then the built-in map is used; at most one is on, and it replaces the
  * built-in map. Each switch saves at once, and turning one on turns the other off.
  */
-function MapServicesSettings({ mapbox, google, onSaved }: { mapbox: MapboxSettings; google: GoogleMapsSettings; onSaved: () => void }) {
+function MapServicesSettings({ mapbox: initialMapbox, google: initialGoogle, onSaved }: { mapbox: MapboxSettings; google: GoogleMapsSettings; onSaved: () => void }) {
+  const [mapbox, setMapbox] = useState(initialMapbox)
+  const [google, setGoogle] = useState(initialGoogle)
   // A Mapbox switch saved on before any token was entered does nothing, so it shows as off.
-  const [mapboxOn, setMapboxOn] = useState(mapbox.enabled && mapbox.configured)
-  const [googleOn, setGoogleOn] = useState(google.enabled && google.configured)
+  const [mapboxOn, setMapboxOn] = useState(initialMapbox.enabled && initialMapbox.configured)
+  const [googleOn, setGoogleOn] = useState(initialGoogle.enabled && initialGoogle.configured)
   const fail = (error: unknown) => { showToast(error instanceof Error ? error.message : "保存失败", "error"); return false }
 
   async function toggleMapbox(next: boolean) {
-    if (next && !mapbox.configured) return fail(new Error("请先在 env 文件里设置 PLOST_MAPBOX_TOKEN 并重启服务"))
+    if (next && !mapbox.configured) return fail(new Error("请先填写并保存 Mapbox Token"))
     try {
       await saveMapboxSettingsFn({ data: { enabled: next } })
       setMapboxOn(next)
@@ -53,7 +55,7 @@ function MapServicesSettings({ mapbox, google, onSaved }: { mapbox: MapboxSettin
     } catch (error) { return fail(error) }
   }
   async function toggleGoogle(next: boolean) {
-    if (next && !google.configured) return fail(new Error("请先在 env 文件里设置 PLOST_GOOGLE_MAPS_KEY 并重启服务"))
+    if (next && !google.configured) return fail(new Error("请先填写并保存 Google Maps API Key"))
     try {
       await saveGoogleMapsSettingsFn({ data: { enabled: next } })
       setGoogleOn(next)
@@ -64,8 +66,8 @@ function MapServicesSettings({ mapbox, google, onSaved }: { mapbox: MapboxSettin
     } catch (error) { return fail(error) }
   }
   return <>
-    <MapboxSettingsPanel initial={mapbox} enabled={mapboxOn} onToggle={toggleMapbox} />
-    <GoogleMapsSettingsPanel initial={google} enabled={googleOn} onToggle={toggleGoogle} />
+    <MapboxSettingsPanel settings={mapbox} enabled={mapboxOn} onToggle={toggleMapbox} onKeySaved={next => { setMapbox(next); onSaved() }} />
+    <GoogleMapsSettingsPanel settings={google} enabled={googleOn} onToggle={toggleGoogle} onKeySaved={next => { setGoogle(next); onSaved() }} />
     <MapServiceTips />
   </>
 }

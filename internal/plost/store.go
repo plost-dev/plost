@@ -46,6 +46,9 @@ type Config struct {
 	// (PLOST_BACKUP_PASSWORD).
 	MapboxToken, GoogleMapsKey                       string
 	BackupAccessKey, BackupSecretKey, BackupPassword string
+	// EnvFile is the env file the service starts with (-env-file); when set, the settings page may save the
+	// map keys into it.
+	EnvFile string
 }
 
 type App struct {
@@ -63,8 +66,9 @@ type App struct {
 	geo      *geoIP
 	recent   *recentEvents
 
-	googleMaps atomic.Bool // Google Maps is the visitor map; the page policy then allows its hosts.
-	live       *livePlaces // Where the visitors online now are, in memory only.
+	googleMaps atomic.Bool  // Google Maps is the visitor map; the page policy then allows its hosts.
+	keysMu     sync.RWMutex // Guards the map keys in cfg, which the settings page may replace.
+	live       *livePlaces  // Where the visitors online now are, in memory only.
 
 	trendMu sync.Mutex // Guards trends, the 30-day site card trends, which the site list asks for on every refresh.
 	trends  map[int64]cachedTrend

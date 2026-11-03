@@ -3,10 +3,7 @@ import { SettingsTips } from "./SettingsTips"
 /** The notes for both map services, at the bottom of the visitor map settings. */
 export function MapServiceTips() {
   return <SettingsTips title="使用提示" tips={[
-    "Token 和 Key 写在服务的 env 文件里（systemd 的 EnvironmentFile，默认 /etc/plost/plost.env），不存数据库，恢复备份也不会丢；改完重启 Plost 生效。",
-    "PLOST_MAPBOX_TOKEN 填以 pk. 开头的公开 Token，限制为本站域名，并开启 styles:read、fonts:read；不要填写 sk. 私密密钥。",
-    "PLOST_GOOGLE_MAPS_KEY 填以 AIza 开头的浏览器 Key。它会在浏览器里使用，请在 Google Cloud 里限制为本站域名（HTTP 引荐来源），API 只开启 Maps JavaScript API。",
-    "Mapbox 和 Google 地图各有三种地图样式，选择后自动保存到当前账号。「标准」适配界面深浅色，「街道」和「深色」保持自身配色。样式预览图只示意风格，统计页上是真正的地图。",
-    "开关点一下就保存，重新打开统计页后生效。两种都没开启，或者 Token、Key 加载失败时，显示内置地图。",
+    "Token 和 Key 保存在服务的 env 文件里，不存数据库，保存后立即生效。Mapbox 填 pk. 开头的公开 Token，Google 填 AIza 开头的浏览器 Key，都请限制为本站域名。",
+    "两种地图同时只能开一种，都不开时显示内置地图。地图样式选择后自动保存，统计页重新打开后生效。",
   ]} />
 }

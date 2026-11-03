@@ -145,7 +145,7 @@ curl --fail-with-body 'https://stats.example.com/api/v1/stats?period=summary' \
 
 ## Key 与 env 文件
 
-地图和云备份用到的 Key 只从环境变量读取，不存数据库，页面上也不能填写，只显示是否已设置；恢复备份、换数据目录或重建数据库都不会丢。systemd 下写在 `EnvironmentFile` 指向的文件里（示例单元是 `/etc/plost/plost.env`，权限 0600），改完 `systemctl restart plost` 生效：
+地图和云备份用到的 Key 只从环境变量读取，不存数据库；恢复备份、换数据目录或重建数据库都不会丢。systemd 下写在 `EnvironmentFile` 指向的文件里（示例单元是 `/etc/plost/plost.env`，权限 0600，属主为 `plost`），手动改完 `systemctl restart plost` 生效：
 
 ```sh
 PLOST_MAPBOX_TOKEN=pk.…
@@ -155,7 +155,9 @@ PLOST_BACKUP_SECRET_KEY=…
 PLOST_BACKUP_PASSWORD=…
 ```
 
-格式不对（例如 Mapbox 填了 `sk.` 私密密钥、Google Key 长度不对、备份密码少于 12 个字符）时程序拒绝启动并说明是哪一项。地图开关、地图样式和备份去向等偏好仍保存在数据库。
+格式不对（例如 Mapbox 填了 `sk.` 私密密钥、Google Key 长度不对、备份密码少于 12 个字符）时程序拒绝启动并说明是哪一项。
+
+两个地图 Key 也可以在「设置 → 访客地图」里填写：页面只显示已设置 Key 的开头几位，保存时程序把它写进 env 文件（替换原来那一行，其余内容不动）并立即使用，不用重启。这需要用 `-env-file` 或环境变量 `PLOST_ENV_FILE` 告诉程序 env 文件的位置，并允许服务写这个文件；示例单元已经设置了 `PLOST_ENV_FILE` 和 `ReadWritePaths`。没有指定时输入框不可用。云备份的凭据和备份密码不在页面上填写。地图开关、地图样式和备份去向等偏好仍保存在数据库。
 
 ## 从 Umami 搬迁
 
