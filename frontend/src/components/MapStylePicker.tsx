@@ -16,10 +16,10 @@ export function MapStylePicker() {
     options={MAPBOX_STYLES.map(style => ({id: style.id, label: style.label, preview: <img className="squircle map-style-preview" src={`/map-previews/${style.id}.webp`} alt={t("{0}地图预览", {0: t(style.label)})} width="360" height="220" loading="lazy" decoding="async"/>}))}/>
 }
 
-export function GoogleMapStylePicker() {
+export function GoogleMapStylePicker({apiKey}: {apiKey?: string}) {
   const {t} = useT()
   return <StylePicker name="google-map-style" saved={useGoogleMapStyle()} save={async styleId => (await saveGoogleMapStyleFn({data: {styleId}})).styleId}
-    options={GOOGLE_MAP_STYLES.map(style => ({id: style.id, label: style.label, preview: <GoogleStylePreview styleId={style.id} label={t("{0}地图预览", {0: t(style.label)})}/>}))}/>
+    options={GOOGLE_MAP_STYLES.map(style => ({id: style.id, label: style.label, preview: <GoogleStylePreview styleId={style.id} apiKey={apiKey} label={t("{0}地图预览", {0: t(style.label)})}/>}))}/>
 }
 
 /** Three map style cards that save to the account as soon as one is picked. */

@@ -15,7 +15,7 @@ declare global { interface Window { google?: { maps: Maps }; __plostGoogleMapsRe
 
 let loading: Promise<Maps> | null = null
 /** Loads the Maps JavaScript API once per page. A rejected key (gm_authFailure) or a failed script rejects. */
-function loadGoogleMaps(key: string, language: string): Promise<Maps> {
+export function loadGoogleMaps(key: string, language: string): Promise<Maps> {
   if (window.google?.maps?.Map) return Promise.resolve(window.google.maps)
   if (loading) return loading
   loading = new Promise((resolve, reject) => {

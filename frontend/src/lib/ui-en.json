@@ -1288,7 +1288,7 @@
   "站点列表每张卡片下方的小走势图。样式和时间范围选择后自动保存到当前账号。": "The small trend under each card in the site list. Its style and time range are saved to this account as you choose.",
   "界面外观": "Appearance",
   "深浅色在页脚的主题按钮切换。": "Switch between light and dark mode with the theme button in the footer.",
-  "Mapbox 和 Google 地图各有三种地图样式，选择后自动保存到当前账号。「标准」适配界面深浅色，「街道」和「深色」保持自身配色。Google 地图的样式预览按配色示意，不是实际地图截图。": "Mapbox and Google Maps each have three map styles, saved to this account as you choose. Standard follows light and dark mode; Streets and Dark keep their own colours. The Google Maps previews only illustrate the colours and are not real map screenshots.",
+  "Mapbox 和 Google 地图各有三种地图样式，选择后自动保存到当前账号。「标准」适配界面深浅色，「街道」和「深色」保持自身配色。Google 地图开启后，样式预览用你的 Key 实时显示与 Mapbox 预览同一位置的地图；未开启时只按配色示意。": "Mapbox and Google Maps each have three map styles, saved to this account as you choose. Standard follows light and dark mode; Streets and Dark keep their own colours. With Google Maps on, its previews are drawn live with your key at the same place as the Mapbox previews; while it is off they only illustrate the colours.",
   "走势图的 24 小时按小时、30 天按天显示访客。": "The trend shows visitors by hour over 24 hours and by day over 30 days.",
   "更改邮箱或密码都需要输入当前密码。密码至少 8 个字符，不限制字符类型。": "Changing the email or password needs the current password. Passwords have at least 8 characters of any kind.",
   "两步验证开启后，登录时在密码之后还要输入验证器里的 6 位数字。恢复码在丢失验证器时使用，每条只能用一次，请另外妥善保存。": "With two-step verification on, signing in also asks for the 6-digit code from your authenticator. Recovery codes are for when you lose it; each works once, so keep them somewhere safe.",

@@ -440,7 +440,7 @@ func (a *App) googleMapsSettings(w http.ResponseWriter, r *http.Request) error {
 	key := a.setting(r.Context(), "google_maps_key", "")
 	enabled := a.setting(r.Context(), "google_maps_enabled", "false") == "true"
 	if r.Method == "GET" {
-		return jsonResponse(w, map[string]any{"enabled": enabled, "configured": key != ""})
+		return jsonResponse(w, googleMapsState(enabled, key))
 	}
 	var in struct {
 		Key     *string `json:"key"`
@@ -485,5 +485,15 @@ func (a *App) googleMapsSettings(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	a.googleMaps.Store(enabled)
-	return jsonResponse(w, map[string]bool{"enabled": enabled, "configured": key != ""})
+	return jsonResponse(w, googleMapsState(enabled, key))
+}
+
+// googleMapsState is what the settings page sees. While Google Maps is on, the key comes back too so the style
+// previews can be drawn with it; the statistics pages receive the same key then anyway.
+func googleMapsState(enabled bool, key string) map[string]any {
+	state := map[string]any{"enabled": enabled, "configured": key != "", "previewKey": ""}
+	if enabled {
+		state["previewKey"] = key
+	}
+	return state
 }

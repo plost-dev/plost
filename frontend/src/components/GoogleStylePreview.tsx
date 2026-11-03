@@ -1,7 +1,9 @@
 import * as d3 from "d3"
-import { useEffect, useId, useState } from "react"
+import { useEffect, useId, useRef, useState } from "react"
+import { loadGoogleMaps } from "./GoogleVisitorMap"
+import { useT } from "~/lib/i18n"
 import { loadWorldMap } from "~/lib/world-countries"
-import type { GoogleMapStyleId } from "~/lib/google-map-styles"
+import { googleMapLook, type GoogleMapStyleId } from "~/lib/google-map-styles"
 
 const WIDTH = 360, HEIGHT = 220
 // Streets only: rough patches of green where Google's road map shows forest (Siberia, Southeast Asia, Europe, central
@@ -18,12 +20,60 @@ function worldOutlines() {
   }).catch(error => { outlines = undefined; throw error })
 }
 
+// The Mapbox previews' camera (public/map-previews/SOURCES.md). Mapbox zoom levels use 512px tiles, Google's 256px,
+// so the same view is one level higher in Google Maps.
+const PREVIEW_CAMERA = { center: { lat: 37.77, lng: -122.44 }, zoom: 12.3 }
+
 /**
- * A preview drawn in each style's own colours from the built-in world map, not a Google screenshot: Google's tiles can
- * only be shown through the Maps API with a key. Standard switches with light and dark mode in CSS.
+ * The real Google map for a style, live through the Maps JavaScript API with the saved key, at the same place as the
+ * Mapbox previews. Google's terms do not allow keeping screenshots, so it is drawn each time; when it cannot load
+ * (no key yet, a rejected key, or a page opened before Google Maps was turned on), the drawn preview is shown.
  */
-export function GoogleStylePreview({styleId, label}: {styleId: GoogleMapStyleId; label: string}) {
-  const clip = useId()
+export function GoogleStylePreview({styleId, label, apiKey}: {styleId: GoogleMapStyleId; label: string; apiKey?: string}) {
+  const [failed, setFailed] = useState(false)
+  useEffect(() => setFailed(false), [apiKey])
+  return apiKey && !failed ? <GoogleLivePreview styleId={styleId} label={label} apiKey={apiKey} onFailure={() => setFailed(true)}/> : <DrawnPreview styleId={styleId} label={label}/>
+}
+
+function GoogleLivePreview({styleId, label, apiKey, onFailure}: {styleId: GoogleMapStyleId; label: string; apiKey: string; onFailure: () => void}) {
+  const {locale} = useT()
+  const container = useRef<HTMLDivElement>(null)
+  const fail = useRef(onFailure)
+  fail.current = onFailure
+  useEffect(() => {
+    const element = container.current
+    if (!element) return
+    let disposed = false
+    let theme: MutationObserver | undefined
+    const failure = () => { if (!disposed) fail.current() }
+    const timer = setTimeout(failure, 15_000)
+    const previous = window.gm_authFailure
+    const onAuthFailure = () => { previous?.(); failure() }
+    window.gm_authFailure = onAuthFailure
+    const dark = () => document.documentElement.dataset.theme === "dark"
+    loadGoogleMaps(apiKey, locale === "en" ? "en" : "zh-CN").then(maps => {
+      if (disposed) return
+      clearTimeout(timer)
+      const map = new maps.Map(element, {
+        ...PREVIEW_CAMERA, ...googleMapLook(styleId, dark()), isFractionalZoomEnabled: true,
+        disableDefaultUI: true, gestureHandling: "none", keyboardShortcuts: false, clickableIcons: false,
+      })
+      theme = new MutationObserver(() => map.setOptions(googleMapLook(styleId, dark())))
+      theme.observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]})
+    }, failure)
+    return () => {
+      disposed = true; clearTimeout(timer); theme?.disconnect()
+      if (window.gm_authFailure === onAuthFailure) window.gm_authFailure = previous
+    }
+  }, [apiKey, styleId, locale])
+  return <div ref={container} className="squircle map-style-preview google-live-preview" role="img" aria-label={label}/>
+}
+
+/**
+ * A preview drawn in each style's own colours from the built-in world map, for when the real map cannot be shown.
+ * Standard switches with light and dark mode in CSS.
+ */
+function DrawnPreview({styleId, label}: {styleId: GoogleMapStyleId; label: string}) {  const clip = useId()
   const [path, setPath] = useState("")
   useEffect(() => { let live = true; void worldOutlines().then(d => { if (live) setPath(d) }, () => {}); return () => { live = false } }, [])
   return <svg className="squircle map-style-preview google-style-preview" data-style={styleId} viewBox={`0 0 ${WIDTH} ${HEIGHT}`} role="img" aria-label={label}>
