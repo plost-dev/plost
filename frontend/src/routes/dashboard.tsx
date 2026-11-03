@@ -3,10 +3,11 @@ import { SiteSparkline } from "~/components/SiteSparkline"
 import { Surface } from "~/components/Surface"
 import { ActionButton } from "~/components/ActionButton"
 import { SiteFavicon } from "~/components/SiteFavicon"
-import { redirect, Link, createFileRoute } from "@tanstack/react-router"
+import { redirect, Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { Shell } from "~/components/Shell"
-import { meFn, sitesFn } from "~/lib/actions"
+import { meFn, overviewGeoFn, sitesFn } from "~/lib/actions"
+import { OverviewGlobe, type OverviewCountry } from "~/components/OverviewGlobe"
 import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
 import { readSiteLayout, setSiteLayout, subscribeSiteLayout, type SiteLayout } from "~/lib/site-layout-preference"
@@ -27,7 +28,7 @@ function DashboardPage() {
   const { t } = useT()
   const [q, setQ] = useState("")
   const [menu, setMenu] = useState<string | null>(null)
-  const layout = useSyncExternalStore(subscribeSiteLayout, readSiteLayout, () => "compact")
+  const layout = useSyncExternalStore(subscribeSiteLayout, readSiteLayout, (): SiteLayout => "compact")
   const [layoutSaveFailed, setLayoutSaveFailed] = useState(false)
   useRouterAutoRefresh()
   const now = new Date().toISOString()
@@ -78,41 +79,25 @@ function DashboardPage() {
   }, [q, sites])
 
   return (
-    <Shell user={me}>
+    <Shell user={me} headerSearch={
+      <div className="management-search relative">
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-800">
+          <UIIcon name="search" className="size-4" />
+        </div>
+        <input
+          ref={searchRef}
+          className="squircle input pl-9"
+          aria-label={t("搜索站点")}
+          placeholder={searching ? t("搜索站点") : t("按 / 搜索")}
+          value={q}
+          onFocus={() => setSearching(true)}
+          onBlur={() => setSearching(false)}
+          onChange={(e) => setQ(e.target.value)}
+        />
+      </div>
+    }>
       <div>
-        <h1 className="sr-only">{t("nav.sites")}</h1>
-        <header className="management-toolbar management-overview-toolbar">
-          <div className="management-search relative">
-            <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-800">
-              <UIIcon name="search" className="size-4" />
-            </div>
-            <input
-              ref={searchRef}
-              className="squircle input pl-9"
-              aria-label={t("搜索站点")}
-              placeholder={searching ? t("搜索站点") : t("按 / 搜索")}
-              value={q}
-              onFocus={() => setSearching(true)}
-              onBlur={() => setSearching(false)}
-              onChange={(e) => setQ(e.target.value)}
-            />
-          </div>
-          <div className="management-site-tools">
-            <div className="squircle site-layout-switch" role="group" aria-label={t("站点显示方式")}>
-              <span className="squircle site-layout-thumb" aria-hidden="true"/>
-              <button className="squircle btn" data-layout="grid" type="button" aria-label={t("卡片")} title={t("卡片")} aria-pressed={layout === "grid"} onClick={() => changeLayout("grid")}>
-                
-                <span className="management-tool-label">{t("卡片")}</span>
-              </button>
-              <button className="squircle btn" data-layout="compact" type="button" aria-label={t("紧凑")} title={t("紧凑")} aria-pressed={layout === "compact"} onClick={() => changeLayout("compact")}>
-                
-                <span className="management-tool-label">{t("紧凑")}</span>
-              </button>
-            </div>
-          <Link to="/sites/new" className="squircle btn btn-primary ui-icon-button" aria-label={t("添加网站")} title={t("添加网站")}>
-            <UIIcon name="plus" className="size-4" /></Link>
-          </div>
-        </header>
+        <OverviewHero sites={sites} layout={layout} onLayout={changeLayout} />
         {layoutSaveFailed ? <p className="text-xs text-gray-500" role="status">{t("已切换，当前浏览器无法保存显示方式。")}</p> : null}
 
         {q && filtered.length === 0 ? (
@@ -194,7 +179,72 @@ function DashboardPage() {
   )
 }
 
-export function CompactMetrics({site}: {site: Awaited<ReturnType<typeof sitesFn>>[number]}) {
+type OverviewSite = Awaited<ReturnType<typeof sitesFn>>[number]
+
+function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[], layout: SiteLayout, onLayout: (value: SiteLayout) => void }) {
+  const { t } = useT()
+  const router = useRouter()
+  const [countries, setCountries] = useState<OverviewCountry[]>([])
+  const [updatedAt, setUpdatedAt] = useState(() => Date.now())
+  const [now, setNow] = useState(() => Date.now())
+  const [refreshing, setRefreshing] = useState(false)
+  const visitors = sites.reduce((sum, site) => sum + (site.visitors || 0), 0)
+
+  // Each loader refresh hands over a new list; the globe follows it.
+  useEffect(() => {
+    let alive = true
+    setUpdatedAt(Date.now())
+    void overviewGeoFn().then((rows) => { if (alive) setCountries(rows) }).catch(() => {})
+    return () => { alive = false }
+  }, [sites])
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 30_000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const minutes = Math.floor(Math.max(0, now - updatedAt) / 60_000)
+  async function refresh() {
+    setRefreshing(true)
+    try { await router.invalidate() } finally { setRefreshing(false); setNow(Date.now()) }
+  }
+
+  return (
+    <section className="squircle overview-hero" aria-labelledby="overview-hero-title">
+      <div className="overview-hero-body">
+        <div>
+          <h1 id="overview-hero-title" className="overview-hero-title">{t("nav.sites")}</h1>
+          <p className="overview-hero-sub">{t("footer.sites").replace("{n}", numberShort(sites.length))}</p>
+        </div>
+        <div className="overview-hero-metric">
+          <strong>{numberShort(visitors)}</strong>
+          <span>{t("位访客（近 24 小时，全部站点）")}</span>
+        </div>
+        <div className="overview-hero-actions management-site-tools">
+          <Link to="/sites/new" className="squircle btn btn-primary" aria-label={t("添加网站")} title={t("添加网站")}>
+            <UIIcon name="plus" className="size-4" />
+            <span className="management-tool-label">{t("添加网站")}</span>
+          </Link>
+          <div className="squircle site-layout-switch" role="group" aria-label={t("站点显示方式")}>
+            <span className="squircle site-layout-thumb" aria-hidden="true"/>
+            <button className="squircle btn" data-layout="grid" type="button" aria-label={t("卡片")} title={t("卡片")} aria-pressed={layout === "grid"} onClick={() => onLayout("grid")}>
+              <span className="management-tool-label">{t("卡片")}</span>
+            </button>
+            <button className="squircle btn" data-layout="compact" type="button" aria-label={t("紧凑")} title={t("紧凑")} aria-pressed={layout === "compact"} onClick={() => onLayout("compact")}>
+              <span className="management-tool-label">{t("紧凑")}</span>
+            </button>
+          </div>
+          <button type="button" className="overview-hero-refresh" disabled={refreshing} onClick={refresh} aria-label={t("刷新")} title={t("刷新")}>
+            <UIIcon name="refresh" className={refreshing ? "is-spinning" : undefined} />
+            <span role="status">{minutes < 1 ? t("刚刚更新") : t("{n} 分钟前更新").replace("{n}", String(minutes))}</span>
+          </button>
+        </div>
+      </div>
+      <OverviewGlobe countries={countries} />
+    </section>
+  )
+}
+
+export function CompactMetrics({site}: {site: OverviewSite}) {
   const {t} = useT()
   const metrics: Array<[string, number]> = [
     [t("访客"), site.visitors],

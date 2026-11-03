@@ -30,6 +30,7 @@ export async function sitesFn(){
   return items.map(({site:s,overview:o,series,previous,certificateExpiresAt})=>({...s,certificateExpiresAt,visitors:o.visitors,visits:o.visits,pageviews:o.pageviews,live:o.online,change:previous.visitors?Math.round((o.visitors-previous.visitors)/previous.visitors*100):0,sparkline:series.map(p=>p.visitors)}))
 }
 export async function trafficPulseFn(){const items=await rpc<Array<{site:Site;overview:GoOverview}>>("/api/sites");return {sites:{count:items.length,visitors:items.reduce((n,s)=>n+s.overview.visitors,0),visits:items.reduce((n,s)=>n+s.overview.visits,0),pageviews:items.reduce((n,s)=>n+s.overview.pageviews,0)}}}
+export const overviewGeoFn=()=>rpc<Array<{code:string;visitors:number;sites:Array<{name:string;visitors:number}>}>>("/api/overview/countries")
 export async function createSiteFn({data}:Input<{domain:string;timezone:string;name?:string|null}>){return rpc<{domain:string}>("/api/sites","POST",data)}
 export async function siteReadyFn({data}:Input<{domain:string}>){const r=await rpc<GoReport>(sitePath(data.domain)+"/report?period=all");return {ready:r.overview.pageviews>0}}
 export type Share={id:number;name:string;slug:string;createdAt:number}

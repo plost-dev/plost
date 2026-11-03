@@ -111,15 +111,6 @@ html[data-theme="dark"] .management-site-ssl.is-unknown { --ssl-text:var(--color
 .site-layout-thumb { position:absolute; top:4px; bottom:4px; left:4px; width:calc(50% - 4px); background:var(--ui-selection-bg); pointer-events:none; transition:transform 180ms ease; }
 .management-shell .site-layout-switch > .btn { position:relative; z-index:1; --control-size:calc(var(--ui-control-height) - 10px); height:var(--control-size); padding-inline:10px; border:0; background:transparent; gap:6px; color:var(--color-gray-500); transition:color 180ms; }
 .management-site-tools > .btn { --control-size:var(--ui-control-height); }
-.management-overview-toolbar { flex-wrap:nowrap; border:0; padding:0; margin:32px 0 24px; }
-.management-overview-toolbar > .management-search { flex:0 1 320px; }
-.management-overview-toolbar > .management-site-tools { flex:none; flex-wrap:nowrap; width:auto; }
-@media(max-width:639px) {
-  .management-overview-toolbar { flex-wrap:wrap; gap:12px; margin:24px 0 20px; }
-  .management-overview-toolbar > .management-search { flex:1 1 100%; width:100%; }
-  .management-overview-toolbar > .management-site-tools { width:100%; justify-content:space-between; gap:12px; }
-  .management-overview-toolbar .management-tool-label { display:inline; }
-}
 .management-shell .site-layout-switch > .btn:hover { background:transparent; color:var(--color-gray-900); }
 /* The early preference script also controls selection before React hydrates. */
 html[data-site-layout="grid"] .management-shell .site-layout-switch > button[data-layout="grid"],
@@ -306,3 +297,52 @@ html.dark .api-doc-table td { border-bottom-color:var(--color-gray-700); }
 html.dark .api-doc-table td code { background:var(--color-gray-800); color:var(--color-gray-200); }
 html.dark .tag-optional { background:var(--color-gray-700); color:var(--color-gray-300); }
 html.dark .tag-required { background:#450a0a; color:#fca5a5; }
+
+/* Site overview hero: totals and controls beside a dotted visitor globe. */
+.overview-hero { --sq-r:20px; position:relative; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,46%); min-height:300px; margin:32px 0 24px; overflow:hidden; border:1px solid var(--color-gray-200); background:var(--surface); --overview-globe-dot:var(--color-gray-500); --overview-globe-sphere:var(--color-gray-100); --overview-globe-rim:rgb(161 161 170 / .3); }
+html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overview-globe-sphere:#050506; --overview-globe-rim:rgb(212 212 216 / .16); }
+.overview-hero-body { position:relative; z-index:1; display:flex; flex-direction:column; gap:24px; padding:32px 0 32px 32px; }
+.overview-hero-title { font-size:28px; line-height:1.2; font-weight:700; letter-spacing:-.025em; color:var(--color-gray-900); }
+.overview-hero-sub { margin-top:6px; font-size:14px; color:var(--color-gray-500); }
+.overview-hero-metric { display:flex; flex-direction:column; gap:2px; }
+.overview-hero-metric strong { font-size:40px; line-height:1.05; font-weight:700; letter-spacing:-.03em; color:var(--color-gray-900); font-variant-numeric:tabular-nums; }
+.overview-hero-metric span { font-size:13px; color:var(--color-gray-500); }
+.overview-hero-actions { margin-top:auto; flex-wrap:nowrap; }
+.overview-hero-actions > .btn-primary { gap:8px; padding-inline:16px; }
+.management-shell .overview-hero .site-layout-switch > .btn .ui-icon { width:15px; height:15px; }
+.overview-hero-refresh { display:inline-flex; align-items:center; gap:8px; min-width:0; height:var(--ui-control-height); padding:0 4px; font-size:13px; color:var(--color-gray-500); white-space:nowrap; }
+.overview-hero-refresh:hover { color:var(--color-gray-900); }
+.overview-hero-refresh .ui-icon { width:16px; height:16px; flex:none; }
+.overview-hero-refresh .is-spinning { animation:overview-spin .8s linear infinite; }
+@keyframes overview-spin { to { transform:rotate(360deg); } }
+.overview-globe { position:relative; min-width:0; min-height:300px; }
+.overview-globe-canvas { position:absolute; inset:0; width:100%; height:100%; touch-action:pan-y; cursor:grab; }
+.overview-globe.is-map .overview-globe-canvas { cursor:default; }
+.overview-globe-canvas:active { cursor:grabbing; }
+.overview-globe-state { position:absolute; inset:0; display:grid; place-items:center; font-size:12px; color:var(--color-gray-500); }
+.overview-globe-tools { position:absolute; top:16px; right:16px; display:flex; gap:8px; }
+.overview-globe-mode { --sq-r:12px; display:flex; gap:2px; padding:3px; border:1px solid var(--color-gray-200); background:var(--surface); }
+.overview-globe-mode button { --sq-r:9px; height:28px; padding:0 12px; font-size:13px; font-weight:500; color:var(--color-gray-500); }
+.overview-globe-mode button:hover { color:var(--color-gray-900); }
+.overview-globe-mode button[aria-pressed="true"] { background:var(--ui-selection-bg); color:var(--ui-selection-text); }
+.overview-globe-expand { --sq-r:12px; display:grid; place-items:center; width:36px; height:36px; border:1px solid var(--color-gray-200); background:var(--surface); color:var(--color-gray-600); }
+.overview-globe-expand:hover { color:var(--color-gray-900); }
+.overview-globe-expand .ui-icon { width:16px; height:16px; }
+.overview-globe-tip { --sq-r:10px; position:absolute; top:0; left:0; z-index:2; display:flex; flex-direction:column; gap:1px; padding:6px 10px; border:1px solid var(--color-gray-200); background:var(--surface); font-size:12px; line-height:1.35; color:var(--color-gray-600); white-space:nowrap; pointer-events:none; }
+.overview-globe-tip strong { display:flex; align-items:center; gap:5px; font-weight:600; color:var(--color-gray-900); }
+.overview-globe-flag { width:14px; height:10px; border-radius:2px; object-fit:cover; }
+.overview-globe.is-fullscreen { background:var(--surface); }
+.overview-globe.is-fullscreen .overview-globe-tools { top:24px; right:24px; }
+@media(max-width:767px) {
+  .overview-hero { grid-template-columns:minmax(0,1fr); margin:24px 0 20px; }
+  .overview-hero-body { padding:24px 20px 0; }
+  .overview-hero-actions { flex-wrap:wrap; }
+  .overview-globe { min-height:280px; }
+  .overview-globe-tools { top:12px; right:12px; }
+}
+
+/* The overview search lives in the header, left of the account menu. */
+.site-header-search { flex:0 1 240px; min-width:0; }
+.site-header-search .management-search { width:100%; }
+.site-header-search .management-search .input { height:36px; font-size:13px; }
+@media(max-width:639px) { .site-header-search { flex:1 1 auto; } }

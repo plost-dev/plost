@@ -1297,5 +1297,14 @@
   "已关闭 Mapbox，统计页使用内置地图。": "Mapbox is off; the statistics page uses the built-in map.",
   "已关闭 Google 地图。": "Google Maps is off.",
   "已关闭 Google 地图，统计页使用内置地图。": "Google Maps is off; the statistics page uses the built-in map.",
-  "{0} 位访客在线": "{0} visitors online"
+  "{0} 位访客在线": "{0} visitors online",
+  "全屏": "Full screen",
+  "退出全屏": "Exit full screen",
+  "地球": "Globe",
+  "平面": "Map",
+  "刚刚更新": "Updated just now",
+  "{n} 分钟前更新": "Updated {n} min ago",
+  "位访客（近 24 小时，全部站点）": "visitors in the last 24 hours, all sites",
+  "{n} 位访客 · {site}": "{n} on {site}",
+  "访客地区分布（近 24 小时）": "Visitor locations in the last 24 hours"
 }

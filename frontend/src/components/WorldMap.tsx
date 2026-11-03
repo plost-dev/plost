@@ -13,6 +13,7 @@ import { HelpHint } from "./HelpHint"
 import { readMapFlags, saveMapFlags, useMapStyle } from "~/lib/map-preferences"
 import {
   COUNTRIES_BY_TWO_LETTER_CODE,
+  countryCentroids,
   loadWorldMap,
   type WorldJsonCountryData,
 } from "~/lib/world-countries"
@@ -42,18 +43,6 @@ function setupProjection(width: number, height: number) {
     .scale(width * 0.158)
     .translate([width / 2, height / 1.5])
   return { projection, path: d3.geoPath().projection(projection) }
-}
-
-let centroidCache: Map<string, [number, number]> | null = null
-function countryCentroids(features: WorldJsonCountryData[]) {
-  if (centroidCache) return centroidCache
-  const out = new Map<string, [number, number]>()
-  for (const feature of features) {
-    const c = d3.geoCentroid(feature as unknown as d3.GeoPermissibleObjects)
-    if (Number.isFinite(c[0]) && Number.isFinite(c[1])) out.set(feature.properties.a3, c)
-  }
-  centroidCache = out
-  return out
 }
 
 function WorldMap({

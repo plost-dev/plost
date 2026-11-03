@@ -92,16 +92,19 @@ export function Shell({
   user,
   children,
   layout = "management",
+  headerSearch,
 }: {
   user?: ShellUser
   children: React.ReactNode
   layout?: "management" | "analytics"
+  /** Page-owned search field shown in the header, left of the account menu. */
+  headerSearch?: React.ReactNode
 }) {
   // The URL changes before the next loader completes; keep the visible page's
   // layout until its component is replaced instead of styling it as the target.
   return (
     <div className={`flex min-h-full flex-col${layout === "management" ? " management-shell" : ""}`}>
-      <SiteHeader user={user} />
+      <SiteHeader user={user} search={headerSearch} />
       {/* The space under the last card equals the space between the header and the first one. */}
       <main className={`container-ls flex-1 ${layout === "management" ? "pb-8" : "pb-4"}`}>{children}</main>
       <SiteFooter user={user} />
@@ -243,7 +246,7 @@ function FooterLanguage({ user }: { user?: ShellUser }) {
   </button>
 }
 
-function SiteHeader({ user }: { user?: ShellUser }) {
+function SiteHeader({ user, search }: { user?: ShellUser, search?: React.ReactNode }) {
   const { t } = useT()
   const location = useRouterState({ select: (s) => s.location })
   const pathname = location.pathname
@@ -259,7 +262,10 @@ function SiteHeader({ user }: { user?: ShellUser }) {
           {user ? <HeaderNav items={items} pathname={pathname} /> : <span className="hidden md:block" />}
           <div className="site-header-actions">
             {user ? (
-              <UserMenu user={user} items={items} pathname={pathname} />
+              <>
+                {search ? <div className="site-header-search">{search}</div> : null}
+                <UserMenu user={user} items={items} pathname={pathname} />
+              </>
             ) : (
               <Link to="/login" className="squircle site-header-link">{t("nav.login")}</Link>
             )}

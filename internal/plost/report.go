@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -490,4 +491,69 @@ func (a *App) liveCountries(ctx context.Context, site int64, q url.Values) ([]Ro
 		out = append(out, r)
 	}
 	return out, rows.Err()
+}
+
+// overviewCountries counts each site's visitors of the last 24 hours by country, busiest country first,
+// so the site overview can place them on its globe.
+func (a *App) overviewCountries(w http.ResponseWriter, r *http.Request) error {
+	since := time.Now().Add(-24 * time.Hour).Unix()
+	rows, err := a.db.QueryContext(r.Context(), `SELECT s.id,COALESCE(NULLIF(s.name,''),s.domain),e.country_code,count(DISTINCT `+visitorSQL+`)
+		FROM events_v2 e JOIN sites s ON s.id=e.site_id
+		WHERE e.timestamp>=? AND e.name='pageview' AND e.country_code<>''
+		GROUP BY s.id,e.country_code`, since)
+	if err != nil {
+		return err
+	}
+	type siteVisitors struct {
+		Name     string `json:"name"`
+		Visitors int64  `json:"visitors"`
+	}
+	type country struct {
+		Code     string         `json:"code"`
+		Visitors int64          `json:"visitors"`
+		Sites    []siteVisitors `json:"sites"`
+	}
+	byCode := map[string]*country{}
+	for rows.Next() {
+		var id, n int64
+		var name, code string
+		if err := rows.Scan(&id, &name, &code, &n); err != nil {
+			rows.Close()
+			return err
+		}
+		code = strings.ToUpper(strings.TrimSpace(code))
+		if len(code) != 2 {
+			continue
+		}
+		c := byCode[code]
+		if c == nil {
+			c = &country{Code: code}
+			byCode[code] = c
+		}
+		c.Visitors += n
+		c.Sites = append(c.Sites, siteVisitors{name, n})
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return err
+	}
+	out := make([]country, 0, len(byCode))
+	for _, c := range byCode {
+		sort.Slice(c.Sites, func(i, j int) bool { return c.Sites[i].Visitors > c.Sites[j].Visitors })
+		if len(c.Sites) > 3 {
+			c.Sites = c.Sites[:3]
+		}
+		out = append(out, *c)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].Visitors != out[j].Visitors {
+			return out[i].Visitors > out[j].Visitors
+		}
+		return out[i].Code < out[j].Code
+	})
+	if len(out) > 250 {
+		out = out[:250]
+	}
+	return jsonResponse(w, out)
 }

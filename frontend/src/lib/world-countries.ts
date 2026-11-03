@@ -1,3 +1,4 @@
+import * as d3 from "d3"
 import * as topojson from "topojson-client"
 import worldMapUrl from "../assets/world-50m.bin?url"
 import { decodeWorldMap } from "./world-map-format"
@@ -34,3 +35,15 @@ for (const [alpha2, pair] of Object.entries(countriesMeta as Record<string, stri
 }
 
 export const COUNTRIES_BY_TWO_LETTER_CODE = lookup
+
+let centroidCache: Map<string, [number, number]> | null = null
+export function countryCentroids(features: WorldJsonCountryData[]) {
+  if (centroidCache) return centroidCache
+  const out = new Map<string, [number, number]>()
+  for (const feature of features) {
+    const c = d3.geoCentroid(feature as unknown as d3.GeoPermissibleObjects)
+    if (Number.isFinite(c[0]) && Number.isFinite(c[1])) out.set(feature.properties.a3, c)
+  }
+  centroidCache = out
+  return out
+}
