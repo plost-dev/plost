@@ -123,14 +123,13 @@ function headerNav(t: (key: string) => string): HeaderNavItem[] {
 function navActive(key: string, pathname: string) {
   if (key === "sites") return pathname === "/dashboard" || pathname.startsWith("/sites/") || pathname === "/sites" || pathname.startsWith("/share/")
   if (key === "account") return pathname === "/settings" || pathname.startsWith("/settings/")
-  if (key === "backup") return pathname === "/backup"
   if (key === "api") return pathname === "/docs/api"
   return false
 }
 
 type HeaderNavItem = {
   key: string
-  to: "/dashboard" | "/settings" | "/backup" | "/docs/api"
+  to: "/dashboard" | "/settings" | "/docs/api"
   label: string
 }
 

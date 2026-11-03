@@ -73,7 +73,7 @@
 
 - 2026-11-04 用户要求站点首页头部（`OverviewHero.tsx`）左侧不再只放一个总数：五种图表都保留，可在头部「图表样式」菜单里切换（24 小时柱形图默认、30 天柱形图、时段热力图、站点占比、关键数字），选择按浏览器保存在 `litestats:overview-chart`；数据来自 `GET /api/overview/charts?view=…`（全部站点相加，只算所选样式需要的部分）。「站点占比」只单独列出访客最多的 3 个站点，其余合并为「其他 N 个站点」。「添加网站」「卡片/紧凑」「刷新」收成标题右侧 32px 图标按钮，更新时间写在副标题里；右侧地球不变。
 
-- 2026-11-04 用户要求设置页地址全部用静态路径，不用 `?tab=` 查询参数，也不用动态分页参数（`{-$tab}`），账户设置不再叫 `/account`。账户与系统设置：`/settings`（个人资料）、`/settings/security`、`/settings/api`、`/settings/appearance`、`/settings/sparkline`、`/settings/map`、`/settings/geoip`、`/settings/backup`，布局和导航在 `routes/settings.tsx`，每页一个 `settings.<页>.tsx`；服务端 `http.go` 的页面白名单要同步加上新页面。站点设置：`/sites/<域名>/settings`（常规）、`/settings/visibility`、`/settings/installation`、`/settings/danger-zone`，布局在 `$domain.settings.tsx`，每页一个文件。旧的 `/account?tab=…`、`/backup`、站点设置的 `?tab=…` 和 `/settings/general` 都替换跳转到新地址。新增页面照此加静态路由文件，不要再用查询参数或动态分页参数。
+- 2026-11-04 用户要求设置页地址全部用静态路径，不用 `?tab=` 查询参数，也不用动态分页参数（`{-$tab}`），账户设置不再叫 `/account`。账户与系统设置：`/settings`（个人资料）、`/settings/security`、`/settings/api`、`/settings/appearance`、`/settings/sparkline`、`/settings/map`、`/settings/geoip`、`/settings/backup`，布局和导航在 `routes/settings.tsx`，每页一个 `settings.<页>.tsx`；服务端 `http.go` 的页面白名单要同步加上新页面。站点设置：`/sites/<域名>/settings`（常规）、`/settings/visibility`、`/settings/installation`、`/settings/danger-zone`，布局在 `$domain.settings.tsx`，每页一个文件。用户明确旧链接（`/account?tab=…`、`/backup`、站点设置的 `?tab=…`、`/settings/general`）不需要跳转，已删除这些兼容路由。新增页面照此加静态路由文件，不要再用查询参数或动态分页参数。
 
 - 2026-11-04 用户要求 Mapbox Token 和 Google Key 在「访客地图」里仍有输入框，并强调 Key 只存 env 文件、不存数据库。现在页面显示已设置 Key 的前几位（`maskKey`），保存时 `writeEnvKey` 原地改写 `-env-file`/`PLOST_ENV_FILE` 指向的 env 文件中对应一行并立即生效（`App.mapKeys` 加锁读取），不重启；没有指定 env 文件时输入框禁用。云备份凭据仍只在 env 文件中手动修改。地图页使用提示精简为两条。
 

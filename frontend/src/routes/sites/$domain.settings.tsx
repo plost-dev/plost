@@ -14,18 +14,7 @@ const PAGES = [
   { to: "/sites/$domain/settings/installation", label: "安装脚本" },
   { to: "/sites/$domain/settings/danger-zone", label: "危险操作" },
 ] as const
-const LEGACY: Record<string, typeof PAGES[number]["to"]> = {
-  visibility: "/sites/$domain/settings/visibility",
-  installation: "/sites/$domain/settings/installation",
-  "danger-zone": "/sites/$domain/settings/danger-zone",
-}
-
 export const Route = createFileRoute("/sites/$domain/settings")({
-  // Older links named the page as ?tab=…; they are sent on to the page's own address.
-  validateSearch: (s: Record<string, unknown>): { tab?: string } => typeof s.tab === "string" ? { tab: s.tab } : {},
-  beforeLoad: ({ params, search }) => {
-    if (search.tab !== undefined) throw redirect({ to: LEGACY[search.tab] ?? "/sites/$domain/settings", params, search: {}, replace: true })
-  },
   loader: async ({ params }) => {
     // Both at once: each is a round trip to the server.
     const settings = siteSettingsFn({ data: { domain: params.domain } })

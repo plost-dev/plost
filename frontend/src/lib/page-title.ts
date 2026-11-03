@@ -33,7 +33,7 @@ export function pageTitle(pathname: string, locale: Locale): string {
 
   let label: PageLabel = "notFound"
   if (path === "/dashboard" || path === "/sites") label = "sites"
-  else if (path === "/settings" || path.startsWith("/settings/") || path === "/account" || path === "/backup") label = "settings"
+  else if (path === "/settings" || path.startsWith("/settings/")) label = "settings"
   else if (path === "/sites/new") label = "addSite"
   else if (path === "/login") label = "login"
   else if (path === "/setup") label = "setup"
