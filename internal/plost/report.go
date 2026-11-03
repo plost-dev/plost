@@ -387,11 +387,15 @@ func (a *App) activity(w http.ResponseWriter, r *http.Request) error {
 func (a *App) statsAPI(w http.ResponseWriter, r *http.Request) error {
 	token := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
 	if token == r.Header.Get("Authorization") {
-		return failure(401, "需要 Bearer 分享凭证")
+		return failure(401, "需要 Bearer API Key")
 	}
-	s, err := a.sharedSite(r, token)
+	// An API key, or a share link's credential as before API keys existed.
+	s, err := a.apiKeySite(r.Context(), token)
 	if err != nil {
-		return failure(401, "分享凭证无效")
+		s, err = a.sharedSite(r, token)
+	}
+	if err != nil {
+		return failure(401, "API Key 无效或已删除")
 	}
 	if !a.limits.allow("stats", token, 60, time.Minute) {
 		w.Header().Set("Retry-After", "60")
@@ -469,7 +473,7 @@ func (a *App) exportCSV(w http.ResponseWriter, r *http.Request) error {
 }
 
 func (a *App) openapi(w http.ResponseWriter, r *http.Request) {
-	_ = jsonResponse(w, map[string]any{"openapi": "3.1.0", "info": map[string]string{"title": "Plost Go statistics API", "version": "0.1.0"}, "paths": map[string]any{"/api/v1/stats": map[string]any{"get": map[string]any{"summary": "Online, today and yesterday metrics for the shared site", "security": []any{map[string]any{"bearerAuth": []string{}}}, "responses": map[string]any{"200": map[string]any{"description": "Site statistics"}, "401": map[string]any{"description": "Invalid share token"}}}}}, "components": map[string]any{"securitySchemes": map[string]any{"bearerAuth": map[string]string{"type": "http", "scheme": "bearer"}}}})
+	_ = jsonResponse(w, map[string]any{"openapi": "3.1.0", "info": map[string]string{"title": "Plost Go statistics API", "version": "0.1.0"}, "paths": map[string]any{"/api/v1/stats": map[string]any{"get": map[string]any{"summary": "Online, today and yesterday metrics for the API key's site", "security": []any{map[string]any{"bearerAuth": []string{}}}, "responses": map[string]any{"200": map[string]any{"description": "Site statistics"}, "401": map[string]any{"description": "Missing, invalid or deleted API key"}}}}}, "components": map[string]any{"securitySchemes": map[string]any{"bearerAuth": map[string]string{"type": "http", "scheme": "bearer"}}}})
 }
 
 // liveCountries counts the visitors of the last five minutes by country, with the report's filters.

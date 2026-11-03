@@ -3,7 +3,7 @@ import { AccentPicker } from "~/components/AccentPicker"
 import { AccountPreferences } from "~/components/AccountPreferences"
 import { AccountSecurity } from "~/components/AccountSecurity"
 import { ActionLink } from "~/components/ActionButton"
-import { ApiDocsContent } from "~/components/ApiDocs"
+import { ApiKeyPanel } from "~/components/ApiKeyPanel"
 import { PasskeyPanel } from "~/components/PasskeyPanel"
 import { BackupPanel } from "~/components/BackupPanel"
 import { SparklineStylePicker } from "~/components/SparklineStylePicker"
@@ -92,7 +92,11 @@ function AccountPage() {
             "两步验证开启后，登录时在密码之后还要输入验证器里的 6 位数字。恢复码在丢失验证器时使用，每条只能用一次，请另外妥善保存。",
             "Passkey 用本机指纹、面容或安全密钥登录，无需输入密码。浏览器只允许在域名或 localhost 上创建，用 IP 地址打开时不能添加。",
           ]} /></> : null}
-          {tab === "api" ? <ApiDocsContent embedded /> : null}
+          {tab === "api" ? <><ApiKeyPanel /><SettingsTips tips={[
+            "API Key 只在创建时显示一次，请只保存在服务端的环境变量里，不要写进网页 JavaScript、公开仓库或网址参数。",
+            "调用时在请求头加上 Authorization: Bearer <API Key>，请求 /api/v1/stats。完整的参数、返回字段和示例代码见官网 API 文档。",
+            "不再使用时删除对应的 Key，调用会立即失效，不用改账号密码。删除站点时，它的 Key 也一起删除。",
+          ]} /></> : null}
           {tab === "system/appearance" ? <><Tile icon="sliders" title="界面外观"><AccentPicker /></Tile><SettingsTips tips={[
             "界面配色立即生效，保存在当前浏览器，换一台电脑或浏览器需要重新选择。",
             "深浅色在页脚的主题按钮切换。",

@@ -120,7 +120,7 @@ function SettingsPage() {
                 </SettingsForm>
               </Tile>
               <Tile icon="plug" title={t("共享链接")}>
-                <p className="mb-4 text-sm"><Link to="/docs/api" className="text-indigo-600 hover:underline">{t("API")} · {t("在线人数")} / UV / PV</Link></p>
+                <p className="mb-4 text-sm"><Link to="/account" search={{ tab: "api" }} className="text-indigo-600 hover:underline">{t("API")} · {t("在线人数")} / UV / PV</Link></p>
                 <SettingsForm
                   className="mb-4"
                   onSubmit={async event => {
@@ -157,7 +157,7 @@ function SettingsPage() {
               <Tile icon="code" title={t("埋点脚本")}>
                 <TrackingSnippet code={snippet} />
                 <TrackingDocs domain={domain} />
-                <p className="mt-4 text-sm"><Link to="/docs/api" className="text-indigo-600 hover:underline">{t("API")} · {t("在线人数")} / UV / PV</Link></p>
+                <p className="mt-4 text-sm"><Link to="/account" search={{ tab: "api" }} className="text-indigo-600 hover:underline">{t("API")} · {t("在线人数")} / UV / PV</Link></p>
               </Tile>
               <SettingsTips tips={[
                 "把这段代码放到网站的 <head> 里。默认会记录页面浏览、外链点击、文件下载，以及标题、语言和屏幕分辨率。",
