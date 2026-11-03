@@ -99,3 +99,17 @@ Yahoo uses The SVG's original `yahoo-badge` asset; Hacker News uses its Y Combin
 mark (`y-combinator.svg`). There is no dedicated Bing Ads / Microsoft Advertising
 mark at this revision, so that source family uses the Bing logo. Ask and 360
 Search have no matching entry and continue to use the existing favicon fallback.
+
+## Mapbox logo (2026-11-03)
+
+`mapbox.svg` is the Mapbox brandmark as supplied by the instance owner (file `mapbox-com-brandmark.svg`), unmodified.
+It is shown only on the Mapbox settings card to identify the service the token belongs to; Mapbox's trademark rules
+apply and no rights are granted. It was checked for scripts, event handlers, external references and embedded images.
+
+## Google Maps icon (2026-11-03)
+
+`google-maps.svg` is the unmodified original-colour Google Maps icon from
+[The SVG](https://github.com/glincker/thesvg) (`public/icons/google-maps/default.svg` on `main`, downloaded 2026-11-03),
+chosen by the instance owner. It identifies the map service on its settings card, next to the title; Google's
+trademark rules apply and no rights are granted. It was checked for scripts, event handlers, external references and
+embedded images.

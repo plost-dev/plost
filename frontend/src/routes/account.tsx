@@ -7,6 +7,7 @@ import { PasskeyPanel } from "~/components/PasskeyPanel"
 import { BackupPanel } from "~/components/BackupPanel"
 import { MapboxSettingsPanel } from "~/components/MapboxSettingsPanel"
 import { ClientIPPanel } from "~/components/ClientIPPanel"
+import { GoogleMapsSettingsPanel } from "~/components/GoogleMapsSettingsPanel"
 import { SettingsHeader } from "~/components/SettingsChrome"
 import { SettingsLayout, SettingsNav } from "~/components/SettingsLayout"
 import { Shell } from "~/components/Shell"
@@ -15,6 +16,7 @@ import { accountSettingsFn } from "~/lib/actions"
 import { useT } from "~/lib/i18n"
 import { mapboxSettingsFn } from "~/lib/mapbox-actions"
 import { clientIPCheckFn } from "~/lib/client-ip-actions"
+import { googleMapsSettingsFn } from "~/lib/google-maps-actions"
 
 const ACCOUNT_TABS = [
   { id: "preferences", label: "个人资料" },
@@ -44,15 +46,15 @@ export const Route = createFileRoute("/account")({
     } catch {
       throw redirect({ to: "/login" })
     }
-    const mapbox = deps.tab === "system/mapbox" ? await mapboxSettingsFn() : null
+    const [mapbox, googleMaps] = deps.tab === "system/mapbox" ? await Promise.all([mapboxSettingsFn(), googleMapsSettingsFn()]) : [null, null]
     const clientIP = deps.tab === "system/client-ip" ? await clientIPCheckFn() : null
-    return { data, mapbox, clientIP }
+    return { data, mapbox, googleMaps, clientIP }
   },
   component: AccountPage,
 })
 
 function AccountPage() {
-  const { data, mapbox, clientIP } = Route.useLoaderData()
+  const { data, mapbox, googleMaps, clientIP } = Route.useLoaderData()
   const { tab } = Route.useSearch()
   const router = useRouter()
   const { t } = useT()
@@ -84,7 +86,9 @@ function AccountPage() {
           {tab === "preferences" ? <AccountPreferences user={user} onSaved={() => router.invalidate()} /> : null}
           {tab === "security" ? <><AccountSecurity user={user} onSaved={() => router.invalidate()} /><PasskeyPanel /></> : null}
           {tab === "api" ? <ApiDocsContent embedded /> : null}
-          {tab === "system/mapbox" && mapbox ? <MapboxSettingsPanel initial={mapbox} /> : null}
+          {/* Turning one map service on turns the other off, so both cards reload after a save. */}
+          {tab === "system/mapbox" && mapbox ? <MapboxSettingsPanel key={`mapbox-${mapbox.enabled}`} initial={mapbox} onSaved={() => router.invalidate()} /> : null}
+          {tab === "system/mapbox" && googleMaps ? <GoogleMapsSettingsPanel key={`google-${googleMaps.enabled}`} initial={googleMaps} onSaved={() => router.invalidate()} /> : null}
           {tab === "system/client-ip" && clientIP ? <ClientIPPanel initial={clientIP} /> : null}
           {tab === "system/backup" ? <BackupPanel /> : null}
         </SettingsLayout>

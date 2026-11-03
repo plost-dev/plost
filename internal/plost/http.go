@@ -140,6 +140,8 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("GET /api/preferences", a.api(a.preferences, false))
 	mux.HandleFunc("PUT /api/mapbox", a.api(a.mapboxSettings, true))
 	mux.HandleFunc("GET /api/mapbox", a.api(a.mapboxSettings, true))
+	mux.HandleFunc("PUT /api/google-maps", a.api(a.googleMapsSettings, true))
+	mux.HandleFunc("GET /api/google-maps", a.api(a.googleMapsSettings, true))
 	mux.HandleFunc("GET /api/client-ip", a.api(a.clientIPCheck, true))
 	mux.HandleFunc("PUT /api/map-style", a.api(a.mapStyle, true))
 	mux.HandleFunc("PUT /api/sparkline", a.api(a.sparklineSettingsPut, true))
@@ -212,7 +214,7 @@ func (a *App) Handler() http.Handler {
 			}
 		}
 		if r.URL.Path != "/api/event" && r.URL.Path != "/api/send" && r.URL.Path != "/e" {
-			w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://favicon.la https://*.favicon.la; font-src 'self'; connect-src 'self' https://api.mapbox.com https://*.tiles.mapbox.com https://events.mapbox.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'")
+			w.Header().Set("Content-Security-Policy", a.contentSecurityPolicy())
 			if r.Method != "GET" && r.Method != "HEAD" && r.Method != "OPTIONS" {
 				origin := a.cfg.Origin
 				if origin == "" {
@@ -542,4 +544,18 @@ func (a *App) sharedSite(r *http.Request, token string) (Site, error) {
 		return Site{}, err
 	}
 	return readSite(r.Context(), a.db, d)
+}
+
+// contentSecurityPolicy allows Google's map hosts only while Google Maps is the visitor map, so instances that do not
+// use it keep the stricter policy.
+func (a *App) contentSecurityPolicy() string {
+	script, style, img, font, connect := "'self'", "'self' 'unsafe-inline'", "'self' data: blob: https://favicon.la https://*.favicon.la", "'self'", "'self' https://api.mapbox.com https://*.tiles.mapbox.com https://events.mapbox.com"
+	if a.googleMaps.Load() {
+		script += " https://maps.googleapis.com https://maps.gstatic.com"
+		style += " https://fonts.googleapis.com"
+		img += " https://*.googleapis.com https://*.gstatic.com https://*.google.com https://*.googleusercontent.com"
+		font += " https://fonts.gstatic.com"
+		connect += " https://*.googleapis.com https://*.google.com https://*.gstatic.com"
+	}
+	return "default-src 'self'; script-src " + script + "; style-src " + style + "; img-src " + img + "; font-src " + font + "; connect-src " + connect + "; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
 }

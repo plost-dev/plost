@@ -95,11 +95,12 @@ export function UIIcon({ name, className = "" }: { name: string, className?: str
   return <i className={`ui-icon ${brand ? `fa-brands fa-${brand}` : `${style} fa-${icons[name] || icons.unknown}`} ${className}`.trim()} aria-hidden="true" />
 }
 
-export type BrandName = "google" | "bing" | "cloudflare"
+export type BrandName = "google" | "bing" | "cloudflare" | "google-maps"
 
 export function BrandIcon({ name, className = "" }: { name: BrandName, className?: string }) {
   const classes = `brand-icon brand-${name} ${className}`.trim()
   if (name === "bing") return <img src="/brands/bing.svg" alt="" aria-hidden="true" className={classes} />
   if (name === "google") return <img src="/brands/sources/google.svg" alt="" aria-hidden="true" className={classes} />
+  if (name === "google-maps") return <img src="/brands/google-maps.svg" alt="" aria-hidden="true" className={classes} />
   return <UIIcon name={`brand-${name}`} className={classes} />
 }

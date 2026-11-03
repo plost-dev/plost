@@ -135,14 +135,11 @@ html[data-accent="black"] {
   --mapbox-accent-border:#84848e;
 }
 
+/* Blue and green keep their light-mode fills in dark mode too (logo, selections, charts; 2026-11-03), like purple.
+   Black stays inverted to light grey below, since its near-black fill would vanish on a dark surface. */
 html[data-accent="blue"][data-theme="dark"] {
   --accent-soft:#1c2d47;
   --accent-text:#93c5fd;
-  --accent-logo:#60a5fa;
-  --accent-logo-on:#10203c;
-  --ui-selection-bg:#93c5fd;
-  --ui-selection-text:#10203c;
-  --analytics-accent:#93c5fd;
   --analytics-tint:#1c2d47;
   --analytics-guide:#36577f;
   --map-accent-1:#334963;
@@ -157,11 +154,6 @@ html[data-accent="blue"][data-theme="dark"] {
 html[data-accent="green"][data-theme="dark"] {
   --accent-soft:#183626;
   --accent-text:#86efac;
-  --accent-logo:#4ade80;
-  --accent-logo-on:#102e1c;
-  --ui-selection-bg:#86efac;
-  --ui-selection-text:#102e1c;
-  --analytics-accent:#86efac;
   --analytics-tint:#183626;
   --analytics-guide:#315b43;
   --map-accent-1:#2b4939;

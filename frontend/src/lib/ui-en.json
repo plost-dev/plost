@@ -1213,5 +1213,15 @@
   "30 天": "30 days",
   "站点卡片走势图": "Site card trend",
   "走势图样式已保存，站点列表将使用此样式。": "Trend style saved. The site list now uses it.",
-  "选择后自动保存到当前账号，站点列表里每张卡片的小走势图都使用此样式。24 小时按小时、30 天按天显示访客。": "Saved to this account as you choose; every site card in the site list uses it. 24 hours shows visitors by hour, 30 days by day."
+  "选择后自动保存到当前账号，站点列表里每张卡片的小走势图都使用此样式。24 小时按小时、30 天按天显示访客。": "Saved to this account as you choose; every site card in the site list uses it. 24 hours shows visitors by hour, 30 days by day.",
+  "Google 地图": "Google Maps",
+  "打开 Google Cloud 获取 API Key": "Get an API key in Google Cloud",
+  "使用 Google 地图作为访客地图": "Use Google Maps for the visitor map",
+  "已改用 Google 地图，重新打开统计页后生效。": "Now using Google Maps. Reopen the statistics page to see it.",
+  "已保存 Key，留空保留；填写新值可替换。": "A key is saved. Leave empty to keep it, or enter a new one to replace it.",
+  "填写以 AIza 开头的浏览器 Key。": "Enter a browser key starting with AIza.",
+  "Key 会在浏览器里使用。请在 Google Cloud 里把它限制为本站域名（HTTP 引荐来源），API 只开启 Maps JavaScript API。开启 Google 地图会关闭 Mapbox，反之亦然。": "The key is used in the browser. In Google Cloud, restrict it to this site's domain (HTTP referrers) and to the Maps JavaScript API only. Turning Google Maps on turns Mapbox off, and the other way round.",
+  "Google 地图暂时无法加载，已显示备用地图。请检查 API Key 和它的域名限制。": "Google Maps could not load, so the built-in map is shown. Check the API key and its domain restriction.",
+  "Google 地图 API Key 格式不对，应以 AIza 开头、共 39 个字符": "That is not a Google Maps API key: it starts with AIza and has 39 characters",
+  "请先填写 Google 地图 API Key": "Enter a Google Maps API key first"
 }

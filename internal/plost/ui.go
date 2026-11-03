@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -146,8 +147,17 @@ func (a *App) mapboxSettings(w http.ResponseWriter, r *http.Request) error {
 	if _, err = tx.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES('mapbox_enabled',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", flag); err != nil {
 		return err
 	}
+	// One map service at a time: turning Mapbox on turns Google Maps off.
+	if enabled {
+		if _, err = tx.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES('google_maps_enabled','false') ON CONFLICT(key) DO UPDATE SET value=excluded.value"); err != nil {
+			return err
+		}
+	}
 	if err = tx.Commit(); err != nil {
 		return err
+	}
+	if enabled {
+		a.googleMaps.Store(false)
 	}
 	return jsonResponse(w, map[string]bool{"enabled": enabled, "configured": token != ""})
 }
@@ -171,8 +181,12 @@ func (a *App) groupRows(ctx context.Context, site int64, rng Range, q url.Values
 }
 
 func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Values) (map[string]any, error) {
-	result := map[string]any{"mapboxToken": a.setting(ctx, "mapbox_public_token", "")}
+	result := map[string]any{"mapboxToken": a.setting(ctx, "mapbox_public_token", ""), "googleMapsKey": ""}
 	if a.setting(ctx, "mapbox_enabled", "true") != "true" {
+		result["mapboxToken"] = ""
+	}
+	if a.setting(ctx, "google_maps_enabled", "false") == "true" {
+		result["googleMapsKey"] = a.setting(ctx, "google_maps_key", "")
 		result["mapboxToken"] = ""
 	}
 	channel := `CASE WHEN referrer_source IN ('','Direct') THEN 'direct' WHEN referrer_source IN ('google.com','bing.com','baidu.com','duckduckgo.com','yahoo.com','yandex.com','yandex.ru','search.brave.com','ecosia.org','sogou.com','so.com') THEN 'organic_search' WHEN referrer_source IN ('twitter.com','x.com','t.co','facebook.com','instagram.com','reddit.com','weibo.com','youtube.com','bsky.app','threads.net','tiktok.com') THEN 'organic_social' WHEN referrer_source IN ('chatgpt.com','chat.openai.com','perplexity.ai','claude.ai','gemini.google.com','copilot.microsoft.com','grok.com','deepseek.com','chat.deepseek.com') THEN 'ai' ELSE 'referral' END`
@@ -396,4 +410,61 @@ func (a *App) dailyTrend(ctx context.Context, s Site) ([]Point, error) {
 	a.trends[s.ID] = cachedTrend{until: now.Add(5 * time.Minute), points: points}
 	a.trendMu.Unlock()
 	return points, nil
+}
+
+// googleMapsKey is a browser key for the Maps JavaScript API, which Google issues as "AIza" and 35 more characters.
+var googleMapsKey = regexp.MustCompile(`^AIza[0-9A-Za-z_-]{35}$`)
+
+// googleMapsSettings is the Google Maps alternative to Mapbox for the visitor map. The key is sent to every
+// dashboard and share page that shows the map, so it must be a browser key limited to this site's referrer.
+func (a *App) googleMapsSettings(w http.ResponseWriter, r *http.Request) error {
+	key := a.setting(r.Context(), "google_maps_key", "")
+	enabled := a.setting(r.Context(), "google_maps_enabled", "false") == "true"
+	if r.Method == "GET" {
+		return jsonResponse(w, map[string]any{"enabled": enabled, "configured": key != ""})
+	}
+	var in struct {
+		Key     *string `json:"key"`
+		Enabled *bool   `json:"enabled"`
+	}
+	if err := readJSON(w, r, &in); err != nil {
+		return err
+	}
+	if in.Key != nil {
+		key = strings.TrimSpace(*in.Key)
+		if key != "" && !googleMapsKey.MatchString(key) {
+			return failure(400, "Google 地图 API Key 格式不对，应以 AIza 开头、共 39 个字符")
+		}
+	}
+	if in.Enabled != nil {
+		enabled = *in.Enabled
+	}
+	if enabled && key == "" {
+		return failure(400, "请先填写 Google 地图 API Key")
+	}
+	tx, err := a.db.BeginTx(r.Context(), nil)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	flag := "false"
+	if enabled {
+		flag = "true"
+	}
+	for _, kv := range [][2]string{{"google_maps_key", key}, {"google_maps_enabled", flag}} {
+		if _, err = tx.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", kv[0], kv[1]); err != nil {
+			return err
+		}
+	}
+	// One map service at a time: turning Google Maps on turns Mapbox off.
+	if enabled {
+		if _, err = tx.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES('mapbox_enabled','false') ON CONFLICT(key) DO UPDATE SET value=excluded.value"); err != nil {
+			return err
+		}
+	}
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+	a.googleMaps.Store(enabled)
+	return jsonResponse(w, map[string]bool{"enabled": enabled, "configured": key != ""})
 }

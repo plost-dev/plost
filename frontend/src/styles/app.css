@@ -991,6 +991,8 @@ button.map-live-count:focus-visible { outline:2px solid var(--analytics-accent);
 .mapbox-country-marker { width:24px; height:24px; padding:0; border:0; border-radius:0; background:transparent; box-shadow:none; cursor:pointer; }
 .mapbox-country-marker:focus-visible { outline:2px solid var(--accent-text); outline-offset:3px; }
 .mapbox-country-marker img { display:block; width:100%; height:100%; object-fit:cover; }
+.google-map-markers { position:absolute; inset:0; }
+.google-country-marker { position:absolute; transform:translate(-50%,-50%); }
 .mapbox-stage[data-show-flags="false"] .mapbox-country-marker:not(.has-live) { display:none; }
 .mapbox-stage[data-show-flags="false"] .mapbox-country-marker img { display:none; }
 .mapbox-stage[data-show-flags="false"] .mapbox-live-dot { top:50%; left:50%; right:auto; transform:translate(-50%,-50%); }
@@ -1016,6 +1018,11 @@ html[data-theme="dark"] .mapboxgl-ctrl-attrib-button { filter:invert(1); }
 .settings-nav { display: flex; flex-direction: column; gap: 4px; }
 .settings-nav-link { display: flex; align-items: center; padding: 10px 12px; --sq-r:15px; color: var(--color-gray-600); font-size: 14px; line-height: 20px; }
 .settings-nav-link:hover { background: var(--color-gray-100); }
+/* Each sub-tab carries a small hollow superellipse that fills in on hover and on the current tab (2026-11-03). */
+.settings-nav-link:not(:has(.ui-icon, .brand-icon))::before { content: ""; flex: none; width: 7px; height: 7px; box-sizing: border-box; border: 1.5px solid currentColor; border-radius: 35%; opacity: .55; transition: background-color 140ms, border-color 140ms, opacity 140ms, transform 140ms; }
+.settings-nav-link:hover::before { background: var(--accent-color); border-color: var(--accent-color); opacity: 1; transform: scale(1.15); }
+.settings-nav-link.is-active::before { background: currentColor; border-color: currentColor; opacity: 1; }
+@media(prefers-reduced-motion:reduce) { .settings-nav-link::before { transition: none; } .settings-nav-link:hover::before { transform: none; } }
 .settings-content { min-width: 0; }
 .settings-content > * + *, .settings-card + .settings-card { margin-top: 24px; }
 .settings-card { min-width: 0; border: 1px solid var(--color-gray-200); }
@@ -1053,7 +1060,8 @@ html[data-theme="dark"] .mapboxgl-ctrl-attrib-button { filter:invert(1); }
 .settings-card-icon { display: inline-flex; flex: 0 0 38px; align-items: center; justify-content: center; width: 38px; height: 38px; --sq-r:15px; background: var(--analytics-tint); color: var(--analytics-accent); }
 .settings-card-heading h2 { font-size: var(--ui-text-card); font-weight: 600; line-height: 24px; }
 .settings-card-heading h2 + div { margin-top: 4px; font-size: 12px; line-height: 1.7; }
-.settings-heading-title-row { display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 14px; }
+.settings-heading-title-row { display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px; }
+.settings-brand-logo { display:block; height:24px; background:currentColor; mask:center / contain no-repeat; -webkit-mask:center / contain no-repeat; }
 .settings-heading-link { font-size:13px; line-height:24px; font-weight:500; }
 .settings-heading-actions { display:flex; align-items:center; flex:none; margin-left:auto; align-self:center; }
 @media(max-width:639px) { .settings-card-heading:has(.settings-heading-actions) { flex-wrap:wrap; } .settings-heading-actions { margin-left:36px; } }

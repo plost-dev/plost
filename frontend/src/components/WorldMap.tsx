@@ -1,4 +1,5 @@
 import { UIIcon } from "./UIIcon"
+import { GoogleVisitorMap } from "./GoogleVisitorMap"
 import { useLiveArrivals } from "~/lib/live-arrivals"
 import { Surface } from "~/components/Surface"
 import { useT } from "~/lib/i18n"
@@ -330,13 +331,14 @@ function WorldMap({
   )
 }
 
-function VisitorMap({token, ...props}: {token: string} & Parameters<typeof WorldMap>[0]) {
+function VisitorMap({token, googleKey = "", ...props}: {token: string; googleKey?: string} & Parameters<typeof WorldMap>[0]) {
   const {t} = useT()
   const styleId = useMapStyle()
   const [failed, setFailed] = useState(false)
+  if (googleKey && !failed) return <GoogleVisitorMap apiKey={googleKey} rows={props.rows} live={props.live || []} showFlags={props.showFlags} onCountryClick={props.onCountryClick} onFailure={() => setFailed(true)}/>
   if (token && !failed) return <MapboxVisitorMap token={token} styleId={styleId} rows={props.rows} live={props.live || []} showFlags={props.showFlags} onCountryClick={props.onCountryClick} onFailure={() => setFailed(true)}/>
   return <>
-    {failed ? <p role="status" className="map-fallback-note">{t("Mapbox 暂时无法加载，已显示备用地图。")}
+    {failed ? <p role="status" className="map-fallback-note">{t(googleKey ? "Google 地图暂时无法加载，已显示备用地图。请检查 API Key 和它的域名限制。" : "Mapbox 暂时无法加载，已显示备用地图。")}
       <button type="button" className="squircle control-compact underline" onClick={() => setFailed(false)}>{t("重试")}</button>
     </p> : null}
     <WorldMap {...props}/>
@@ -345,6 +347,7 @@ function VisitorMap({token, ...props}: {token: string} & Parameters<typeof World
 
 export function MapCard({
   mapboxToken = "",
+  googleMapsKey = "",
   rows,
   live = [],
   liveCount = 0,
@@ -352,6 +355,7 @@ export function MapCard({
   onCountryClick,
 }: {
   mapboxToken?: string
+  googleMapsKey?: string
   rows: Array<{ name: string, value: number, label?: string }>
   live?: Array<{ country: string }>
   liveCount?: number
@@ -389,7 +393,7 @@ export function MapCard({
                 <span className="squircle map-flags-track" aria-hidden="true"><span className="squircle map-flags-thumb"/></span>
               </label>
           </div>
-          <VisitorMap key={mapboxToken} token={mapboxToken} rows={rows} live={live} showFlags={showFlags} onCountryClick={onCountryClick} />
+          <VisitorMap key={googleMapsKey || mapboxToken} token={mapboxToken} googleKey={googleMapsKey} rows={rows} live={live} showFlags={showFlags} onCountryClick={onCountryClick} />
 
         </Surface>
       </div>

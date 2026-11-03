@@ -57,6 +57,8 @@ type App struct {
 	recent    *recentEvents
 	ipSamples *ipSamples // How recent events' addresses were found, for the settings page.
 
+	googleMaps atomic.Bool // Google Maps is the visitor map; the page policy then allows its hosts.
+
 	trendMu sync.Mutex // Guards trends, the 30-day site card trends, which the site list asks for on every refresh.
 	trends  map[int64]cachedTrend
 
@@ -157,6 +159,7 @@ func Open(cfg Config) (*App, error) {
 	a.jobCtx, a.cancelJobs = context.WithCancel(context.Background())
 	a.outboundAllow = cfg.OutboundAllow
 	a.siteProbe = newSiteChecker(cfg.OutboundAllow)
+	a.googleMaps.Store(a.setting(context.Background(), "google_maps_enabled", "false") == "true")
 	a.workers.Add(3)
 	go a.ingestLoop()
 	go a.scheduleLoop()
