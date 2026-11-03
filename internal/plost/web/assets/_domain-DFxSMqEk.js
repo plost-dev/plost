@@ -1,0 +1,1 @@
+import{Ot as e}from"./index-BzmngI32.js";var t=e;export{t as component};

@@ -1,4 +1,3 @@
-import { UIIcon } from "./UIIcon"
 import { useEffect, useMemo, useRef, useState } from "react"
 import * as d3 from "d3"
 import { CountryFlag } from "~/components/icons"
@@ -63,7 +62,6 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
   const tipRef = useRef<HTMLDivElement>(null)
   const tipAt = useRef<[number, number]>([0, 0])
   const labelRef = useRef<{ key: string, right: boolean }>({ key: "", right: false })
-  const [fullscreen, setFullscreen] = useState(false)
   const frameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const hoverRef = useRef<string | null>(null)
@@ -72,12 +70,6 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
     let alive = true
     loadDots().then((value) => { if (alive) setData(value) }).catch(() => { if (alive) setFailed(true) })
     return () => { alive = false }
-  }, [])
-
-  useEffect(() => {
-    const sync = () => setFullscreen(document.fullscreenElement === frameRef.current)
-    document.addEventListener("fullscreenchange", sync)
-    return () => document.removeEventListener("fullscreenchange", sync)
   }, [])
 
   const markers = useMemo<Marker[]>(() => {
@@ -124,8 +116,9 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
       ctx.clearRect(0, 0, width, height)
       shown = []
       if (mode === "globe") {
-        const radius = Math.min(width * 0.46, height * 0.62)
-        const cx = width / 2, cy = height * 0.6
+        // Small enough to sit whole inside the card, a little below centre to clear the corner buttons.
+        const radius = Math.min(width * 0.4, height * 0.46)
+        const cx = width / 2, cy = height * 0.54
         const projection = d3.geoOrthographic().scale(radius).translate([cx, cy]).rotate(rotation).clipAngle(90)
         const center: [number, number] = [-rotation[0], -rotation[1]]
         ctx.fillStyle = sphere
@@ -178,8 +171,8 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
       // A hover labels that place. Otherwise one place keeps the label while it stays in view, so the card
       // follows its dot instead of hopping between dots as the globe turns; then the busiest in view takes over.
       // A label lets go once its dot nears the rim, and a new one is taken only from the front of the globe.
-      // The dot must also be on the canvas, below the corner buttons, since the globe runs past the top edge.
-      const inView = (dot: { x: number, y: number }) => dot.y > 96 && dot.y < height - 12 && dot.x > 12 && dot.x < width - 12
+      // The dot must also be on the canvas and below the corner buttons.
+      const inView = (dot: { x: number, y: number }) => dot.y > 64 && dot.y < height - 12 && dot.x > 12 && dot.x < width - 12
       let label = hoverRef.current ? shown.find((dot) => dot.marker.key === hoverRef.current) : shown.find((dot) => dot.marker.key === labelRef.current.key && dot.edge < 1.15 && inView(dot))
       if (!label && !hoverRef.current) label = shown.filter((dot) => dot.edge < 0.95 && inView(dot)).sort((a, b) => b.marker.visitors - a.marker.visitors)[0]
       if (label && label.marker.key !== labelRef.current.key) {
@@ -258,14 +251,9 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
     }
   }, [data, markers, mode])
 
-  function toggleFullscreen() {
-    if (document.fullscreenElement) void document.exitFullscreen()
-    else void frameRef.current?.requestFullscreen?.()
-  }
-
   const top = tip?.sites[0]
   return (
-    <div ref={frameRef} className={`overview-globe is-${mode}${fullscreen ? " is-fullscreen" : ""}`}>
+    <div ref={frameRef} className={`overview-globe is-${mode}`}>
       <canvas ref={canvasRef} className="overview-globe-canvas" role="img" aria-label={t("当前在线访客位置")} />
       {failed ? <p className="overview-globe-state" role="status">{t("地图加载失败")}</p> : null}
       {tip && top ? (
@@ -279,9 +267,6 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
           <button type="button" className="squircle" aria-pressed={mode === "globe"} onClick={() => setMode("globe")}>{t("地球")}</button>
           <button type="button" className="squircle" aria-pressed={mode === "map"} onClick={() => setMode("map")}>{t("平面")}</button>
         </div>
-        <button type="button" className="squircle overview-globe-expand" aria-label={t(fullscreen ? "退出全屏" : "全屏")} title={t(fullscreen ? "退出全屏" : "全屏")} onClick={toggleFullscreen}>
-          <UIIcon name="expand" />
-        </button>
       </div>
     </div>
   )
