@@ -1,4 +1,5 @@
 import { Surface } from "~/components/Surface"
+import { SettingsTips } from "~/components/SettingsTips"
 import { TrackingDocs } from "~/components/TrackingDocs"
 import { TrackingSnippet } from "~/components/TrackingSnippet"
 import { ActionButton, ActionLink } from "~/components/ActionButton"
@@ -95,10 +96,15 @@ function SettingsPage() {
                 {ZONES.map(zone => <option key={zone.value} value={zone.value}>{t(zone.label)}</option>)}
               </select></Field>
               {data.health ? <div className="settings-field"><span className="settings-label">{t("站点检查")}</span><Toggle checked={healthEnabled} onChange={setHealthEnabled}>{t("开启检查")}</Toggle></div> : null}
-              {data.health && healthEnabled ? <Field label={t("检查路径")} hint={t("每 5 分钟访问一次，跟随跳转后返回 HTTP 200 视为正常。无需安装探针或统计脚本。")}><input className="squircle input" required maxLength={2048} value={healthPath} onChange={event=>setHealthPath(event.target.value)} placeholder="/" autoCapitalize="none" autoCorrect="off" spellCheck={false}/></Field> : null}
+              {data.health && healthEnabled ? <Field label={t("检查路径")}><input className="squircle input" required maxLength={2048} value={healthPath} onChange={event=>setHealthPath(event.target.value)} placeholder="/" autoCapitalize="none" autoCorrect="off" spellCheck={false}/></Field> : null}
               <FormActions><ActionButton className="btn btn-primary" type="submit">{t("保存设置")}</ActionButton></FormActions>
             </SettingsForm>
           </Tile> : null}
+          {tab === "general" ? <SettingsTips tips={[
+            "站点域名改动后，埋点脚本里的 data-domain 也要一起改成新域名，否则新的访问不会记到这个站点。",
+            "时区决定「今天」「昨天」从几点开始算，也决定按天、按小时统计的分界。",
+            "站点检查每 5 分钟访问一次检查路径，跟随跳转后返回 HTTP 200 视为正常，并检查证书和域名到期时间。无需安装探针或统计脚本。",
+          ]} /> : null}
 
           {tab === "visibility" ? (
             <div>
@@ -113,7 +119,7 @@ function SettingsPage() {
                   <FormActions><ActionButton className="btn btn-primary" type="submit">{t("保存设置")}</ActionButton></FormActions>
                 </SettingsForm>
               </Tile>
-              <Tile icon="plug" title={t("共享链接")} subtitle={t("生成不需登录就能打开的报表链接。")}>
+              <Tile icon="plug" title={t("共享链接")}>
                 <p className="mb-4 text-sm"><Link to="/docs/api" className="text-indigo-600 hover:underline">{t("API")} · {t("在线人数")} / UV / PV</Link></p>
                 <SettingsForm
                   className="mb-4"
@@ -138,16 +144,26 @@ function SettingsPage() {
                   ))}
                 </ul>
               </Tile>
+              <SettingsTips tips={[
+                "公开仪表盘打开后，任何人都能用站点地址查看这个站点的统计，不需要登录。",
+                "共享链接生成不需登录就能打开的只读报表，可以随时删除；删除后链接立即失效。",
+                "两者都只开放报表，不包括活动日志、账号、系统设置和备份。",
+              ]} />
             </div>
           ) : null}
 
           {tab === "installation" ? (
             <div>
-              <Tile icon="code" title={t("埋点脚本")} subtitle={t("把这段代码放到网站的 <head> 里。默认会记录页面浏览、外链点击、文件下载，以及标题、语言和屏幕分辨率。")}>
+              <Tile icon="code" title={t("埋点脚本")}>
                 <TrackingSnippet code={snippet} />
                 <TrackingDocs domain={domain} />
                 <p className="mt-4 text-sm"><Link to="/docs/api" className="text-indigo-600 hover:underline">{t("API")} · {t("在线人数")} / UV / PV</Link></p>
               </Tile>
+              <SettingsTips tips={[
+                "把这段代码放到网站的 <head> 里。默认会记录页面浏览、外链点击、文件下载，以及标题、语言和屏幕分辨率。",
+                "页面完全加载完才计一次浏览，单页应用切换路由、后退前进也会计入；自动化浏览器和常见爬虫不计。",
+                "前面有反向代理或 CDN 时，要在 设置 → 访客 IP 识别 里确认访客地址识别正常。",
+              ]} />
             </div>
           ) : null}
 

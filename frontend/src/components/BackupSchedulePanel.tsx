@@ -143,7 +143,6 @@ export function BackupSchedulePanel() {
           </div>
           <div className="backup-credentials">
             <div className="flex items-center gap-2"><h3>{t("访问凭据")}</h3><HelpHint>{t("密钥加密保存在服务器，保存后不再显示原文。")}</HelpHint></div>
-            <p>{t("云端旧备份不会被自动删除，请在存储桶中设置生命周期规则。")}</p>
             <div className="backup-fields">
               <Field label="Access Key ID">
                 <PasswordInput className="squircle input" title={credentialHint(saved.hasAccessKey)} maxLength={256} autoComplete="new-password" name="s3-access-key" value={secrets.accessKey} placeholder={saved.hasAccessKey && !destinationChanged ? t("已保存的 Access Key ID") : "Access Key ID"} spellCheck={false} onChange={e => secret("accessKey", e.target.value)} />
@@ -161,7 +160,6 @@ export function BackupSchedulePanel() {
               catch (error) { setConnectionError(error instanceof Error ? t(error.message) : t("连接测试失败，请重试")) }
               finally { setBusy("") }
             }}>{t(busy === "test" ? "测试中…" : "测试连接")}</ActionButton>
-            <p>{t("测试当前填写的信息，不会保存设置或创建备份。")}</p>
           </div>
           {connection ? <div role="status" className="squircle backup-connection-result"><UIIcon name="check" /><div className="min-w-0"><strong>{t("连接成功，可以读取备份目录")}</strong><p>{t("已验证 {0} 的读取权限，未上传或删除文件。", { 0: connection.bucket })}</p><p>{t("上传权限将在执行备份时验证。")}</p></div></div> : null}
           {connectionError ? <p role="alert" className="squircle settings-feedback is-error">{connectionError}</p> : null}
@@ -205,7 +203,6 @@ export function BackupSchedulePanel() {
     {msg ? <p role="status" className="squircle settings-feedback">{msg}</p> : null}
     {err ? <p role="alert" className="squircle settings-feedback is-error">{err}</p> : null}
     <Tile icon="cloud" id="restore" title={t("备份记录与恢复")}>
-      <p className="settings-hint">{t("计划备份与手动完整备份使用相同的加密格式（.plostbk）。恢复期间会暂停采集与后台请求，并先自动保存当前数据。")}</p>
       <dl className="squircle backup-status-grid">
         <div><dt>{t("上次成功备份")}</dt><dd>{saved.lastRunAt ? formatTimestamp(saved.lastRunAt * 1000, locale) : t("尚无成功备份")}</dd></div>
         <div><dt>{t("备份状态")}</dt><dd>{t(status)}</dd></div>

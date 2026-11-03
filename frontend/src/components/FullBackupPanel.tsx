@@ -16,9 +16,7 @@ export function FullBackupPanel() {
   const [notice, setNotice] = useState("")
   const clear = () => { setPassword(""); setCurrent(""); setNotice("") }
 
-  return <Tile id="full-backup" icon="shield" title={t("完整备份与恢复")} subtitle={t("统一保存账号、站点配置与全部访问数据")}>
-    <p className="settings-hint">{t("在这里创建、下载或上传完整加密备份。恢复前自动保存当前数据，还原到新数据库并校验，成功后切换；旧数据库保留。")}</p>
-    <p className="settings-hint">{t("备份和恢复期间会短暂暂停采集与后台访问，完成后自动恢复。")}</p>
+  return <Tile id="full-backup" icon="shield" title={t("完整备份与恢复")}>
     <div className="backup-run-actions">
       <ActionButton className="btn btn-primary" onClick={() => { clear(); setCreate(true); setRestore(false) }}>{t("创建完整备份")}</ActionButton>
       <ActionButton onClick={() => { clear(); setRestore(true); setCreate(false) }}>{t("上传备份文件")}</ActionButton>
@@ -36,6 +34,5 @@ export function FullBackupPanel() {
       </div>
     </SettingsForm> : null}
     {restore ? <RestoreForm onCancel={() => { clear(); setRestore(false) }} /> : null}
-    {!create && !restore ? <div className="backup-empty"><p>{t("创建并下载完整备份，或上传已有备份进行校验和恢复。")}</p></div> : null}
   </Tile>
 }

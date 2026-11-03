@@ -4,6 +4,7 @@ import (
 	"hash/maphash"
 	"net/http"
 	"net/netip"
+	"strings"
 	"sync"
 	"time"
 )
@@ -178,12 +179,74 @@ func (a *App) clientIPCheck(w http.ResponseWriter, r *http.Request) error {
 	if a.cfg.TrustProxy {
 		trusted = append([]string{"loopback (-trust-proxy)"}, trusted...)
 	}
+	// The hops this request came through, from the visitor's end to this program, for the page to draw.
+	type hop struct {
+		Address string `json:"address"`
+		Kind    string `json:"kind"`
+		Trusted bool   `json:"trusted"`
+		Visitor bool   `json:"visitor"`
+	}
+	hops := []hop{}
+	peerHop := hop{Address: peer.String(), Kind: addressKind(peer), Trusted: peer.IsValid() && a.trustedProxy(peer)}
+	switch via {
+	case viaDirect, viaProxy:
+		// Either nobody in front is trusted, or the trusted proxy passed on no address: the peer is the visitor.
+		peerHop.Visitor = true
+	default:
+		found := false
+		for _, h := range forwardedChain(r) {
+			isVisitor := !found && h == addr
+			found = found || isVisitor
+			hops = append(hops, hop{Address: h.String(), Kind: addressKind(h), Trusted: a.trustedProxy(h), Visitor: isVisitor})
+		}
+		if !found { // Taken from -client-ip-header or X-Real-IP rather than from the chain.
+			hops = append([]hop{{Address: addr.String(), Kind: addressKind(addr), Visitor: true}}, hops...)
+		}
+	}
+	hops = append(hops, peerHop)
+	recent := a.ipSamples.summary()
 	return jsonResponse(w, map[string]any{
 		"config": map[string]any{"trusted": trusted, "header": a.cfg.ClientIPHeader, "geoip": a.geo != nil},
 		"request": map[string]any{
 			"peer": peer.String(), "peerTrusted": peer.IsValid() && a.trustedProxy(peer), "headers": headers,
 			"address": addr.String(), "kind": addressKind(addr), "via": via, "known": a.addressKnown(r), "country": a.requestCountry(r, time.Now()),
+			"hops": hops,
 		},
-		"recent": a.ipSamples.summary(),
+		"recent":    recent,
+		"suggested": a.suggestedProxyFlags(recent),
 	})
+}
+
+// suggestedProxyFlags is the startup option the warnings point to, as one line to copy, or "" when the recent
+// requests need no change (or say too little yet).
+func (a *App) suggestedProxyFlags(recent ipSummary) string {
+	names := []string{}
+	seen := map[string]bool{}
+	add := func(name string) {
+		if name != "" && !seen[name] {
+			seen[name] = true
+			names = append(names, name)
+		}
+	}
+	if a.cfg.TrustProxy {
+		add("loopback")
+	}
+	for _, name := range a.cfg.TrustedProxyNames {
+		add(name)
+	}
+	changed := false
+	for _, w := range recent.Warnings {
+		if w.Suggest != "" && !seen[w.Suggest] {
+			add(w.Suggest)
+			changed = true
+		}
+	}
+	if !changed {
+		return ""
+	}
+	flags := "-trusted-proxies " + strings.Join(names, ",")
+	if a.cfg.ClientIPHeader != "" {
+		flags += " -client-ip-header " + a.cfg.ClientIPHeader
+	}
+	return flags
 }

@@ -28,7 +28,7 @@ export function PasskeyPanel() {
   const close = () => { setAdding(false); setRemoving(null); setPassword(""); setName("") }
 
   return <>
-    <Tile icon="key" title={t("security.passkey")} subtitle={t("security.passkey_sub")}>
+    <Tile icon="key" title={t("security.passkey")}>
       {items && items.length === 0 ? <div className="settings-empty"><UIIcon name="key" /><span>{t("security.no_passkey")}</span></div> : null}
       {items && items.length ? <ul className="divide-y divide-gray-100 text-sm">
         {items.map(item => <li key={item.id} className="settings-list-row flex min-w-0 flex-wrap items-center justify-between gap-3 py-2">

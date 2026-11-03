@@ -1062,9 +1062,9 @@ html[data-theme="dark"] .mapboxgl-ctrl-attrib-button { filter:invert(1); }
 .settings-card-heading h2 + div { margin-top: 4px; font-size: 12px; line-height: 1.7; }
 .settings-heading-title-row { display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px; }
 .settings-brand-logo { display:block; height:24px; background:currentColor; mask:center / contain no-repeat; -webkit-mask:center / contain no-repeat; }
-.map-service-tips { display:grid; gap:12px; margin:0; padding:0; list-style:none; font-size:13px; line-height:1.7; color:var(--color-gray-600); }
-.map-service-tips li { display:flex; gap:10px; align-items:flex-start; }
-.map-service-tip-number { display:inline-flex; flex:none; align-items:center; justify-content:center; width:22px; height:22px; margin-top:1px; --sq-r:8px; background:var(--accent-soft); color:var(--accent-text); font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; }
+.settings-tips { display:grid; gap:12px; margin:0; padding:0; list-style:none; font-size:13px; line-height:1.7; color:var(--color-gray-600); }
+.settings-tips li { display:flex; gap:10px; align-items:flex-start; }
+.settings-tip-number { display:inline-flex; flex:none; align-items:center; justify-content:center; width:22px; height:22px; margin-top:1px; --sq-r:8px; background:var(--accent-soft); color:var(--accent-text); font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; }
 .settings-heading-link { font-size:13px; line-height:24px; font-weight:500; }
 .settings-heading-actions { display:flex; align-items:center; flex:none; margin-left:auto; align-self:center; }
 @media(max-width:639px) { .settings-card-heading:has(.settings-heading-actions) { flex-wrap:wrap; } .settings-heading-actions { margin-left:36px; } }

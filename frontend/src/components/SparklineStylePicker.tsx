@@ -1,6 +1,5 @@
-import { useEffect, useId, useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "@tanstack/react-router"
-import { HelpHint } from "./HelpHint"
 import { SiteSparkline, useSparkline } from "./SiteSparkline"
 import { UIIcon } from "./UIIcon"
 import { useT } from "~/lib/i18n"
@@ -20,7 +19,6 @@ export function SparklineStylePicker() {
   const [selected, setSelected] = useState(saved)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState("")
-  const hintId = useId()
   useEffect(() => setSelected(saved), [saved])
   async function choose(next: SparklinePreference) {
     if (pending || (next.style === saved.style && next.range === saved.range)) return
@@ -34,9 +32,8 @@ export function SparklineStylePicker() {
       setError(err instanceof Error ? err.message : t("保存失败"))
     } finally { setPending(false) }
   }
-  return <fieldset className="map-style-picker sparkline-style-picker" disabled={pending} aria-describedby={hintId} aria-busy={pending}>
+  return <fieldset className="map-style-picker sparkline-style-picker" disabled={pending} aria-busy={pending}>
     <legend>{t("站点卡片走势图")}</legend>
-    <HelpHint id={hintId}>{t("选择后自动保存到当前账号，站点列表里每张卡片的小走势图都使用此样式。24 小时按小时、30 天按天显示访客。")}</HelpHint>
     <div className="sparkline-range" role="radiogroup" aria-label={t("时间范围")}>
       <span>{t("时间范围")}</span>
       <div className="squircle segmented-control flex rounded-md bg-gray-100">

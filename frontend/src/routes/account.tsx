@@ -9,6 +9,7 @@ import { MapboxSettingsPanel } from "~/components/MapboxSettingsPanel"
 import { ClientIPPanel } from "~/components/ClientIPPanel"
 import { GoogleMapsSettingsPanel } from "~/components/GoogleMapsSettingsPanel"
 import { MapServiceTips } from "~/components/MapServiceTips"
+import { SettingsTips } from "~/components/SettingsTips"
 import { SettingsHeader } from "~/components/SettingsChrome"
 import { SettingsLayout, SettingsNav } from "~/components/SettingsLayout"
 import { Shell } from "~/components/Shell"
@@ -84,8 +85,17 @@ function AccountPage() {
             </SettingsNav>
           </div>
         </>}>
-          {tab === "preferences" ? <AccountPreferences user={user} onSaved={() => router.invalidate()} /> : null}
-          {tab === "security" ? <><AccountSecurity user={user} onSaved={() => router.invalidate()} /><PasskeyPanel /></> : null}
+          {tab === "preferences" ? <><AccountPreferences user={user} onSaved={() => router.invalidate()} /><SettingsTips tips={[
+            "昵称、头像和界面语言点「保存设置」后生效；邮箱在这里只读，更改邮箱请到「安全」页。",
+            "界面配色立即生效，保存在当前浏览器，换一台电脑或浏览器需要重新选择。",
+            "地图样式和站点卡片走势图选择后自动保存到当前账号。地图「标准」适配界面深浅色，「街道」和「深色」保持自身配色。",
+            "走势图的 24 小时按小时、30 天按天显示访客。",
+          ]} /></> : null}
+          {tab === "security" ? <><AccountSecurity user={user} onSaved={() => router.invalidate()} /><PasskeyPanel /><SettingsTips tips={[
+            "更改邮箱或密码都需要输入当前密码。密码至少 8 个字符，不限制字符类型。",
+            "两步验证开启后，登录时在密码之后还要输入验证器里的 6 位数字。恢复码在丢失验证器时使用，每条只能用一次，请另外妥善保存。",
+            "Passkey 用本机指纹、面容或安全密钥登录，无需输入密码。浏览器只允许在域名或 localhost 上创建，用 IP 地址打开时不能添加。",
+          ]} /></> : null}
           {tab === "api" ? <ApiDocsContent embedded /> : null}
           {/* Turning one map service on turns the other off, so both cards reload after a save. */}
           {tab === "system/mapbox" && mapbox ? <MapboxSettingsPanel key={`mapbox-${mapbox.enabled}`} initial={mapbox} onSaved={() => router.invalidate()} /> : null}

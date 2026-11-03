@@ -68,7 +68,7 @@ export function AccountPreferences({ user, onSaved }: {
       </div>
       {avatarError ? <p role="alert" className="mt-3 text-sm text-red-600">{t(avatarError)}</p> : null}
       <Field label={t("profile.nickname_label")}><input className="squircle input" required value={name} onChange={event=>setName(event.target.value)} /></Field>
-      <Field label={t("邮箱")} hint={t("如需更改邮箱，请到「安全」页。")}><input className="squircle input bg-gray-50" value={user.email} disabled /></Field>
+      <Field label={t("邮箱")}><input className="squircle input bg-gray-50" value={user.email} disabled /></Field>
       <Field label={t("界面语言")}><select className="squircle input" value={language} onChange={event=>setLanguage(event.target.value === "en" ? "en" : "zh-CN")}><option value="zh-CN">简体中文</option><option value="en">English</option></select></Field>
       <FormActions><ActionButton className="btn btn-primary" type="submit" disabled={processing}>{t("保存设置")}</ActionButton></FormActions>
     </SettingsForm>

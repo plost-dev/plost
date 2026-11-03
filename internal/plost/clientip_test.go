@@ -260,3 +260,26 @@ func TestClientIPCheckEndpoint(t *testing.T) {
 		t.Fatalf("got %+v", out)
 	}
 }
+
+func TestClientIPCheckHopsAndSuggestion(t *testing.T) {
+	a := testTrust(t, "loopback", "", false)
+	for i := 0; i < minSamples; i++ {
+		r := httptest.NewRequest("POST", "/api/send", nil)
+		r.RemoteAddr = "127.0.0.1:5000"
+		r.Header.Set("X-Forwarded-For", "198.51.100.4, 162.158.1.2")
+		a.recordAddress(r)
+	}
+	if got := a.suggestedProxyFlags(a.ipSamples.summary()); got != "-trusted-proxies loopback,cloudflare" {
+		t.Fatalf("suggestion: %q", got)
+	}
+	b := testTrust(t, "loopback,cloudflare", "", false)
+	for i := 0; i < minSamples; i++ {
+		r := httptest.NewRequest("POST", "/api/send", nil)
+		r.RemoteAddr = "127.0.0.1:5000"
+		r.Header.Set("X-Forwarded-For", "198.51."+itoa(i)+".4, 162.158.1.2")
+		b.recordAddress(r)
+	}
+	if got := b.suggestedProxyFlags(b.ipSamples.summary()); got != "" {
+		t.Fatalf("nothing to change, got %q", got)
+	}
+}

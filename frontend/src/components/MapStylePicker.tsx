@@ -1,6 +1,5 @@
 import { UIIcon } from "./UIIcon"
-import { HelpHint } from "./HelpHint"
-import { useEffect, useId, useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "@tanstack/react-router"
 import { MAPBOX_STYLES, type MapboxStyleId } from "~/lib/mapbox-styles"
 import { useMapStyle } from "~/lib/map-preferences"
@@ -15,7 +14,6 @@ export function MapStylePicker() {
   const [selected, setSelected] = useState(saved)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState("")
-  const hintId = useId()
   useEffect(() => setSelected(saved), [saved])
   async function choose(styleId: MapboxStyleId) {
     if (pending || styleId === saved) return
@@ -32,12 +30,11 @@ export function MapStylePicker() {
       setError(persisted ? t("样式已保存，请刷新页面载入最新设置。") : err instanceof Error ? err.message : t("保存失败"))
     } finally {setPending(false)}
   }
-  return <fieldset className="map-style-picker" disabled={pending} aria-describedby={hintId} aria-busy={pending}>
+  return <fieldset className="map-style-picker" disabled={pending} aria-busy={pending}>
     <legend>{t("地图样式")}{pending ? <svg className="button-spinner map-style-spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" opacity=".25"/>
       <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
     </svg> : null}<span className="sr-only" role="status">{pending ? t("保存中…") : ""}</span></legend>
-    <HelpHint id={hintId}>{t("选择后自动保存到当前账号。标准为默认地图并适配界面深浅色；街道和深色保持自身配色。预览使用相同区域。")}</HelpHint>
     <div className="map-style-options">
       {MAPBOX_STYLES.map(style => <label key={style.id} className={`squircle map-style-option${selected === style.id ? " is-selected" : ""}`}>
         <input className="sr-only" type="radio" name="mapbox-style" value={style.id} checked={selected === style.id} onChange={() => void choose(style.id)}/>

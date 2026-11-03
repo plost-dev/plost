@@ -1,1 +1,0 @@
-import{_ as e}from"./index-B0NAUs86.js";import{c as t}from"./useSelector-DzGlCpWO.js";var n=t(),r=({error:t})=>(0,n.jsx)(e,{title:`页面出错`,description:t instanceof Error?t.message:void 0});export{r as errorComponent};

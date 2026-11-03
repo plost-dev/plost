@@ -35,7 +35,6 @@ export function RestoreForm({ source, label, onCancel }: { source?: string, labe
         <p className="full-backup-filename">{label}</p>
       </>
       : <>
-        <p className="settings-hint">{t("请选择此 Go 版生成的 .plostbk 备份。旧版 PostgreSQL / ClickHouse 的备份不能直接恢复。")}</p>
         <Field label={t("上传备份文件")}><input className="squircle input" type="file" accept=".plostbk" required onChange={e => { setFile(e.target.files?.[0] || null); stale() }} /></Field>
       </>}
     <Field label={t("当前管理员密码")}><PasswordInput className="squircle input" required autoComplete="current-password" value={current} onChange={e => { setCurrent(e.target.value); stale() }} /></Field>
