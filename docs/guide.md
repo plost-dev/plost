@@ -59,7 +59,7 @@ go build -trimpath -ldflags='-s -w' -o plost ./cmd/plost
 地图沿用原版，可用 Mapbox 公开 Token（`PLOST_MAPBOX_TOKEN`）或 Google 地图浏览器 Key（`PLOST_GOOGLE_MAPS_KEY`），没有时使用内嵌备用地图；Key 写在 env 文件里，见下文「Key 与 env 文件」。当前采集只提供国家，不采集城市或省州，相关视图为空。国家默认未知，有两种来源：
 
 - **CDN 的国家头**（Cloudflare 的 `CF-IPCountry`、CloudFront 的 `CloudFront-Viewer-Country`）：有就优先采用。声明了 `-trusted-proxies` 时，和 `-client-ip-header` 一样只在请求经过受信任的 CDN 时采用；只用旧的 `-trust-proxy` 时，沿用以前的规则直接相信本机反代转来的头。
-- **本机的 GeoIP 库**：没有 Cloudflare（例如域名直接解析到源站）时，用 `-geoip-db /路径/GeoLite2-Country.mmdb` 指定 MaxMind 格式的数据库（GeoLite2 的 Country 或 City、DB-IP 的 Country 或 City 都可以，只读取其中的国家代码）。库文件需要自己下载并保持更新，程序不会下载；它用内存映射读取，每分钟检查一次文件，替换成新文件后自动换用，不必重启。更新工具须像常规做法那样“写好新文件再改名覆盖”，不要在原文件上原地改写。启动时指定的库打不开会拒绝启动。只有拿得到访客 IP 时才会查（与访客哈希同一条件），CDN 的国家头可用时优先用它。
+- **本机的 GeoIP 库**：没有 Cloudflare（例如域名直接解析到源站）时，用 `-geoip-db /路径/GeoLite2-Country.mmdb` 指定 MaxMind 的 GeoLite2 数据库，按需要二选一：只统计国家用 GeoLite2-Country（约 10 MB）；还想在实时访客地图上显示点位用 GeoLite2-City（约 65 MB），它多出的城市经纬度会四舍五入到两位小数（约 1 公里）再使用。两个库都可以在 MaxMind 官网注册免费账号后下载，用官方的 `geoipupdate` 定时更新即可。库文件需要自己下载并保持更新，程序不会下载；它用内存映射读取，每分钟检查一次文件，替换成新文件后自动换用，不必重启。更新工具须像常规做法那样“写好新文件再改名覆盖”，不要在原文件上原地改写。启动时指定的库打不开会拒绝启动。只有拿得到访客 IP 时才会查（与访客哈希同一条件），CDN 的国家头可用时优先用它。
 
 查询都在本机完成，没有启用外部 IP 查询服务，不会悄悄向第三方发送访客 IP。已经存下来的事件不会补查国家，因为原始 IP 从不保存。
 
