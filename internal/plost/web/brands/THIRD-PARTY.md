@@ -113,3 +113,11 @@ apply and no rights are granted. It was checked for scripts, event handlers, ext
 chosen by the instance owner. It identifies the map service on its settings card, next to the title; Google's
 trademark rules apply and no rights are granted. It was checked for scripts, event handlers, external references and
 embedded images.
+
+## MaxMind logo (2026-11-04)
+
+`maxmind.svg` is made from MaxMind's own header logo (`https://static.maxmind.com/fd6ead67cd5e7440ba1e/images/maxmind-header-logo-compact-alt.svg`,
+downloaded 2026-11-04): the wordmark paths are kept as they are, and the symbol's embedded gradient image is replaced
+by its own clipping path filled solid, so the whole mark can be drawn in the text colour like the Mapbox logo. It is
+shown only on the MaxMind settings card to identify the service the licence key belongs to; MaxMind's trademark
+rules apply and no rights are granted. It contains no scripts, event handlers, external references or images.

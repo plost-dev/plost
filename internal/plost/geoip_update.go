@@ -412,7 +412,15 @@ func (a *App) geoViewOf(ctx context.Context) geoView {
 	source, edition, state := a.geoSettings(ctx)
 	account, key := a.maxMindKeys()
 	return geoView{Managed: a.geoManaged(), FlagPath: a.cfg.GeoIPPath, Loaded: a.geo.ready(), Source: source, Edition: edition,
-		Account: maskKey(account), Key: maskKey(key), Editable: a.cfg.EnvFile != "", Updating: a.geoUpdating.Load(), State: state}
+		Account: maskKey(account), Key: maskSecret(key), Editable: a.cfg.EnvFile != "", Updating: a.geoUpdating.Load(), State: state}
+}
+
+// maskSecret shows only the first four characters of the licence key, which unlike a map token is secret.
+func maskSecret(value string) string {
+	if len(value) < 8 {
+		return maskKey(value)
+	}
+	return value[:4] + strings.Repeat("•", 8)
 }
 
 func (a *App) geoipGet(w http.ResponseWriter, r *http.Request) error {

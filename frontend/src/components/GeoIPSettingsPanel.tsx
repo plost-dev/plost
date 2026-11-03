@@ -46,7 +46,7 @@ export function GeoIPSettingsPage() {
     <SettingsTips tips={[
       "IP 数据库用来判断访客所在的国家；GeoLite2-City 还能让实时访客地图显示到城市。经过 Cloudflare 时优先使用它给出的国家。",
       "Plost 每天检查一次新版本，下载后先核对 SHA-256、再校验整个数据库，通过后才替换正在使用的库，并删除旧版本和未完成的下载。",
-      "MaxMind 账号 ID 和 License Key 只写入 env 文件，不存数据库。在 MaxMind 官网注册免费账号后，在「Manage License Keys」里生成。",
+      "想直接从 MaxMind 下载：在 MaxMind 官网注册免费账号，在「Manage License Keys」里生成 Key，填进上面的 MaxMind 卡片。保存后会自动改用 MaxMind，并立即检测、下载、校验和替换，之后每天自动检测新版本。账号 ID 和 License Key 只写入 env 文件，不存数据库。",
       "查询全部在本机完成，访客 IP 不会发给任何第三方。",
     ]} />
   </>
@@ -76,8 +76,23 @@ function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (nex
     } finally { setPending(false) }
   }
   function chooseSource(next: GeoIPSource) {
+    if (next === "maxmind" && !hasKeys) {
+      showToast("请先在下方 MaxMind 卡片里填写并保存账号 ID 和 License Key", "error")
+      document.getElementById("maxmind-account")?.focus()
+      return
+    }
     setSource(next)
-    if (next !== "maxmind" || hasKeys) void save({ source: next })
+    void save({ source: next })
+  }
+  // Waits for the background download that a save started, so the page can say how it went.
+  async function settled() {
+    for (let i = 0; i < 300; i++) {
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      const next = await geoipSettingsFn()
+      onChange(next)
+      if (!next.updating) return next
+    }
+    return null
   }
   async function check() {
     setChecking(true)
@@ -120,16 +135,20 @@ function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (nex
         </FormActions>
       </> : null}
     </Tile>
-    {source === "maxmind" ? <Tile icon="key" title="MaxMind 账号"
+    <Tile icon="key" title="MaxMind" logo={{ src: "/brands/maxmind.svg", width: 128 }}
       titleAddon={<a className="settings-heading-link" href="https://www.maxmind.com/en/accounts/current/license-key" target="_blank" rel="noreferrer">{t("打开 MaxMind 获取 License Key")}</a>}>
       <SettingsForm onSubmit={async () => {
         const next = await saveGeoIPSettingsFn({ source: "maxmind", account: account.trim(), key: key.trim() })
         onChange(next); setSource(next.source); setAccount(""); setKey("")
-        showToast("已写入 env 文件，正在后台从 MaxMind 下载。")
+        showToast("已写入 env 文件，正在从 MaxMind 检测并下载最新版本…")
+        const done = await settled()
+        if (!done) return
+        if (done.state.error) throw new Error(done.state.error)
+        showToast("已从 MaxMind 下载最新版本并换用，之后每天自动检测更新。")
       }}>
         <div className="backup-fields">
           <Field label="账号 ID（Account ID）" hint={data.editable ? undefined : t("启动 Plost 时没有指定 env 文件（-env-file），请直接在 env 文件里修改 {0}。", { 0: "PLOST_MAXMIND_ACCOUNT_ID" })}>
-            <input className="squircle input" inputMode="numeric" autoComplete="off" spellCheck={false} required disabled={!data.editable}
+            <input id="maxmind-account" className="squircle input" inputMode="numeric" autoComplete="off" spellCheck={false} required disabled={!data.editable}
               value={account} placeholder={data.account || "1234567"} onChange={event => setAccount(event.target.value)} />
           </Field>
           <Field label="License Key">
@@ -137,8 +156,8 @@ function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (nex
               value={key} placeholder={data.key || "xxxxxx_…_mmk"} onChange={event => setKey(event.target.value)} />
           </Field>
         </div>
-        {data.editable ? <FormActions><ActionButton type="submit" className="btn btn-primary">{t("保存")}</ActionButton></FormActions> : null}
+        {data.editable ? <FormActions><ActionButton type="submit" className="btn btn-primary">{t(hasKeys ? "保存并更新" : "保存并下载")}</ActionButton></FormActions> : null}
       </SettingsForm>
-    </Tile> : null}
+    </Tile>
   </>
 }

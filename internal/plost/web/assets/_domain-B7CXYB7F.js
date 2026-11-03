@@ -1,0 +1,1 @@
+import{L as e}from"./index-CIzP-qmh.js";var t=e;export{t as component};
