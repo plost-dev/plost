@@ -1487,8 +1487,9 @@ select:disabled { opacity:.65; cursor:not-allowed; }
 .google-style-preview { --water:#e4e4e7; --land:#f4f4f5; --border:#d4d4d8; }
 :root[data-theme="dark"] .google-style-preview[data-style="standard"], .google-style-preview[data-style="dark"] { --water:#0c0c0e; --land:#1c1c1f; --border:#3f3f46; }
 .google-style-preview[data-style="roadmap"] { --water:#90daee; --land:#f5f1e6; --border:#a8a29e; }
-/* The live map only shows the style; clicks go to the card around it. */
-.google-live-preview { overflow:hidden; pointer-events:none; }
+/* Standard comes as a light and a dark image; only the current mode's shows. */
+.google-static-preview[data-mode="dark"], :root[data-theme="dark"] .google-static-preview[data-mode="light"] { display:none; }
+:root[data-theme="dark"] .google-static-preview[data-mode="dark"] { display:block; }
 .google-style-water { fill:var(--water); }
 .google-style-land { fill:var(--land); stroke:var(--border); stroke-width:.5; }
 .google-style-green { fill:#c8ebd4; opacity:.9; }

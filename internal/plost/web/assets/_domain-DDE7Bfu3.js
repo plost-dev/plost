@@ -1,0 +1,1 @@
+import{F as e}from"./index-BLtg4Rvh.js";var t=e;export{t as component};
