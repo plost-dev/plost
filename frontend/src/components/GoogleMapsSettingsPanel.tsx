@@ -10,8 +10,8 @@ import { GoogleMapStylePicker } from "./MapStylePicker"
 import { PasswordInput } from "~/components/PasswordInput"
 
 /** The Google Maps card, with the account's Google map style below the key. Its switch belongs to MapServicesSettings, which keeps it and Mapbox from both being on. */
-export function GoogleMapsSettingsPanel({initial, enabled, previewKey, onToggle, onSaved}: {
-  initial: GoogleMapsSettings; enabled: boolean; previewKey?: string
+export function GoogleMapsSettingsPanel({initial, enabled, onToggle, onSaved}: {
+  initial: GoogleMapsSettings; enabled: boolean
   onToggle: (next: boolean, key: string) => Promise<boolean>; onSaved: () => void
 }) {
   const {t} = useT()
@@ -30,6 +30,6 @@ export function GoogleMapsSettingsPanel({initial, enabled, previewKey, onToggle,
       </Field>
       <FormActions><ActionButton type="submit" className="btn btn-primary">{t("保存设置")}</ActionButton></FormActions>
     </SettingsForm>
-    <GoogleMapStylePicker apiKey={previewKey} />
+    <GoogleMapStylePicker />
   </Tile>
 }

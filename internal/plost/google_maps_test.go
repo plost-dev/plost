@@ -27,12 +27,12 @@ func TestGoogleMapsSettings(t *testing.T) {
 	key := "AIza" + strings.Repeat("A", 35)
 	x.call(t, "PUT", "/api/mapbox", map[string]any{"token": "pk.test", "enabled": true}, 200)
 	var google map[string]any
-	if err := json.Unmarshal(x.call(t, "PUT", "/api/google-maps", map[string]any{"key": key, "enabled": false}, 200), &google); err != nil || google["previewKey"] != "" {
-		t.Fatalf("key handed out while Google Maps is off: %v %v", err, google)
+	if err := json.Unmarshal(x.call(t, "PUT", "/api/google-maps", map[string]any{"key": key, "enabled": false}, 200), &google); err != nil || google["configured"] != true {
+		t.Fatalf("saving the key: %v %v", err, google)
 	}
 	json.Unmarshal(x.call(t, "PUT", "/api/google-maps", map[string]any{"enabled": true}, 200), &google)
-	if google["previewKey"] != key {
-		t.Fatalf("preview key while on: %v", google["previewKey"])
+	if _, ok := google["previewKey"]; ok || google["enabled"] != true {
+		t.Fatalf("the settings answer must not carry the key: %v", google)
 	}
 	var mapbox map[string]bool
 	json.Unmarshal(x.call(t, "GET", "/api/mapbox", nil, 200), &mapbox)
@@ -52,7 +52,7 @@ func TestGoogleMapsSettings(t *testing.T) {
 	x.call(t, "PUT", "/api/mapbox", map[string]any{"enabled": true}, 200) // The token saved above.
 	google = nil
 	json.Unmarshal(x.call(t, "GET", "/api/google-maps", nil, 200), &google)
-	if google["enabled"] != false || google["previewKey"] != "" || strings.Contains(csp(), "googleapis") {
+	if google["enabled"] != false || strings.Contains(csp(), "googleapis") {
 		t.Fatal("Google Maps stayed on after Mapbox was turned on")
 	}
 }

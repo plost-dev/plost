@@ -488,12 +488,7 @@ func (a *App) googleMapsSettings(w http.ResponseWriter, r *http.Request) error {
 	return jsonResponse(w, googleMapsState(enabled, key))
 }
 
-// googleMapsState is what the settings page sees. While Google Maps is on, the key comes back too so the style
-// previews can be drawn with it; the statistics pages receive the same key then anyway.
+// googleMapsState is what the settings page sees: whether Google Maps is on and whether a key is saved, never the key.
 func googleMapsState(enabled bool, key string) map[string]any {
-	state := map[string]any{"enabled": enabled, "configured": key != "", "previewKey": ""}
-	if enabled {
-		state["previewKey"] = key
-	}
-	return state
+	return map[string]any{"enabled": enabled, "configured": key != ""}
 }

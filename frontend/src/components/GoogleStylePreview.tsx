@@ -1,8 +1,7 @@
 import * as d3 from "d3"
 import { useEffect, useId, useState } from "react"
-import { useT } from "~/lib/i18n"
 import { loadWorldMap } from "~/lib/world-countries"
-import { googleMapLook, type GoogleMapStyleId } from "~/lib/google-map-styles"
+import { type GoogleMapStyleId } from "~/lib/google-map-styles"
 
 const WIDTH = 360, HEIGHT = 220
 // Streets only: rough patches of green where Google's road map shows forest (Siberia, Southeast Asia, Europe, central
@@ -19,39 +18,15 @@ function worldOutlines() {
   }).catch(error => { outlines = undefined; throw error })
 }
 
-// The Mapbox previews' place and framing (public/map-previews/SOURCES.md): 720 × 440 pixels at Mapbox zoom 11.3,
-// which is Google zoom 11 at 360 × 220 doubled for sharp screens.
-const STATIC_MAP = "https://maps.googleapis.com/maps/api/staticmap?center=37.77,-122.44&zoom=11&size=360x220&scale=2"
-
-type Rule = { featureType?: string; elementType?: string; stylers: Array<Record<string, string>> }
-/** A Maps JavaScript style array as the Static Maps API's style parameters. */
-function staticStyle(rules: Rule[]) {
-  return rules.map(rule => "&style=" + encodeURIComponent([
-    rule.featureType ? `feature:${rule.featureType}` : "", rule.elementType ? `element:${rule.elementType}` : "",
-    ...rule.stylers.flatMap(Object.entries).map(([k, v]) => `${k}:${v.replace(/^#/, "0x")}`),
-  ].filter(Boolean).join("|"))).join("")
+/**
+ * A fixed preview of each Google Maps style, drawn in the style's own colours from the built-in world map, just to show
+ * the look. It needs no key: Google's terms do not allow keeping its map images, and the real map on the statistics
+ * page is the Maps JavaScript API. Standard switches with light and dark mode in CSS.
+ */
+export function GoogleStylePreview({styleId, label}: {styleId: GoogleMapStyleId; label: string}) {
+  return <DrawnPreview styleId={styleId} label={label}/>
 }
 
-/**
- * The real Google map for a style as a Static Maps API image with the saved key, at the same place as the Mapbox
- * previews. Google's terms do not allow keeping its images, so the page asks Google for them each time; when one
- * cannot load (no key yet, or the Static Maps API not allowed for the key), the drawn preview is shown instead.
- * Standard has a light and a dark image, and CSS shows the one for the current mode.
- */
-export function GoogleStylePreview({styleId, label, apiKey}: {styleId: GoogleMapStyleId; label: string; apiKey?: string}) {
-  const {locale} = useT()
-  const [failed, setFailed] = useState(false)
-  useEffect(() => setFailed(false), [apiKey])
-  if (!apiKey || failed) return <DrawnPreview styleId={styleId} label={label}/>
-  const url = (dark: boolean) => `${STATIC_MAP}&language=${locale === "en" ? "en" : "zh-CN"}${staticStyle(googleMapLook(styleId, dark).styles)}&key=${encodeURIComponent(apiKey)}`
-  const image = (dark: boolean, mode?: string) => <img className="squircle map-style-preview google-static-preview" data-mode={mode} src={url(dark)} alt={label} width="360" height="220" loading="lazy" decoding="async" referrerPolicy="strict-origin-when-cross-origin" onError={() => setFailed(true)}/>
-  return styleId === "standard" ? <>{image(false, "light")}{image(true, "dark")}</> : image(styleId === "dark")
-}
-
-/**
- * A preview drawn in each style's own colours from the built-in world map, for when the real map cannot be shown.
- * Standard switches with light and dark mode in CSS.
- */
 function DrawnPreview({styleId, label}: {styleId: GoogleMapStyleId; label: string}) {
   const clip = useId()
   const [path, setPath] = useState("")

@@ -40,7 +40,7 @@ export function MapServicesSettings({ mapbox, google, onSaved }: { mapbox: Mapbo
   }
   return <>
     <MapboxSettingsPanel initial={mapbox} enabled={mapboxOn} onToggle={toggleMapbox} onSaved={onSaved} />
-    <GoogleMapsSettingsPanel initial={google} enabled={googleOn} previewKey={googleOn ? google.previewKey : undefined} onToggle={toggleGoogle} onSaved={onSaved} />
+    <GoogleMapsSettingsPanel initial={google} enabled={googleOn} onToggle={toggleGoogle} onSaved={onSaved} />
     <MapServiceTips />
   </>
 }
