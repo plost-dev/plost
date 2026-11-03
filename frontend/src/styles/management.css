@@ -287,16 +287,13 @@ html.dark .tag-optional { background:var(--color-gray-700); color:var(--color-gr
 html.dark .tag-required { background:#450a0a; color:#fca5a5; }
 
 /* Site overview hero: totals and controls beside a dotted visitor globe. */
-.overview-hero { --sq-r:20px; position:relative; display:grid; grid-template-columns:minmax(0,46%) minmax(0,1fr); height:352px; margin:32px 0 24px; overflow:hidden; border:1px solid var(--color-gray-200); background:var(--surface); --overview-globe-dot:var(--color-gray-500); --overview-globe-sphere:var(--color-gray-100); }
+.overview-hero { --sq-r:20px; position:relative; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,46%); height:352px; margin:32px 0 24px; overflow:hidden; border:1px solid var(--color-gray-200); background:var(--surface); --overview-globe-dot:var(--color-gray-500); --overview-globe-sphere:var(--color-gray-100); }
 html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overview-globe-sphere:#050506; }
 .overview-hero { --hero-uv: var(--accent-color); --hero-pv: color-mix(in srgb, var(--accent-color) 22%, var(--color-gray-100)); }
-/* The globe sits on the left and the title, tools and chart on the right, so the tools line up in the top-right corner. */
-.overview-hero-body { position:relative; z-index:1; grid-column:2; grid-row:1; display:flex; flex-direction:column; gap:18px; min-width:0; min-height:0; overflow:hidden; padding:28px 32px 28px 8px; }
+.overview-hero-body { position:relative; z-index:1; display:flex; flex-direction:column; gap:18px; min-width:0; min-height:0; overflow:hidden; padding:28px 8px 28px 32px; }
 /* The card keeps one height whatever the chart: the figures above take the same room in every style, and the chart,
    heatmap or tiles below stretch to fill the rest, so the two bar charts are drawn at the same size. */
 .overview-hero-body > * { flex:none; }
-.overview-hero > .overview-globe { grid-column:1; grid-row:1; }
-.overview-hero > .overview-globe:not(.is-fullscreen) .overview-globe-tools { left:16px; right:auto; }
 .overview-hero-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
 .overview-hero-title { font-size:24px; line-height:1.2; font-weight:700; letter-spacing:-.025em; color:var(--color-gray-900); }
 .overview-hero-sub { margin-top:4px; font-size:13px; color:var(--color-gray-500); }
@@ -400,15 +397,13 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 .overview-globe.is-fullscreen .overview-globe-tools { top:24px; right:24px; }
 @media(max-width:767px) {
   .overview-hero { grid-template-columns:minmax(0,1fr); height:auto; margin:24px 0 20px; }
-  .overview-hero-body { grid-column:auto; grid-row:auto; overflow:visible; padding:22px 20px 0; }
+  .overview-hero-body { overflow:visible; padding:22px 20px 0; }
   .overview-hero-body > .overview-hero-chart { min-height:110px; }
   .overview-hero-heat-row:not(.is-axis) { flex:none; }
   .overview-hero-heat-row > i { height:11px; }
-  .overview-hero > .overview-globe { grid-column:auto; grid-row:auto; }
   .overview-hero-kpis.is-row { gap:20px; }
   .overview-globe { min-height:280px; }
   .overview-globe-tools { top:12px; right:12px; }
-  .overview-hero > .overview-globe:not(.is-fullscreen) .overview-globe-tools { left:auto; right:12px; }
 }
 
 /* The overview search lives in the header, left of the account menu. */
