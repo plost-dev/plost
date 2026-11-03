@@ -3,7 +3,7 @@ import { SiteSparkline } from "~/components/SiteSparkline"
 import { Surface } from "~/components/Surface"
 import { ActionLink } from "~/components/ActionButton"
 import { SiteFavicon } from "~/components/SiteFavicon"
-import { redirect, Link, createFileRoute } from "@tanstack/react-router"
+import { redirect, Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { Shell } from "~/components/Shell"
 import { meFn, sitesFn } from "~/lib/actions"
@@ -12,6 +12,7 @@ import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
 import { readSiteLayout, setSiteLayout, subscribeSiteLayout, type SiteLayout } from "~/lib/site-layout-preference"
 import { useRouterAutoRefresh } from "~/lib/router-refresh"
+import { useLiveChanges } from "~/lib/live-changes"
 import { expiryState } from "~/lib/site-check-view"
 
 export const Route = createFileRoute("/dashboard")({
@@ -29,6 +30,9 @@ function DashboardPage() {
   const [q, setQ] = useState("")
   const layout = useSyncExternalStore(subscribeSiteLayout, readSiteLayout, (): SiteLayout => "compact")
   const [layoutSaveFailed, setLayoutSaveFailed] = useState(false)
+  // New visits are pushed by the server; the 30-second refresh still moves the time windows on when nothing arrives.
+  const router = useRouter()
+  useLiveChanges(() => { void router.invalidate() })
   useRouterAutoRefresh()
   const now = new Date().toISOString()
   function changeLayout(value: SiteLayout) {

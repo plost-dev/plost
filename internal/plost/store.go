@@ -72,6 +72,7 @@ type App struct {
 	googleMaps atomic.Bool  // Google Maps is the visitor map; the page policy then allows its hosts.
 	keysMu     sync.RWMutex // Guards the map keys in cfg, which the settings page may replace.
 	live       *livePlaces  // Where the visitors online now are, in memory only.
+	changes    *changeHub   // Tells the open admin pages when new visits were stored.
 
 	trendMu sync.Mutex // Guards trends, the 30-day site card trends, which the site list asks for on every refresh.
 	trends  map[int64]cachedTrend
@@ -178,7 +179,7 @@ func Open(cfg Config) (*App, error) {
 		db.Close()
 		return nil, errors.New("invalid visitor secret")
 	}
-	a := &App{cfg: cfg, db: db, secret: key, queue: make(chan *ingest, 1024), stop: make(chan struct{}), limits: newLimiter(), lockFile: lock, geo: geo, recent: newRecentEvents(), live: newLivePlaces()}
+	a := &App{cfg: cfg, db: db, secret: key, queue: make(chan *ingest, 1024), stop: make(chan struct{}), limits: newLimiter(), lockFile: lock, geo: geo, recent: newRecentEvents(), live: newLivePlaces(), changes: newChangeHub()}
 	a.jobCtx, a.cancelJobs = context.WithCancel(context.Background())
 	a.outboundAllow = cfg.OutboundAllow
 	a.siteProbe = newSiteChecker(cfg.OutboundAllow)
@@ -317,6 +318,7 @@ func (a *App) Close() error {
 		a.jobsMu.Unlock()
 		a.cancelJobs()
 		close(a.stop)
+		a.changes.close()
 		a.workers.Wait()
 		a.mu.Lock()
 		defer a.mu.Unlock()

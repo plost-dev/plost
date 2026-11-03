@@ -1,1 +1,0 @@
-import{P as e}from"./index-CoKugR-S.js";import{t}from"./jsx-runtime-C-7WyuLU.js";var n=t(),r=({error:t})=>(0,n.jsx)(e,{title:`页面出错`,description:t instanceof Error?t.message:void 0});export{r as errorComponent};

@@ -1,5 +1,5 @@
 import { Link, useRouter } from "@tanstack/react-router"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { UIIcon } from "~/components/UIIcon"
 import { OverviewGlobe, type OverviewPlace } from "~/components/OverviewGlobe"
 import { overviewChartsFn, overviewLiveFn, type OverviewCharts, type sitesFn } from "~/lib/actions"
@@ -19,19 +19,25 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
   const [updatedAt, setUpdatedAt] = useState(() => Date.now())
   const [now, setNow] = useState(() => Date.now())
   const [refreshing, setRefreshing] = useState(false)
+  const [loading, setLoading] = useState(0)
+  const loadingRef = useRef<Promise<void> | null>(null)
 
-  // Each loader refresh hands over a new list; the globe and the figures follow it.
-  useEffect(() => {
-    let alive = true
-    setUpdatedAt(Date.now())
-    void overviewLiveFn().then((rows) => { if (alive) setPlaces(rows) }).catch(() => {})
-    return () => { alive = false }
-  }, [sites])
-  useEffect(() => {
-    let alive = true
-    void overviewChartsFn().then((value) => { if (alive) setCharts(value) }).catch(() => {})
-    return () => { alive = false }
-  }, [sites])
+  // The figures and the globe, once at a time; the refresh icon turns while they load.
+  const load = useCallback(() => loadingRef.current ??= (async () => {
+    setLoading(n => n + 1)
+    try {
+      const [rows, figures] = await Promise.all([overviewLiveFn().catch(() => null), overviewChartsFn().catch(() => null)])
+      if (rows) setPlaces(rows)
+      if (figures) setCharts(figures)
+      if (rows || figures) setUpdatedAt(Date.now())
+      setNow(Date.now())
+    } finally {
+      setLoading(n => n - 1)
+      loadingRef.current = null
+    }
+  })(), [])
+  // Each loader refresh, by hand, by the timer or pushed by the server, hands over a new list; the figures follow it.
+  useEffect(() => { void load() }, [sites, load])
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000)
     return () => window.clearInterval(timer)
@@ -40,8 +46,10 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
   const minutes = Math.floor(Math.max(0, now - updatedAt) / 60_000)
   async function refresh() {
     setRefreshing(true)
-    try { await router.invalidate() } finally { setRefreshing(false); setNow(Date.now()) }
+    // Kept turning for a moment at least, so a fast reload still shows that it happened.
+    try { await Promise.all([router.invalidate(), load(), new Promise(resolve => setTimeout(resolve, 600))]) } finally { setRefreshing(false) }
   }
+  const spinning = refreshing || loading > 0
   return (
     <section className="squircle overview-hero" aria-labelledby="overview-hero-title">
       <div className="overview-hero-head">
@@ -51,7 +59,7 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
           <p className="overview-hero-sub">
             {t("footer.sites").replace("{n}", numberShort(sites.length))} · <span role="status">{minutes < 1 ? t("刚刚更新") : t("{n} 分钟前更新").replace("{n}", String(minutes))}</span>
             <button type="button" className="overview-hero-refresh" disabled={refreshing} onClick={refresh} aria-label={t("刷新")} title={t("刷新")}>
-              <UIIcon name="refresh" className={refreshing ? "is-spinning" : undefined} />
+              <UIIcon name="refresh" className={spinning ? "is-spinning" : undefined} />
             </button>
             · {t("近 24 小时 · 全部站点")}
           </p>

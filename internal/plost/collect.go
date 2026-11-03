@@ -449,7 +449,11 @@ func (a *App) persistBatch(batch []*ingest) error {
 			return err
 		}
 	}
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return err
+	}
+	a.changes.notify()
+	return nil
 }
 
 func parseUA(ua string) (browser, osName, device string) {
