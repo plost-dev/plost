@@ -1,4 +1,3 @@
-import { UIIcon } from "./UIIcon"
 import { GoogleStylePreview } from "./GoogleStylePreview"
 import { useEffect, useState, type ReactNode } from "react"
 import { useRouter } from "@tanstack/react-router"
@@ -22,7 +21,7 @@ export function GoogleMapStylePicker() {
     options={GOOGLE_MAP_STYLES.map(style => ({id: style.id, label: style.label, preview: <GoogleStylePreview styleId={style.id} label={t("{0}地图预览", {0: t(style.label)})}/>}))}/>
 }
 
-/** Three map style cards that save to the account as soon as one is picked. */
+/** Three map style cards, named in the lower left of the map and checked in the lower right, that save to the account as soon as one is picked. */
 function StylePicker<Id extends MapboxStyleId | GoogleMapStyleId>({name, saved, save, options}: {
   name: string; saved: Id; save: (styleId: Id) => Promise<Id>; options: Array<{id: Id; label: string; preview: ReactNode}>
 }) {
@@ -53,10 +52,14 @@ function StylePicker<Id extends MapboxStyleId | GoogleMapStyleId>({name, saved, 
       <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
     </svg> : null}<span className="sr-only" role="status">{pending ? t("保存中…") : ""}</span></legend>
     <div className="map-style-options">
-      {options.map(style => <label key={style.id} className={`squircle map-style-option${selected === style.id ? " is-selected" : ""}`}>
+      {options.map(style => <label key={style.id} className={`squircle map-style-card${selected === style.id ? " is-selected" : ""}`}>
         <input className="sr-only" type="radio" name={name} value={style.id} checked={selected === style.id} onChange={() => void choose(style.id)}/>
         {style.preview}
-        <span className="map-style-option-caption"><span>{t(style.label)}</span>{selected === style.id ? <UIIcon name="check" className="size-3.5"/> : null}</span>
+        <span className="squircle map-style-card-label">{t(style.label)}</span>
+        {selected === style.id ? <svg className="map-style-card-check" viewBox="0 0 1024 1024" aria-hidden="true">
+          <circle cx="512" cy="512" r="400" fill="#fff"/>
+          <path fill="#52c41a" d="M512 0a512 512 0 1 0 0 1024A512 512 0 0 0 512 0zm356.06 343.77L439.52 722.65a35.47 35.47 0 0 1-46.74 0L229.08 580.46a28.16 28.16 0 0 1 0-42.42 35.47 35.47 0 0 1 46.81 0l140.29 120.98 405.07-357.67a35.47 35.47 0 0 1 46.74 0c12.87 11.7 12.87 30.72 0 42.42z"/>
+        </svg> : null}
       </label>)}
     </div>
     {error ? <p className="text-sm text-red-600" role="alert">{t(error)}</p> : null}
