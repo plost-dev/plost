@@ -289,10 +289,8 @@ html.dark .tag-required { background:#450a0a; color:#fca5a5; }
 /* Site overview hero: totals and controls beside a dotted visitor globe. */
 .overview-hero { --sq-r:20px; position:relative; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,46%); height:352px; margin:32px 0 24px; overflow:hidden; border:1px solid var(--color-gray-200); background:var(--surface); --overview-globe-dot:var(--color-gray-500); --overview-globe-sphere:var(--color-gray-100); }
 html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overview-globe-sphere:#050506; }
-.overview-hero { --hero-uv: var(--accent-color); --hero-pv: color-mix(in srgb, var(--accent-color) 22%, var(--color-gray-100)); }
 .overview-hero-body { position:relative; z-index:1; display:flex; flex-direction:column; gap:18px; min-width:0; min-height:0; overflow:hidden; padding:28px 8px 28px 32px; }
-/* The card keeps one height whatever the chart: the figures above take the same room in every style, and the chart,
-   heatmap or tiles below stretch to fill the rest, so the two bar charts are drawn at the same size. */
+/* The card keeps one height; the key-figure tiles stretch to fill what the heading leaves. */
 .overview-hero-body > * { flex:none; }
 .overview-hero-head { display:flex; align-items:flex-start; justify-content:space-between; gap:16px; }
 .overview-hero-title { font-size:24px; line-height:1.2; font-weight:700; letter-spacing:-.025em; color:var(--color-gray-900); }
@@ -309,11 +307,6 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 .overview-hero-seg button:hover { color:var(--color-gray-900); }
 .overview-hero-seg button[aria-pressed="true"] { background:var(--ui-selection-bg); color:var(--ui-selection-text); }
 
-.overview-hero-kpis { display:flex; flex-direction:column; gap:2px; min-height:58px; }
-.overview-hero-kpis.is-row { flex-direction:row; gap:32px; }
-.overview-hero-big { display:flex; align-items:baseline; gap:10px; }
-.overview-hero-big strong { font-size:36px; line-height:1.05; font-weight:700; letter-spacing:-.03em; color:var(--color-gray-900); font-variant-numeric:tabular-nums; }
-.overview-hero-mid { display:block; font-size:22px; line-height:1.2; font-weight:700; letter-spacing:-.02em; color:var(--color-gray-900); font-variant-numeric:tabular-nums; }
 .overview-hero-note { font-size:12px; color:var(--color-gray-500); }
 .overview-hero-delta { display:inline-flex; align-items:center; gap:2px; font-size:13px; font-weight:600; color:var(--color-gray-500); font-variant-numeric:tabular-nums; }
 .overview-hero-delta .ui-icon { width:12px; height:12px; }
@@ -321,49 +314,6 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 .overview-hero-delta.is-down { color:var(--color-red-600); }
 .overview-hero-body > .overview-hero-loading { flex:1; min-height:0; border-radius:12px; background:var(--color-gray-100); animation:overview-hero-pulse 1.2s ease-in-out infinite; }
 @keyframes overview-hero-pulse { 50% { opacity:.5; } }
-
-/* Hourly and daily bars */
-.overview-hero-body > .overview-hero-chart { display:grid; grid-template-columns:auto minmax(0,1fr); gap:8px; flex:1; min-height:0; }
-.overview-hero-axis { position:relative; min-width:22px; font-size:11px; line-height:1; color:var(--color-gray-400); text-align:right; font-variant-numeric:tabular-nums; }
-.overview-hero-axis span { position:absolute; right:0; transform:translateY(50%); }
-.overview-hero-plot { position:relative; padding-bottom:18px; }
-.overview-hero-grid { position:absolute; left:0; right:0; height:1px; background:var(--color-gray-100); }
-.overview-hero-plot::after { content:""; position:absolute; left:0; right:0; bottom:18px; height:1px; background:var(--color-gray-200); }
-.overview-hero-bars { position:relative; display:flex; align-items:flex-end; gap:3px; height:100%; }
-.overview-hero-bar { position:relative; flex:1; height:100%; cursor:default; }
-.overview-hero-bar span { position:absolute; left:0; right:0; bottom:0; border-radius:3px 3px 0 0; transition:opacity 120ms; }
-.overview-hero-bar .pv { background:var(--hero-pv); }
-.overview-hero-bar .uv { background:var(--hero-uv); opacity:.85; }
-.overview-hero-bars:hover .overview-hero-bar:not(.is-hover) span { opacity:.45; }
-.overview-hero-bar.is-now .uv { opacity:1; background-image:repeating-linear-gradient(135deg, transparent 0 3px, rgb(255 255 255 / .35) 3px 5px); }
-.overview-hero-bar em { position:absolute; left:0; bottom:-18px; font-size:11px; font-style:normal; line-height:16px; color:var(--color-gray-400); white-space:nowrap; }
-.overview-hero-tip { --sq-r:10px; position:absolute; top:-8px; z-index:3; display:flex; flex-direction:column; gap:2px; padding:7px 11px 8px; transform:translateX(-50%); border:1px solid var(--color-gray-200); background:color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter:blur(8px); box-shadow:0 6px 20px rgb(0 0 0 / .12); font-size:12px; color:var(--color-gray-500); white-space:nowrap; pointer-events:none; }
-.overview-hero-tip strong { font-size:12px; font-weight:600; color:var(--color-gray-900); }
-.overview-hero-tip span, .overview-hero-legend span { display:flex; align-items:center; gap:6px; font-variant-numeric:tabular-nums; }
-.overview-hero-tip i, .overview-hero-legend i { width:8px; height:8px; border-radius:50%; }
-:is(.overview-hero-tip, .overview-hero-legend) i.uv { background:var(--hero-uv); } :is(.overview-hero-tip, .overview-hero-legend) i.pv { background:var(--hero-pv); }
-.overview-hero-legend { display:flex; gap:14px; margin-top:-8px; font-size:12px; color:var(--color-gray-500); }
-
-/* Weekday × hour heatmap */
-.overview-hero-body > .overview-hero-heat { display:flex; flex-direction:column; gap:2px; flex:1; min-height:0; }
-.overview-hero-heat-row { display:grid; grid-template-columns:24px repeat(24, minmax(0,1fr)); gap:2px; align-items:center; }
-.overview-hero-heat-row:not(.is-axis) { flex:1; align-items:stretch; }
-.overview-hero-heat-row > span { align-self:center; font-size:10px; line-height:11px; color:var(--color-gray-400); }
-.overview-hero-heat-row > i { min-height:8px; border-radius:3px; background:var(--color-gray-100); transition:outline-color 120ms; outline:2px solid transparent; outline-offset:1px; }
-.overview-hero-heat-row > i.is-hover { outline-color:var(--color-gray-900); }
-.overview-hero-heat-row.is-axis em { font-size:11px; font-style:normal; color:var(--color-gray-400); overflow:visible; white-space:nowrap; }
-.overview-hero-heat-foot { margin-top:-8px; font-variant-numeric:tabular-nums; }
-
-/* Share of visitors by site */
-.overview-hero-share { --sq-r:8px; display:flex; gap:2px; height:14px; overflow:hidden; }
-.overview-hero-share span { min-width:4px; }
-.overview-hero-share-list { display:grid; gap:6px; font-size:13px; }
-.overview-hero-share-list li { display:grid; grid-template-columns:8px minmax(0,1fr) 64px 40px 56px; align-items:center; gap:8px; }
-.overview-hero-share-list .overview-hero-delta { justify-content:flex-end; font-size:12px; }
-.overview-hero-share-list i { width:8px; height:8px; border-radius:2px; }
-.overview-hero-share-list .name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--color-gray-700); }
-.overview-hero-share-list .num { text-align:right; font-weight:600; color:var(--color-gray-900); font-variant-numeric:tabular-nums; }
-.overview-hero-share-list .pct { text-align:right; color:var(--color-gray-500); font-variant-numeric:tabular-nums; }
 
 /* Key figures */
 .overview-hero-body > .overview-hero-tiles { display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; flex:1; min-height:0; margin-top:-8px; }
@@ -393,10 +343,6 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 @media(max-width:767px) {
   .overview-hero { grid-template-columns:minmax(0,1fr); height:auto; margin:24px 0 20px; }
   .overview-hero-body { overflow:visible; padding:22px 20px 0; }
-  .overview-hero-body > .overview-hero-chart { min-height:110px; }
-  .overview-hero-heat-row:not(.is-axis) { flex:none; }
-  .overview-hero-heat-row > i { height:11px; }
-  .overview-hero-kpis.is-row { gap:20px; }
   .overview-globe { min-height:280px; }
   .overview-globe-tools { top:12px; right:12px; }
 }

@@ -32,8 +32,8 @@ export async function sitesFn(){
 }
 export async function trafficPulseFn(){const items=await rpc<Array<{site:Site;overview:GoOverview}>>("/api/sites");return {sites:{count:items.length,visitors:items.reduce((n,s)=>n+s.overview.visitors,0),visits:items.reduce((n,s)=>n+s.overview.visits,0),pageviews:items.reduce((n,s)=>n+s.overview.pageviews,0)}}}
 export const overviewLiveFn=()=>rpc<OverviewPlace[]>("/api/overview/live")
-export type OverviewCharts={totals:GoOverview;previous:GoOverview;points:GoPoint[];heatmap:Array<{dow:number;hour:number;value:number}>}
-export const overviewChartsFn=(view:string)=>rpc<OverviewCharts>("/api/overview/charts?view="+encodeURIComponent(view))
+export type OverviewCharts={totals:GoOverview;previous:GoOverview;points:GoPoint[]}
+export const overviewChartsFn=()=>rpc<OverviewCharts>("/api/overview/charts")
 export async function createSiteFn({data}:Input<{domain:string;timezone:string;name?:string|null}>){return rpc<{domain:string}>("/api/sites","POST",data)}
 export async function siteReadyFn({data}:Input<{domain:string}>){const r=await rpc<GoReport>(sitePath(data.domain)+"/report?period=all");return {ready:r.overview.pageviews>0}}
 export type Share={id:number;name:string;slug:string;createdAt:number}
