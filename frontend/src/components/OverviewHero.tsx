@@ -102,7 +102,7 @@ function MetricsChart({ charts }: { charts: OverviewCharts }) {
     <>
       <div className="overview-hero-tiles">
         {tiles.map(tile => (
-          <div key={tile.label} className={`squircle overview-hero-tile${tile.delta === undefined ? " is-online" : ""}`}>
+          <div key={tile.label} className={`overview-hero-tile${tile.delta === undefined ? " is-online" : ""}`}>
             <span className="label">{tile.delta === undefined ? <i /> : null}{tile.label}</span>
             <strong>{numberShort(tile.value)}</strong>
             {tile.delta === undefined ? <span className="overview-hero-note">{t("实时，5 分钟内")}</span> : <Delta value={tile.delta} />}

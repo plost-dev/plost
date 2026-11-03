@@ -321,12 +321,15 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 .overview-hero-delta .ui-icon { width:12px; height:12px; }
 .overview-hero-delta.is-up { color:var(--color-green-600); }
 .overview-hero-delta.is-down { color:var(--color-red-600); }
-.overview-hero-body > .overview-hero-loading { height:118px; border-radius:12px; background:var(--color-gray-100); animation:overview-hero-pulse 1.2s ease-in-out infinite; }
+.overview-hero-body > .overview-hero-loading { height:96px; border-radius:12px; background:var(--color-gray-100); animation:overview-hero-pulse 1.2s ease-in-out infinite; }
 @keyframes overview-hero-pulse { 50% { opacity:.5; } }
 
 /* Key figures */
-.overview-hero-body > .overview-hero-tiles { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:10px; }
-.overview-hero-tile { --sq-r:14px; position:relative; display:flex; flex-direction:column; gap:4px; min-width:0; min-height:0; padding:14px 16px; overflow:hidden; border:1px solid var(--color-gray-200); background:var(--surface); }
+/* No boxes: the four figures stand in a row, parted by thin vertical rules. */
+.overview-hero-body > .overview-hero-tiles { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); padding:6px 0; }
+.overview-hero-tile { position:relative; display:flex; flex-direction:column; gap:4px; min-width:0; padding:4px 20px; }
+.overview-hero-tile:first-child { padding-left:0; }
+.overview-hero-tile + .overview-hero-tile { border-left:1px solid var(--color-gray-200); }
 .overview-hero-tile .label { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--color-gray-500); }
 .overview-hero-tile .label i { width:7px; height:7px; border-radius:50%; background:var(--color-green-500); box-shadow:0 0 0 3px rgb(34 197 94 / .18); }
 .overview-hero-tile strong { margin-top:6px; font-size:28px; line-height:1.15; font-weight:700; color:var(--color-gray-900); font-variant-numeric:tabular-nums; }
@@ -354,7 +357,8 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
   .overview-hero-head { padding:22px 20px 0; }
   .overview-hero-sub { flex-wrap:wrap; white-space:normal; }
   .overview-hero-body { padding:18px 20px 0; }
-  .overview-hero-body > .overview-hero-tiles { grid-template-columns:repeat(2, minmax(0,1fr)); }
+  .overview-hero-body > .overview-hero-tiles { grid-template-columns:repeat(2, minmax(0,1fr)); row-gap:20px; }
+  .overview-hero-tile:nth-child(odd) { padding-left:0; border-left:0; }
   .overview-globe { grid-column:1; grid-row:3; min-height:280px; }
 }
 
