@@ -45,10 +45,12 @@ export const Route = createFileRoute("/sites/$domain/settings/{-$tab}")({
     }
   },
   loader: async ({ params }) => {
+    // Both at once: each is a round trip to the server.
+    const settings = siteSettingsFn({ data: { domain: params.domain } })
+    settings.catch(() => {})
     const me = await meFn()
     if (!me) throw redirect({ to: "/login" })
-    const data = await siteSettingsFn({ data: { domain: params.domain } })
-    return { me, data }
+    return { me, data: await settings }
   },
   component: SettingsPage,
 })

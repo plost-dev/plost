@@ -1,16 +1,41 @@
-import { useState } from "react"
-import { saveMapboxSettingsFn, type MapboxSettings } from "~/lib/mapbox-actions"
-import { saveGoogleMapsSettingsFn, type GoogleMapsSettings } from "~/lib/google-maps-actions"
+import { useEffect, useState } from "react"
+import { mapboxSettingsFn, saveMapboxSettingsFn, type MapboxSettings } from "~/lib/mapbox-actions"
+import { googleMapsSettingsFn, saveGoogleMapsSettingsFn, type GoogleMapsSettings } from "~/lib/google-maps-actions"
 import { showToast } from "~/lib/toast"
 import { GoogleMapsSettingsPanel } from "./GoogleMapsSettingsPanel"
 import { MapboxSettingsPanel } from "./MapboxSettingsPanel"
 import { MapServiceTips } from "./MapServiceTips"
 
+type MapServices = { mapbox: MapboxSettings; google: GoogleMapsSettings }
+let loading: Promise<MapServices> | null = null
+
+/**
+ * Both services' settings, fetched once and shared, so the settings page can start this before the map page is
+ * opened and switching to it does not wait for the server. A save clears it for the next visit.
+ */
+export function loadMapServices() {
+  loading ??= Promise.all([mapboxSettingsFn(), googleMapsSettingsFn()]).then(([mapbox, google]) => ({ mapbox, google }))
+  loading.catch(() => { loading = null })
+  return loading
+}
+
+/** The map settings page: shows the services once their settings arrive. */
+export function MapServicesPage({ onSaved }: { onSaved: () => void }) {
+  const [data, setData] = useState<MapServices | null>(null)
+  useEffect(() => {
+    let live = true
+    loadMapServices().then(next => { if (live) setData(next) }, error => showToast(error instanceof Error ? error.message : "读取失败", "error"))
+    return () => { live = false }
+  }, [])
+  if (!data) return null
+  return <MapServicesSettings mapbox={data.mapbox} google={data.google} onSaved={() => { loading = null; onSaved() }} />
+}
+
 /**
  * The visitor map services. Both may be off, and then the built-in map is used; at most one is on, and it replaces the
  * built-in map. Each switch saves at once, and turning one on turns the other off.
  */
-export function MapServicesSettings({ mapbox, google, onSaved }: { mapbox: MapboxSettings; google: GoogleMapsSettings; onSaved: () => void }) {
+function MapServicesSettings({ mapbox, google, onSaved }: { mapbox: MapboxSettings; google: GoogleMapsSettings; onSaved: () => void }) {
   // A Mapbox switch saved on before any token was entered does nothing, so it shows as off.
   const [mapboxOn, setMapboxOn] = useState(mapbox.enabled && mapbox.configured)
   const [googleOn, setGoogleOn] = useState(google.enabled && google.configured)

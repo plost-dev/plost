@@ -1,4 +1,5 @@
 import { createFileRoute, Link, redirect, useRouter } from "@tanstack/react-router"
+import { useEffect } from "react"
 import { AccentPicker } from "~/components/AccentPicker"
 import { AccountPreferences } from "~/components/AccountPreferences"
 import { AccountSecurity } from "~/components/AccountSecurity"
@@ -8,7 +9,7 @@ import { PasskeyPanel } from "~/components/PasskeyPanel"
 import { BackupPanel } from "~/components/BackupPanel"
 import { SparklineStylePicker } from "~/components/SparklineStylePicker"
 import { SettingsTips } from "~/components/SettingsTips"
-import { MapServicesSettings } from "~/components/MapServicesSettings"
+import { loadMapServices, MapServicesPage } from "~/components/MapServicesSettings"
 import { SettingsHeader } from "~/components/SettingsChrome"
 import { SettingsLayout, SettingsNav } from "~/components/SettingsLayout"
 import { Shell } from "~/components/Shell"
@@ -16,8 +17,6 @@ import { Tile } from "~/components/ui"
 import { UIIcon as TabIcon } from "~/components/UIIcon"
 import { accountSettingsFn } from "~/lib/actions"
 import { useT } from "~/lib/i18n"
-import { mapboxSettingsFn } from "~/lib/mapbox-actions"
-import { googleMapsSettingsFn } from "~/lib/google-maps-actions"
 
 const ACCOUNT_TABS = [
   { id: "preferences", label: "个人资料" },
@@ -40,26 +39,25 @@ function accountTab(search: Record<string, unknown>) {
 
 export const Route = createFileRoute("/account")({
   validateSearch: (search: Record<string, unknown>) => ({ tab: accountTab(search) }),
-  loaderDeps: ({ search }) => search,
-  loader: async ({ deps }) => {
-    let data: Awaited<ReturnType<typeof accountSettingsFn>>
+  // The loader does not depend on the tab, so switching tabs neither waits for the server nor remounts the page; each
+  // tab loads its own data.
+  loader: async () => {
     try {
-      data = await accountSettingsFn()
+      return { data: await accountSettingsFn() }
     } catch {
       throw redirect({ to: "/login" })
     }
-    const [mapbox, googleMaps] = deps.tab === "system/mapbox" ? await Promise.all([mapboxSettingsFn(), googleMapsSettingsFn()]) : [null, null]
-    return { data, mapbox, googleMaps }
   },
   component: AccountPage,
 })
 
 function AccountPage() {
-  const { data, mapbox, googleMaps } = Route.useLoaderData()
+  const { data } = Route.useLoaderData()
   const { tab } = Route.useSearch()
   const router = useRouter()
   const { t } = useT()
   const user = data.user
+  useEffect(() => { void loadMapServices().catch(() => {}) }, [])
 
   return (
     <Shell user={user}>
@@ -105,7 +103,7 @@ function AccountPage() {
             "站点列表每张卡片下方的小走势图。样式和时间范围选择后自动保存到当前账号。",
             "走势图的 24 小时按小时、30 天按天显示访客。",
           ]} /></> : null}
-          {tab === "system/mapbox" && mapbox && googleMaps ? <MapServicesSettings mapbox={mapbox} google={googleMaps} onSaved={() => router.invalidate()} /> : null}
+          {tab === "system/mapbox" ? <MapServicesPage onSaved={() => router.invalidate()} /> : null}
           {tab === "system/backup" ? <BackupPanel /> : null}
         </SettingsLayout>
       </div>
