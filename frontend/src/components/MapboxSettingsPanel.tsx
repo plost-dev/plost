@@ -6,9 +6,10 @@ import { ActionButton } from "./ActionButton"
 import { Field, FormActions, SettingsForm } from "./SettingsForm"
 import { Tile } from "./ui"
 import { Toggle } from "./Toggle"
+import { MapStylePicker } from "./MapStylePicker"
 import { PasswordInput } from "~/components/PasswordInput"
 
-/** The Mapbox card. Its switch belongs to MapServicesSettings, which keeps it and Google Maps from both being on. */
+/** The Mapbox card, with the account's Mapbox map style below the token. Its switch belongs to MapServicesSettings, which keeps it and Google Maps from both being on. */
 export function MapboxSettingsPanel({initial, enabled, onToggle, onSaved}: {
   initial: {enabled: boolean; configured: boolean}; enabled: boolean
   onToggle: (next: boolean, token: string) => Promise<boolean>; onSaved?: () => void
@@ -29,5 +30,6 @@ export function MapboxSettingsPanel({initial, enabled, onToggle, onSaved}: {
       </Field>
       <FormActions><ActionButton type="submit" className="btn btn-primary" >{t("保存设置")}</ActionButton></FormActions>
     </SettingsForm>
+    <MapStylePicker />
   </Tile>
 }

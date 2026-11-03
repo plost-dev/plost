@@ -1,8 +1,5 @@
 import { UserAvatar } from "./UserAvatar"
 import { ActionButton, ActionUpload } from "~/components/ActionButton"
-import { AccentPicker } from "~/components/AccentPicker"
-import { SparklineStylePicker } from "~/components/SparklineStylePicker"
-import { MapStylePicker } from "~/components/MapStylePicker"
 import { useEffect, useState } from "react"
 import { Field, FormActions, SettingsForm } from "~/components/SettingsForm"
 import { Tile } from "~/components/ui"
@@ -72,8 +69,5 @@ export function AccountPreferences({ user, onSaved }: {
       <Field label={t("界面语言")}><select className="squircle input" value={language} onChange={event=>setLanguage(event.target.value === "en" ? "en" : "zh-CN")}><option value="zh-CN">简体中文</option><option value="en">English</option></select></Field>
       <FormActions><ActionButton className="btn btn-primary" type="submit" disabled={processing}>{t("保存设置")}</ActionButton></FormActions>
     </SettingsForm>
-    <AccentPicker />
-    <MapStylePicker />
-    <SparklineStylePicker />
   </Tile>
 }

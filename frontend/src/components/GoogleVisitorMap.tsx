@@ -5,6 +5,7 @@ import { useT } from "~/lib/i18n"
 import { numberShort } from "~/lib/format"
 import { liveDot, pointKey, useLiveArrivals, usePointArrivals, type LivePoint } from "~/lib/live-arrivals"
 import { loadWorldMap, type WorldJsonCountryData } from "~/lib/world-countries"
+import { googleMapLook, type GoogleMapStyleId } from "~/lib/google-map-styles"
 import { mapboxVisitorData, type MapRows, type VisitorCountry } from "~/lib/mapbox-data"
 
 // The Maps JavaScript API has no bundled types here; only the few calls below are used.
@@ -28,18 +29,6 @@ function loadGoogleMaps(key: string, language: string): Promise<Maps> {
   return loading
 }
 
-const LIGHT = [
-  { featureType: "poi", stylers: [{ visibility: "off" }] }, { featureType: "road", stylers: [{ visibility: "off" }] }, { featureType: "transit", stylers: [{ visibility: "off" }] },
-  { featureType: "administrative.province", stylers: [{ visibility: "off" }] }, { featureType: "administrative.locality", stylers: [{ visibility: "off" }] },
-  { featureType: "landscape", stylers: [{ color: "#f4f4f5" }] }, { featureType: "water", stylers: [{ color: "#e4e4e7" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#71717a" }] }, { elementType: "labels.text.stroke", stylers: [{ color: "#ffffff" }] },
-]
-const DARK = [
-  ...LIGHT.slice(0, 5),
-  { featureType: "landscape", stylers: [{ color: "#1c1c1f" }] }, { featureType: "water", stylers: [{ color: "#0c0c0e" }] },
-  { featureType: "administrative", elementType: "geometry.stroke", stylers: [{ color: "#3f3f46" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#a1a1aa" }] }, { elementType: "labels.text.stroke", stylers: [{ color: "#000000" }] },
-]
 const HOME = { center: { lat: 25, lng: 110 }, zoom: 2 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -53,8 +42,8 @@ function mix(low: string, high: string, weight: number) {
   return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * weight)).join(",")})`
 }
 
-export function GoogleVisitorMap({ apiKey, rows, live, points = [], showFlags = true, onCountryClick, onFailure }: {
-  apiKey: string; rows: MapRows; live: Array<{ country: string }>; points?: LivePoint[]; showFlags?: boolean
+export function GoogleVisitorMap({ apiKey, styleId, rows, live, points = [], showFlags = true, onCountryClick, onFailure }: {
+  apiKey: string; styleId: GoogleMapStyleId; rows: MapRows; live: Array<{ country: string }>; points?: LivePoint[]; showFlags?: boolean
   onCountryClick?: (code: string) => void; onFailure: () => void
 }) {
   const { t, locale } = useT()
@@ -92,7 +81,7 @@ export function GoogleVisitorMap({ apiKey, rows, live, points = [], showFlags = 
         clearTimeout(timer)
         const map = new maps.Map(element, {
           ...HOME, minZoom: 1, maxZoom: 6, disableDefaultUI: true, clickableIcons: false, gestureHandling: "cooperative",
-          backgroundColor: dark() ? "#0c0c0e" : "#e4e4e7", styles: dark() ? DARK : LIGHT,
+          ...googleMapLook(styleId, dark()),
         })
         mapRef.current = map
         let byCode = new Map<string, VisitorCountry>()
@@ -162,7 +151,7 @@ export function GoogleVisitorMap({ apiKey, rows, live, points = [], showFlags = 
         map.data.addListener("click", (event: Maps) => { const code = event.feature.getProperty("code"); if (code) props.current.onCountryClick?.(String(code)) })
         map.addListener("dragstart", () => setHovered(null))
         restyle(); update.current(); setLoaded(true)
-        theme = new MutationObserver(() => { map.setOptions({ styles: dark() ? DARK : LIGHT, backgroundColor: dark() ? "#0c0c0e" : "#e4e4e7" }); restyle() })
+        theme = new MutationObserver(() => { map.setOptions(googleMapLook(styleId, dark())); restyle() })
         theme.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "data-accent"] })
       } catch { fail() }
     })()
@@ -171,7 +160,7 @@ export function GoogleVisitorMap({ apiKey, rows, live, points = [], showFlags = 
       if (window.gm_authFailure === fail) window.gm_authFailure = undefined
       mapRef.current = null; update.current = null
     }
-  }, [apiKey, locale])
+  }, [apiKey, styleId, locale])
   useEffect(() => { update.current?.() }, [rows, live, arrivals, points, pointArrivals, t])
 
   return <div className="relative">

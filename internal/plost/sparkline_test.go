@@ -35,3 +35,23 @@ func TestSparklineSettings(t *testing.T) {
 		t.Fatalf("30-day trend: %d sites, %d points", len(sites), len(sites[0].Series))
 	}
 }
+
+func TestGoogleMapStyleSetting(t *testing.T) {
+	x := newTestApp(t)
+	x.setup(t)
+	var prefs map[string]string
+	if err := json.Unmarshal(x.call(t, "GET", "/api/preferences", nil, 200), &prefs); err != nil {
+		t.Fatal(err)
+	}
+	if prefs["googleMapStyle"] != "standard" {
+		t.Fatalf("default: %v", prefs)
+	}
+	x.call(t, "PUT", "/api/google-map-style", map[string]any{"styleId": "streets-v12"}, 400)
+	x.call(t, "PUT", "/api/google-map-style", map[string]any{"styleId": "dark"}, 200)
+	if err := json.Unmarshal(x.call(t, "GET", "/api/preferences", nil, 200), &prefs); err != nil {
+		t.Fatal(err)
+	}
+	if prefs["googleMapStyle"] != "dark" || prefs["mapboxStyle"] != "standard" {
+		t.Fatalf("saved: %v", prefs)
+	}
+}

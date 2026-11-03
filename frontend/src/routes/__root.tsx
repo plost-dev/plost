@@ -3,6 +3,7 @@ import { useEffect, type ReactNode } from "react"
 import { I18nProvider, isLocale, useT } from "~/lib/i18n"
 import { rootPreferencesFn } from "~/lib/auth-actions"
 import { MapStyleProvider } from "~/lib/map-preferences"
+import { DEFAULT_GOOGLE_MAP_STYLE } from "~/lib/google-map-styles"
 import { SparklineProvider } from "~/components/SiteSparkline"
 import { DEFAULT_SPARKLINE } from "~/lib/sparkline-styles"
 import { DEFAULT_MAPBOX_STYLE } from "~/lib/mapbox-styles"
@@ -44,7 +45,7 @@ export function RootShell({ children }: { children: ReactNode }) {
   const locale = isLocale(preferences?.locale) ? preferences.locale : "zh-CN"
   return (
     <I18nProvider locale={locale}>
-      <MapStyleProvider styleId={preferences?.mapboxStyle ?? DEFAULT_MAPBOX_STYLE}>
+      <MapStyleProvider styleId={preferences?.mapboxStyle ?? DEFAULT_MAPBOX_STYLE} googleStyleId={preferences?.googleMapStyle ?? DEFAULT_GOOGLE_MAP_STYLE}>
         <SparklineProvider value={preferences?.sparkline ?? DEFAULT_SPARKLINE}>
           <PageTitle />
           {children}

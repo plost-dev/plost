@@ -56,7 +56,7 @@ func (a *App) setting(ctx context.Context, key, fallback string) string {
 }
 func (a *App) preferences(w http.ResponseWriter, r *http.Request) error {
 	style, span := a.sparklineSettings(r.Context())
-	return jsonResponse(w, map[string]string{"mapboxStyle": a.setting(r.Context(), "mapbox_style", "standard"), "sparklineStyle": style, "sparklineRange": span})
+	return jsonResponse(w, map[string]string{"mapboxStyle": a.setting(r.Context(), "mapbox_style", "standard"), "googleMapStyle": a.setting(r.Context(), "google_map_style", "standard"), "sparklineStyle": style, "sparklineRange": span})
 }
 
 // The small trend on each site card in the site list: one of these styles, over the last 24 hours (hourly) or the
@@ -105,6 +105,22 @@ func (a *App) mapStyle(w http.ResponseWriter, r *http.Request) error {
 		return failure(400, "地图样式无效")
 	}
 	_, err := a.db.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES('mapbox_style',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", in.StyleID)
+	if err != nil {
+		return err
+	}
+	return jsonResponse(w, in)
+}
+func (a *App) googleMapStyle(w http.ResponseWriter, r *http.Request) error {
+	var in struct {
+		StyleID string `json:"styleId"`
+	}
+	if err := readJSON(w, r, &in); err != nil {
+		return err
+	}
+	if in.StyleID != "standard" && in.StyleID != "roadmap" && in.StyleID != "dark" {
+		return failure(400, "地图样式无效")
+	}
+	_, err := a.db.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES('google_map_style',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", in.StyleID)
 	if err != nil {
 		return err
 	}

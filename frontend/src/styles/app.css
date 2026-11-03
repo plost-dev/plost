@@ -1440,6 +1440,7 @@ select:disabled { opacity:.65; cursor:not-allowed; }
 }
 
 .map-style-picker { min-width:0; margin-top:28px; padding-top:24px; border-top:1px solid var(--color-gray-200); }
+.map-style-picker:first-child { margin-top:0; padding-top:0; border-top:0; }
 .map-style-picker > legend { float:left; width:calc(100% - 36px); font-size:14px; line-height:28px; font-weight:600; color:var(--color-gray-900); margin-bottom:12px; }
 .map-style-picker > .help-hint { float:right; }
 /* The saving state sits beside the title, inline, so nothing below it moves. */
@@ -1482,3 +1483,9 @@ select:disabled { opacity:.65; cursor:not-allowed; }
 .site-header-brand .plost-logo__mark { width: var(--header-control); height: var(--header-control); }
 .site-header-nav-link, .site-header-link { display: inline-flex; align-items: center; box-sizing: border-box; height: var(--header-control); padding-block: 0; }
 .site-header .squircle:is(.site-header-account, .site-header-avatar) { --sq-r: calc(var(--header-control) * .46); }
+/* Google map style previews, in the colours googleMapLook gives each style. */
+.google-style-preview { --water:#e4e4e7; --land:#f4f4f5; --border:#d4d4d8; }
+:root[data-theme="dark"] .google-style-preview[data-style="standard"], .google-style-preview[data-style="dark"] { --water:#0c0c0e; --land:#1c1c1f; --border:#3f3f46; }
+.google-style-preview[data-style="roadmap"] { --water:#aadaff; --land:#f5f3ef; --border:#9aa0a6; }
+.google-style-water { fill:var(--water); }
+.google-style-land { fill:var(--land); stroke:var(--border); stroke-width:.5; }

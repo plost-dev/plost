@@ -1,0 +1,1 @@
+import{F as e}from"./index-DfKoc-mK.js";var t=e;export{t as component};

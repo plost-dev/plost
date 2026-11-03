@@ -10,7 +10,7 @@ import { countryName } from "~/lib/countries"
 import { numberShort } from "~/lib/format"
 import { MapboxVisitorMap } from "./MapboxVisitorMap"
 import { HelpHint } from "./HelpHint"
-import { readMapFlags, saveMapFlags, useMapStyle } from "~/lib/map-preferences"
+import { readMapFlags, saveMapFlags, useGoogleMapStyle, useMapStyle } from "~/lib/map-preferences"
 import {
   COUNTRIES_BY_TWO_LETTER_CODE,
   countryCentroids,
@@ -335,8 +335,9 @@ function WorldMap({
 function VisitorMap({token, googleKey = "", ...props}: {token: string; googleKey?: string} & Parameters<typeof WorldMap>[0]) {
   const {t} = useT()
   const styleId = useMapStyle()
+  const googleStyleId = useGoogleMapStyle()
   const [failed, setFailed] = useState(false)
-  if (googleKey && !failed) return <GoogleVisitorMap apiKey={googleKey} rows={props.rows} live={props.live || []} points={props.points || []} showFlags={props.showFlags} onCountryClick={props.onCountryClick} onFailure={() => setFailed(true)}/>
+  if (googleKey && !failed) return <GoogleVisitorMap apiKey={googleKey} styleId={googleStyleId} rows={props.rows} live={props.live || []} points={props.points || []} showFlags={props.showFlags} onCountryClick={props.onCountryClick} onFailure={() => setFailed(true)}/>
   if (token && !failed) return <MapboxVisitorMap token={token} styleId={styleId} rows={props.rows} live={props.live || []} points={props.points || []} showFlags={props.showFlags} onCountryClick={props.onCountryClick} onFailure={() => setFailed(true)}/>
   return <>
     {failed ? <p role="status" className="map-fallback-note">{t(googleKey ? "Google 地图暂时无法加载，已显示备用地图。请检查 API Key 和它的域名限制。" : "Mapbox 暂时无法加载，已显示备用地图。")}

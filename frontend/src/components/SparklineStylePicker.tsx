@@ -33,7 +33,7 @@ export function SparklineStylePicker() {
     } finally { setPending(false) }
   }
   return <fieldset className="map-style-picker sparkline-style-picker" disabled={pending} aria-busy={pending}>
-    <legend>{t("站点卡片走势图")}</legend>
+    <legend>{t("走势图样式")}</legend>
     <div className="sparkline-range" role="radiogroup" aria-label={t("时间范围")}>
       <span>{t("时间范围")}</span>
       <div className="squircle segmented-control flex rounded-md bg-gray-100">

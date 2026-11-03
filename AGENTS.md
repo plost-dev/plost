@@ -63,3 +63,5 @@
 - 2026-11-02 用户担心「页面没打开、广告没看就关掉」也被计数，以及爬虫没过滤：追踪脚本改成和 Umami 一样，等 `document.readyState` 变成 complete 才计第一次浏览（加载完之前的页内跳转并入这一次），`navigator.webdriver` 为真的自动化浏览器什么都不发（只留一个空的 `window.plost.track`）；服务端 `isBot` 在原清单上补了常见爬虫、AI 抓取、预览、监控和脚本客户端标识，空标识也丢弃，`CUBOT` 手机型号不算爬虫。新增规则时先在 `bot_test.go` 里加真实浏览器样本，避免误伤（例如 Pinterest、Instagram、Facebook 的内置浏览器）。
 
 - 2026-11-03 用户要求访客 IP 像 Umami 一样自动识别，不论直连、反代、Docker、Cloudflare 或其他 CDN 都不用配置，设置里也不要再显示「访客 IP 识别」页（已删除）。统计用 `visitorAddr`/`visitorKnown`/`visitorCountryHeader`（`clientip.go`）：没声明代理时依次读 CDN 单一地址头、`X-Forwarded-For` 第一个公网地址、`Forwarded`、`X-Real-IP`，再用连接方；声明了 `-trusted-proxies` 或 `-trust-proxy` 时走严格规则。频率限制等安全判断只用严格的 `clientIP`，不要改成自动读取，否则伪造头就能绕过限制。访客地图的 Mapbox 和 Google 地图开关点一下就保存，可以都关（用内置地图），最多开一个，打开一个会关掉另一个。
+
+- 2026-11-03 用户要求设置页按归属整理：个人资料只留昵称、头像、邮箱和语言；站点卡片走势图移到「系统设置 → 站点走势图」（`system/sparkline`），仍保存到账号；界面配色移到「系统设置 → 界面外观」（`system/appearance`），仍保存在当前浏览器；地图样式属于各自的地图服务，Mapbox 的三种放在 Mapbox 卡片里，Google 地图另有「标准、街道、深色」三种（`google_map_style`，`PUT /api/google-map-style`，`lib/google-map-styles.ts`）放在 Google 卡片里，含义与 Mapbox 相同：标准跟随深浅色，街道和深色保持自身配色。Google 样式预览用内置世界地图按配色画出，不是 Google 截图。

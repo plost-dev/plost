@@ -2,9 +2,10 @@ import {startAuthentication,startRegistration} from "@simplewebauthn/browser"
 import {rpc} from "./rpc"
 import {meFn} from "./actions"
 import {normalizeMapboxStyle} from "./mapbox-styles"
+import {normalizeGoogleMapStyle} from "./google-map-styles"
 import {normalizeSparkline} from "./sparkline-styles"
 import QRCode from "qrcode"
-export async function rootPreferencesFn(){const [user,prefs]=await Promise.all([meFn(),rpc<{mapboxStyle:string;sparklineStyle?:string;sparklineRange?:string}>("/api/preferences")]);return {locale:user?.locale||((localStorage.getItem("plost:locale")==="en")?"en":"zh-CN"),theme:user?.theme||"system",mapboxStyle:normalizeMapboxStyle(prefs.mapboxStyle),sparkline:normalizeSparkline(prefs.sparklineStyle,prefs.sparklineRange)}}
+export async function rootPreferencesFn(){const [user,prefs]=await Promise.all([meFn(),rpc<{mapboxStyle:string;googleMapStyle?:string;sparklineStyle?:string;sparklineRange?:string}>("/api/preferences")]);return {locale:user?.locale||((localStorage.getItem("plost:locale")==="en")?"en":"zh-CN"),theme:user?.theme||"system",mapboxStyle:normalizeMapboxStyle(prefs.mapboxStyle),googleMapStyle:normalizeGoogleMapStyle(prefs.googleMapStyle),sparkline:normalizeSparkline(prefs.sparklineStyle,prefs.sparklineRange)}}
 /** Browsers refuse with these names when the person cancels, times out or repeats a credential. */
 function passkeyBrowserError(error:unknown):Error{
   const name=error instanceof Error?error.name:""

@@ -192,7 +192,6 @@ html[data-accent="black"][data-theme="dark"] {
 }
 
 .accent-picker { min-width:0; margin:0; padding:0; border:0; }
-.preferences-form + .accent-picker { margin-top:var(--ui-section-gap); }
 .accent-picker-label { font-size:var(--ui-text-body); font-weight:500; color:var(--color-gray-800); margin-bottom:8px; }
 .accent-options { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; }
 .accent-option { --sq-r:18px; position:relative; display:flex; align-items:center; justify-content:center; gap:8px; min-height:var(--ui-control-height); padding:8px 12px; border:1px solid var(--color-gray-200); color:var(--color-gray-700); background:var(--surface); cursor:pointer; font-size:var(--ui-text-control); }
