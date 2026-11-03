@@ -3,6 +3,8 @@ import { useEffect, type ReactNode } from "react"
 import { I18nProvider, isLocale, useT } from "~/lib/i18n"
 import { rootPreferencesFn } from "~/lib/auth-actions"
 import { MapStyleProvider } from "~/lib/map-preferences"
+import { SparklineProvider } from "~/components/SiteSparkline"
+import { DEFAULT_SPARKLINE } from "~/lib/sparkline-styles"
 import { DEFAULT_MAPBOX_STYLE } from "~/lib/mapbox-styles"
 import { pageTitle } from "~/lib/page-title"
 import { syncAccentFavicon, subscribeAccentColor } from "~/lib/accent-preference"
@@ -43,9 +45,11 @@ export function RootShell({ children }: { children: ReactNode }) {
   return (
     <I18nProvider locale={locale}>
       <MapStyleProvider styleId={preferences?.mapboxStyle ?? DEFAULT_MAPBOX_STYLE}>
-        <PageTitle />
-        {children}
-        <Toaster />
+        <SparklineProvider value={preferences?.sparkline ?? DEFAULT_SPARKLINE}>
+          <PageTitle />
+          {children}
+          <Toaster />
+        </SparklineProvider>
       </MapStyleProvider>
     </I18nProvider>
   )

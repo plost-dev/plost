@@ -1,4 +1,5 @@
 import { UIIcon } from "~/components/UIIcon"
+import { SiteSparkline } from "~/components/SiteSparkline"
 import { Surface } from "~/components/Surface"
 import { ActionButton } from "~/components/ActionButton"
 import { SiteFavicon } from "~/components/SiteFavicon"
@@ -136,14 +137,14 @@ function DashboardPage() {
                       <div className="management-site-name min-w-0 flex-1">
                         <div className="management-site-heading">
                           <h3 title={site.name || site.domain} className="management-site-title text-base leading-6 font-semibold text-gray-900">{site.name || site.domain}</h3>
-                          <p className={`management-site-ssl${(expiryState(site.certificateExpiresAt, now).days ?? Infinity) < 30 ? " is-expiring" : ""}`}><UIIcon name="shield"/>SSL {expiryState(site.certificateExpiresAt, now).days ?? "—"}{expiryState(site.certificateExpiresAt, now).days === null ? "" : ` ${t("天")}`}</p>
+                          <p className={`management-site-ssl${{warning: " is-expiring", bad: " is-expired", unknown: " is-unknown"}[expiryState(site.certificateExpiresAt, now).tone as string] ?? ""}`}><UIIcon name="lock"/>SSL {expiryState(site.certificateExpiresAt, now).days ?? "—"}{expiryState(site.certificateExpiresAt, now).days === null ? "" : ` ${t("天")}`}</p>
                         </div>
                       </div>
                     </div>
                     <div className="management-site-data">
                       {layout === "compact" ? <CompactMetrics site={site}/> : <>
                         <span className="h-12 max-w-sm text-indigo-500 sm:max-w-none">
-                          <Sparkline values={site.sparkline || []} />
+                          <SiteSparkline values={site.sparkline || []} />
                         </span>
                         <div className="flex items-center justify-between max-lg:col-span-full">
                           <div className="flex flex-col">
@@ -202,23 +203,8 @@ export function CompactMetrics({site}: {site: Awaited<ReturnType<typeof sitesFn>
     [t("当前在线"), site.live],
   ]
   return <>
-    <span className="management-compact-spark"><Sparkline values={site.sparkline}/></span>
+    <span className="management-compact-spark"><SiteSparkline values={site.sparkline}/></span>
     <div className="management-compact-metrics">{metrics.map(([label,value]) => <div key={label} className={label === t("当前在线") ? "is-online" : ""}><strong>{numberShort(value)}</strong><span>{label}</span></div>)}</div>
   </>
 }
 
-function Sparkline({ values }: { values: number[] }) {
-  const pts = values.length ? values : [0, 0]
-  const max = Math.max(1, ...pts)
-  const w = 240
-  const h = 48
-  const step = pts.length > 1 ? w / (pts.length - 1) : w
-  const d = pts.map((v, i) => `${i === 0 ? "M" : "L"}${i * step},${h - (v / max) * (h - 4) - 2}`).join(" ")
-  const area = `${d} L${(pts.length - 1) * step},${h} L0,${h} Z`
-  return (
-    <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" className="h-12 w-full">
-      <path d={area} fill="currentColor" opacity="0.12" />
-      <path d={d} fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-    </svg>
-  )
-}

@@ -1,6 +1,7 @@
 import { UserAvatar } from "./UserAvatar"
 import { ActionButton, ActionUpload } from "~/components/ActionButton"
 import { AccentPicker } from "~/components/AccentPicker"
+import { SparklineStylePicker } from "~/components/SparklineStylePicker"
 import { MapStylePicker } from "~/components/MapStylePicker"
 import { useEffect, useState } from "react"
 import { Field, FormActions, SettingsForm } from "~/components/SettingsForm"
@@ -73,5 +74,6 @@ export function AccountPreferences({ user, onSaved }: {
     </SettingsForm>
     <AccentPicker />
     <MapStylePicker />
+    <SparklineStylePicker />
   </Tile>
 }

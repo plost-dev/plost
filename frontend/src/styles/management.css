@@ -88,10 +88,16 @@
 .management-site-data .text-lg { font-size:20px; font-weight:600; }
 .management-site-heading { display:flex; align-items:center; flex-wrap:nowrap; gap:10px; min-width:0; }
 .management-site-title { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.management-site-ssl { display:inline-flex; align-items:center; flex:none; gap:4px; width:max-content; padding:3px 8px; border:1px solid var(--color-green-200); border-radius:999px; background:var(--color-green-50); font-size:11px; line-height:14px; font-weight:500; color:var(--color-green-700); font-variant-numeric:tabular-nums; white-space:nowrap; }
-.management-site-ssl .ui-icon { width:12px; height:12px; color:var(--color-green-600); }
-.management-site-ssl.is-expiring { border-color:var(--color-amber-200); background:var(--color-amber-50); color:var(--color-amber-700); }
-.management-site-ssl.is-expiring .ui-icon { color:var(--color-amber-600); }
+/* Tinted pill without a border, lock first (2026-11-03, style 2 of the badge options). */
+.management-site-ssl { --ssl-tone:var(--color-green-500); --ssl-text:var(--color-green-700); display:inline-flex; align-items:center; flex:none; gap:5px; width:max-content; padding:4px 10px; border-radius:999px; background:color-mix(in srgb,var(--ssl-tone) 12%,transparent); font-size:12px; line-height:16px; font-weight:500; color:var(--ssl-text); font-variant-numeric:tabular-nums; white-space:nowrap; }
+.management-site-ssl .ui-icon { width:12px; height:12px; font-size:11px; color:currentColor; }
+.management-site-ssl.is-expiring { --ssl-tone:var(--color-amber-500); --ssl-text:var(--color-amber-700); }
+.management-site-ssl.is-expired { --ssl-tone:var(--color-red-500); --ssl-text:var(--color-red-700); }
+.management-site-ssl.is-unknown { --ssl-tone:var(--color-gray-500); --ssl-text:var(--color-gray-600); }
+html[data-theme="dark"] .management-site-ssl { --ssl-text:var(--color-green-400); background:color-mix(in srgb,var(--ssl-tone) 18%,transparent); }
+html[data-theme="dark"] .management-site-ssl.is-expiring { --ssl-text:var(--color-amber-400); }
+html[data-theme="dark"] .management-site-ssl.is-expired { --ssl-text:var(--color-red-400); }
+html[data-theme="dark"] .management-site-ssl.is-unknown { --ssl-text:var(--color-gray-400); }
 @media(max-width:639px) {
  .management-site-list .management-site-row { grid-template-columns:minmax(0,1fr); gap:18px; padding:18px; }
  .management-site-row > .management-site-identity { padding-right:32px; }

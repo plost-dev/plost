@@ -54,7 +54,44 @@ func (a *App) setting(ctx context.Context, key, fallback string) string {
 	return value
 }
 func (a *App) preferences(w http.ResponseWriter, r *http.Request) error {
-	return jsonResponse(w, map[string]string{"mapboxStyle": a.setting(r.Context(), "mapbox_style", "standard")})
+	style, span := a.sparklineSettings(r.Context())
+	return jsonResponse(w, map[string]string{"mapboxStyle": a.setting(r.Context(), "mapbox_style", "standard"), "sparklineStyle": style, "sparklineRange": span})
+}
+
+// The small trend on each site card in the site list: one of these styles, over the last 24 hours (hourly) or the
+// last 30 days (daily). The frontend draws them (SiteSparkline); "area-line" is the original look.
+var sparklineStyles = map[string]bool{
+	"area-line": true, "bars": true, "bars-today": true, "bars-recent": true, "barcode": true, "bars-average": true, "bars-cap": true,
+	"line": true, "line-faint": true, "area": true, "step": true, "dots": true, "heat": true,
+}
+
+func (a *App) sparklineSettings(ctx context.Context) (style, span string) {
+	style = a.setting(ctx, "sparkline_style", "area-line")
+	if !sparklineStyles[style] {
+		style = "area-line"
+	}
+	if span = a.setting(ctx, "sparkline_range", "24h"); span != "30d" {
+		span = "24h"
+	}
+	return style, span
+}
+
+func (a *App) sparklineSettingsPut(w http.ResponseWriter, r *http.Request) error {
+	var in struct {
+		Style string `json:"style"`
+		Range string `json:"range"`
+	}
+	if err := readJSON(w, r, &in); err != nil {
+		return err
+	}
+	if !sparklineStyles[in.Style] || (in.Range != "24h" && in.Range != "30d") {
+		return failure(400, "走势图样式无效")
+	}
+	_, err := a.db.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES('sparkline_style',?),('sparkline_range',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", in.Style, in.Range)
+	if err != nil {
+		return err
+	}
+	return jsonResponse(w, in)
 }
 func (a *App) mapStyle(w http.ResponseWriter, r *http.Request) error {
 	var in struct {
@@ -326,4 +363,37 @@ func (a *App) visitors(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	return jsonResponse(w, map[string]any{"rows": list, "total": total, "online": online, "timezone": site.Timezone, "fetchedAt": time.Now().UTC().Format(time.RFC3339)})
+}
+
+type cachedTrend struct {
+	until  time.Time
+	points []Point
+}
+
+// dailyTrend is a site's last 30 days, one point a day, for its card in the site list. Thirty days of events is far
+// more to read than the 24 hours the card's numbers cover, and the list refreshes every half minute, so the result
+// is kept for five minutes.
+func (a *App) dailyTrend(ctx context.Context, s Site) ([]Point, error) {
+	now := time.Now()
+	a.trendMu.Lock()
+	cached, ok := a.trends[s.ID]
+	a.trendMu.Unlock()
+	if ok && now.Before(cached.until) {
+		return cached.points, nil
+	}
+	rng, err := parseRange(url.Values{"period": {"30d"}}, s.Timezone)
+	if err != nil {
+		return nil, err
+	}
+	points, err := a.series(ctx, s.ID, rng, nil)
+	if err != nil {
+		return nil, err
+	}
+	a.trendMu.Lock()
+	if a.trends == nil {
+		a.trends = map[int64]cachedTrend{}
+	}
+	a.trends[s.ID] = cachedTrend{until: now.Add(5 * time.Minute), points: points}
+	a.trendMu.Unlock()
+	return points, nil
 }

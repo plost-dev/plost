@@ -142,6 +142,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("GET /api/mapbox", a.api(a.mapboxSettings, true))
 	mux.HandleFunc("GET /api/client-ip", a.api(a.clientIPCheck, true))
 	mux.HandleFunc("PUT /api/map-style", a.api(a.mapStyle, true))
+	mux.HandleFunc("PUT /api/sparkline", a.api(a.sparklineSettingsPut, true))
 	mux.HandleFunc("GET /api/sites", a.api(a.listSites, true))
 	mux.HandleFunc("POST /api/sites", a.api(a.createSite, true))
 	mux.HandleFunc("GET /api/sites/{domain}/settings", a.api(a.siteSettings, true))
@@ -329,6 +330,7 @@ func (a *App) listSites(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	expiries := a.certificateExpiries(r.Context())
+	_, trendSpan := a.sparklineSettings(r.Context())
 	result := []map[string]any{}
 	for _, s := range sites {
 		rng, err := parseRange(r.URL.Query(), s.Timezone)
@@ -353,6 +355,11 @@ func (a *App) listSites(w http.ResponseWriter, r *http.Request) error {
 			old, err := a.overview(r.Context(), s.ID, prev, nil)
 			if err != nil {
 				return err
+			}
+			if trendSpan == "30d" {
+				if series, err = a.dailyTrend(r.Context(), s); err != nil {
+					return err
+				}
 			}
 			item["series"] = series
 			item["previous"] = old

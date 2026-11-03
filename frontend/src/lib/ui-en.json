@@ -1197,5 +1197,21 @@
   "未配置，只能靠 CDN 的国家头": "Not set; only a CDN's country header can tell the country",
   "怎么设置": "How to set it up",
   "CDN 的回源网段要在 CDN 控制台或接口里查。前面有本机反代时，它要把收到的 X-Forwarded-For 追加或覆盖后再转给 Plost。直接访问源站伪造的 CF-Connecting-IP、CF-IPCountry 等头不会被采用。": "Look up a CDN's origin-pull networks in its console or API. A reverse proxy on this machine must append to or overwrite X-Forwarded-For before passing requests on. Headers such as CF-Connecting-IP or CF-IPCountry forged in requests sent straight to the server are ignored.",
-  "重新检查": "Check again"
+  "重新检查": "Check again",
+  "折线 + 面积": "Line and area",
+  "柱形，最新一根高亮": "Bars, latest highlighted",
+  "柱形，越近越深": "Bars, darker when recent",
+  "细竖线": "Thin bars",
+  "柱形 + 均线": "Bars with average",
+  "淡柱，顶部描色": "Light bars, coloured tops",
+  "细折线 + 末点": "Thin line with end dot",
+  "折线 + 淡面积": "Line with faint area",
+  "只有面积": "Area only",
+  "阶梯线": "Step line",
+  "圆点": "Dots",
+  "热力格": "Heat strip",
+  "30 天": "30 days",
+  "站点卡片走势图": "Site card trend",
+  "走势图样式已保存，站点列表将使用此样式。": "Trend style saved. The site list now uses it.",
+  "选择后自动保存到当前账号，站点列表里每张卡片的小走势图都使用此样式。24 小时按小时、30 天按天显示访客。": "Saved to this account as you choose; every site card in the site list uses it. 24 hours shows visitors by hour, 30 days by day."
 }

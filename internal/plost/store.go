@@ -57,6 +57,9 @@ type App struct {
 	recent    *recentEvents
 	ipSamples *ipSamples // How recent events' addresses were found, for the settings page.
 
+	trendMu sync.Mutex // Guards trends, the 30-day site card trends, which the site list asks for on every refresh.
+	trends  map[int64]cachedTrend
+
 	keyMu         sync.Mutex // Guards the lazily loaded key for stored backup credentials.
 	key           []byte
 	backupRunning atomic.Bool

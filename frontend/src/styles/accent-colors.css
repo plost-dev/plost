@@ -24,13 +24,11 @@ html {
   --mapbox-accent-border:#818cf8;
 }
 
+/* The purple fills (logo, selected pills, charts) stay the same as in light mode (2026-11-03); only the soft tint and
+   text on dark surfaces change. */
 html[data-theme="dark"] {
   --accent-soft:#30304c;
   --accent-text:#a5b4fc;
-  --accent-logo:#818cf8;
-  --ui-selection-bg:#a5adff;
-  --ui-selection-text:#171827;
-  --analytics-accent:#a5adff;
   --analytics-tint:#2a2d44;
 }
 

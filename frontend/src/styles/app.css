@@ -289,7 +289,7 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   padding-block: 0.65rem;
 }
 
-.site-footer-brand .logo.plost-logo { --plost-tile-size: 35px; --plost-pill: transparent; --plost-brand: currentColor; filter: none; }
+.site-footer-brand .logo.plost-logo { --plost-tile-size: calc(35px * .9); --plost-pill: transparent; --plost-brand: currentColor; filter: none; }
 
 .site-footer-meta {
   grid-area: meta;
@@ -329,16 +329,17 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   min-width: 0;
 }
 
-/* The language, theme, GitHub and Plost icons each sit on the same superellipse tile. */
+/* The language, theme, GitHub and Plost icons each sit on the same superellipse tile, 90% of the original 36px
+   tile and 20px glyph (2026-11-03). */
 .site-footer-tool {
-  --sq-r: calc(36px * .46);
+  --sq-r: calc(36px * .9 * .46);
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 36px;
-  height: 36px;
+  width: calc(36px * .9);
+  height: calc(36px * .9);
   padding: 0;
   border: 0;
   background: rgb(255 255 255 / 0.08);
@@ -353,7 +354,7 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
 }
 
 .site-footer-tool:disabled { cursor: wait; }
-.site-footer-glyph { display: block; flex: none; width: 20px; height: 20px; overflow: visible; }
+.site-footer-glyph { display: block; flex: none; width: 18px; height: 18px; overflow: visible; }
 
 .site-footer-tool:focus-visible {
   outline: 2px solid #d4d4d8;
@@ -1411,6 +1412,9 @@ select:disabled { opacity:.65; cursor:not-allowed; }
 .map-style-picker:disabled .map-style-option { cursor:wait; }
 .map-style-preview { display:block; width:100%; height:auto; aspect-ratio:18/11; object-fit:cover; background:var(--color-gray-100); --sq-r:12px; }
 .map-style-option-caption { display:flex; align-items:center; justify-content:space-between; gap:8px; padding:2px 4px 4px; font-size:13px; line-height:20px; overflow-wrap:anywhere; }
+.sparkline-range { clear:both; display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; font-size:13px; color:var(--color-gray-700); }
+.sparkline-style-preview { display:block; padding:10px 8px; background:var(--color-gray-50); color:var(--analytics-accent); }
+.map-style-option.is-selected .sparkline-style-preview { background:var(--surface); }
 @media(max-width:767px) { .map-style-options { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:399px) { .map-style-options { grid-template-columns:minmax(0,1fr); } }
 
