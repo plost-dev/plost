@@ -1,1 +1,0 @@
-import{F as e}from"./index-BFxry9go.js";var t=e;export{t as component};

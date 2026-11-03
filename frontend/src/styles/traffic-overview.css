@@ -19,7 +19,9 @@ html .traffic-overview[data-chart="bar"] {
 }
 .traffic-overview .traffic-summary,
 .traffic-overview-skeleton .metric-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
-.traffic-overview .traffic-summary { margin: 0; }
+/* Columns as wide as their content, spread from edge to edge, so the space left of the first figure and right of the
+   last one match and the gaps between them are even (2026-11-03). */
+.traffic-overview .traffic-summary { margin: 0; grid-template-columns: repeat(6, auto); justify-content: space-between; }
 .traffic-overview .traffic-summary-item {
   display: flex;
   flex-direction: column;
@@ -43,8 +45,8 @@ html .traffic-overview[data-chart="bar"] {
 .traffic-overview .traffic-tooltip-metrics dd { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
 .traffic-series-path, .traffic-series-area { pointer-events: none; }
 @media (max-width: 1100px) {
-  .traffic-overview .traffic-summary,
   .traffic-overview-skeleton .metric-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .traffic-overview .traffic-summary { grid-template-columns: repeat(3, auto); }
 }
 @media (max-width: 639px) {
   .traffic-overview .traffic-summary-item { min-height: 86px; padding: 12px 8px; gap: 10px; }
