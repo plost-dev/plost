@@ -568,6 +568,8 @@ export function Tile({
   id,
   title,
   subtitle,
+  titleAddon,
+  actions,
   children,
 }: {
   icon?: string
@@ -575,6 +577,10 @@ export function Tile({
   id?: string
   title: string
   subtitle?: string
+  /** Shown right after the title, such as a link. */
+  titleAddon?: React.ReactNode
+  /** Shown at the right end of the heading, such as a switch. */
+  actions?: React.ReactNode
   children: React.ReactNode
 }) {
   const { t } = useT()
@@ -582,8 +588,9 @@ export function Tile({
     <Surface id={id} className="settings-card scroll-mt-24 bg-white shadow-sm">
       <header className="settings-card-heading">
         <span className="squircle settings-card-icon">{brand ? <BrandIcon name={brand}/> : <UIIcon name={icon}/>}</span>
-        <div className="settings-heading-copy min-w-0"><h2 className="text-lg leading-7 font-medium text-gray-900">{t(title || "")}</h2>
+        <div className="settings-heading-copy min-w-0">{titleAddon ? <div className="settings-heading-title-row"><h2 className="text-lg leading-7 font-medium text-gray-900">{t(title || "")}</h2>{titleAddon}</div> : <h2 className="text-lg leading-7 font-medium text-gray-900">{t(title || "")}</h2>}
         {subtitle ? <div className="mt-px text-sm leading-5 text-gray-500">{t(subtitle || "")}</div> : null}</div>
+        {actions ? <div className="settings-heading-actions">{actions}</div> : null}
       </header>
       <div className="mx-6 border-b border-gray-200" />
       <div className="relative p-4 sm:p-6">{children}</div>

@@ -118,7 +118,7 @@ curl --fail-with-body 'https://stats.example.com/api/v1/stats?period=summary' \
 
 ## Passkey 登录
 
-在页头右上角头像菜单的「个人资料设置」里添加 Passkey（也就是「设置 → 个人资料」页最下面的 Passkey 一栏）后，登录页会出现「使用 Passkey 登录」，无需输入邮箱和密码。Passkey 使用 WebAuthn 的可发现凭据，注册和登录都要求用户验证（指纹、面容或设备 PIN），所以一次验证就等同于两个因素，登录后不再询问验证器代码。
+在「设置 → 安全」页最下面的 Passkey 一栏添加 Passkey 后，登录页会出现「使用 Passkey 登录」，无需输入邮箱和密码。Passkey 使用 WebAuthn 的可发现凭据，注册和登录都要求用户验证（指纹、面容或设备 PIN），所以一次验证就等同于两个因素，登录后不再询问验证器代码。
 
 - **访问地址**：浏览器只在 HTTPS 或 `localhost` 上提供 WebAuthn，并把 Passkey 绑定到域名。生产环境请通过 HTTPS 域名访问，并设置 `-origin` 为该域名；本机试用请打开 `http://localhost:3101`，不要用 `127.0.0.1`，IP 地址不是有效的 Passkey 域名。更换域名后，旧域名下创建的 Passkey 不能用于新域名。
 - **添加和移除需要确认身份**：两者都要输入当前账号密码，被盗用的会话不能给自己添加一把登录方式。最多 20 把，名称可选。

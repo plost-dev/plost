@@ -81,8 +81,8 @@ function AccountPage() {
             </SettingsNav>
           </div>
         </>}>
-          {tab === "preferences" ? <><AccountPreferences user={user} onSaved={() => router.invalidate()} /><PasskeyPanel /></> : null}
-          {tab === "security" ? <AccountSecurity user={user} onSaved={() => router.invalidate()} /> : null}
+          {tab === "preferences" ? <AccountPreferences user={user} onSaved={() => router.invalidate()} /> : null}
+          {tab === "security" ? <><AccountSecurity user={user} onSaved={() => router.invalidate()} /><PasskeyPanel /></> : null}
           {tab === "api" ? <ApiDocsContent embedded /> : null}
           {tab === "system/mapbox" && mapbox ? <MapboxSettingsPanel initial={mapbox} /> : null}
           {tab === "system/client-ip" && clientIP ? <ClientIPPanel initial={clientIP} /> : null}
