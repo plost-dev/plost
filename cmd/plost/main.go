@@ -23,8 +23,10 @@ func main() {
 	addr := flag.String("listen", "127.0.0.1:3101", "HTTP listening address")
 	data := flag.String("data", "./data", "Private data directory")
 	origin := flag.String("origin", "", "Public origin, e.g. https://stats.example.com")
-	proxy := flag.Bool("trust-proxy", false, "Trust a local reverse proxy that overwrites forwarding headers")
-	geoip := flag.String("geoip-db", "", "MaxMind-format database (GeoLite2 City or Country, DB-IP) used to tell visitors' countries when no Cloudflare header does")
+	proxy := flag.Bool("trust-proxy", false, "Trust a reverse proxy on this machine (same as -trusted-proxies loopback)")
+	trusted := flag.String("trusted-proxies", "", "Comma-separated proxies and CDNs whose forwarding headers count: loopback, private (Docker, LAN), cloudflare, networks such as 203.0.113.0/24, or @file with one per line")
+	ipHeader := flag.String("client-ip-header", "", "Header a trusted proxy sets to the visitor's address alone, e.g. CF-Connecting-IP or Ali-CDN-Real-IP; by default X-Forwarded-For is read")
+	geoip := flag.String("geoip-db", "", "MaxMind-format database (GeoLite2 City or Country, DB-IP) used to tell visitors' countries when no CDN header does")
 	showVersion := flag.Bool("version", false, "Print version")
 	memory := flag.Int("memory", 64, "Go runtime soft memory limit in MiB (not a total process limit)")
 	allowOutbound := flag.String("allow-outbound", "", "Comma-separated networks that site checks and cloud backups may connect to although they are normally refused, e.g. 198.18.0.0/15 for a local proxy's fake-IP mode")
@@ -47,7 +49,18 @@ func main() {
 		}
 		allow = append(allow, network)
 	}
-	app, err := plost.Open(plost.Config{DataDir: *data, Origin: *origin, TrustProxy: *proxy, GeoIPPath: *geoip, Version: version, OutboundAllow: allow})
+	trustedNets, trustedNames, err := plost.ParseTrustedProxies(*trusted)
+	if err != nil {
+		log.Fatal("-trusted-proxies: ", err)
+	}
+	header, err := plost.CanonicalClientIPHeader(*ipHeader)
+	if err != nil {
+		log.Fatal("-", err)
+	}
+	if header != "" && !*proxy && len(trustedNets) == 0 {
+		log.Fatal("-client-ip-header only applies behind a trusted proxy; add -trusted-proxies")
+	}
+	app, err := plost.Open(plost.Config{DataDir: *data, Origin: *origin, TrustProxy: *proxy, TrustedProxies: trustedNets, TrustedProxyNames: trustedNames, ClientIPHeader: header, GeoIPPath: *geoip, Version: version, OutboundAllow: allow})
 	if err != nil {
 		log.Fatal("Cannot open Plost: ", err)
 	}

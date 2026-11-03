@@ -6,6 +6,7 @@ import { ApiDocsContent } from "~/components/ApiDocs"
 import { PasskeyPanel } from "~/components/PasskeyPanel"
 import { BackupPanel } from "~/components/BackupPanel"
 import { MapboxSettingsPanel } from "~/components/MapboxSettingsPanel"
+import { ClientIPPanel } from "~/components/ClientIPPanel"
 import { SettingsHeader } from "~/components/SettingsChrome"
 import { SettingsLayout, SettingsNav } from "~/components/SettingsLayout"
 import { Shell } from "~/components/Shell"
@@ -13,6 +14,7 @@ import { UIIcon as TabIcon } from "~/components/UIIcon"
 import { accountSettingsFn } from "~/lib/actions"
 import { useT } from "~/lib/i18n"
 import { mapboxSettingsFn } from "~/lib/mapbox-actions"
+import { clientIPCheckFn } from "~/lib/client-ip-actions"
 
 const ACCOUNT_TABS = [
   { id: "preferences", label: "个人资料" },
@@ -21,6 +23,7 @@ const ACCOUNT_TABS = [
 ]
 const SYSTEM_TABS = [
   { id: "system/mapbox", label: "访客地图" },
+  { id: "system/client-ip", label: "访客 IP 识别" },
   { id: "system/backup", label: "备份与恢复" },
 ]
 
@@ -42,13 +45,14 @@ export const Route = createFileRoute("/account")({
       throw redirect({ to: "/login" })
     }
     const mapbox = deps.tab === "system/mapbox" ? await mapboxSettingsFn() : null
-    return { data, mapbox }
+    const clientIP = deps.tab === "system/client-ip" ? await clientIPCheckFn() : null
+    return { data, mapbox, clientIP }
   },
   component: AccountPage,
 })
 
 function AccountPage() {
-  const { data, mapbox } = Route.useLoaderData()
+  const { data, mapbox, clientIP } = Route.useLoaderData()
   const { tab } = Route.useSearch()
   const router = useRouter()
   const { t } = useT()
@@ -81,6 +85,7 @@ function AccountPage() {
           {tab === "security" ? <AccountSecurity user={user} onSaved={() => router.invalidate()} /> : null}
           {tab === "api" ? <ApiDocsContent embedded /> : null}
           {tab === "system/mapbox" && mapbox ? <MapboxSettingsPanel initial={mapbox} /> : null}
+          {tab === "system/client-ip" && clientIP ? <ClientIPPanel initial={clientIP} /> : null}
           {tab === "system/backup" ? <BackupPanel /> : null}
         </SettingsLayout>
       </div>

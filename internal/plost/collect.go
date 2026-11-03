@@ -212,6 +212,7 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
+	a.recordAddress(r)
 	loc, _ := time.LoadLocation(site.Timezone)
 	if loc == nil {
 		loc = time.UTC

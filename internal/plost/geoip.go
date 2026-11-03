@@ -120,16 +120,12 @@ func (g *geoIP) country(ip netip.Addr, now time.Time) string {
 	return code
 }
 
-// requestCountry names the visitor's country. A Cloudflare header counts when it comes through a proxy on this
-// machine that the program was told to trust; otherwise the address is looked up in the GeoIP database, if one was
-// given with -geoip-db and the address is really the visitor's.
+// requestCountry names the visitor's country. A CDN's country header counts when a trusted proxy handed it over;
+// otherwise the address is looked up in the GeoIP database, if one was given with -geoip-db and the address is
+// really the visitor's.
 func (a *App) requestCountry(r *http.Request, now time.Time) string {
-	if a.cfg.TrustProxy {
-		if peer, err := netip.ParseAddrPort(r.RemoteAddr); err == nil && peer.Addr().IsLoopback() {
-			if code := strings.ToUpper(r.Header.Get("CF-IPCountry")); countryPattern.MatchString(code) {
-				return code
-			}
-		}
+	if code := a.headerCountry(r); code != "" {
+		return code
 	}
 	if a.geo == nil || !a.addressKnown(r) {
 		return ""

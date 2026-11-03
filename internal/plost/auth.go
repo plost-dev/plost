@@ -12,7 +12,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"image/jpeg"
-	"net"
 	"net/http"
 	"net/mail"
 	"net/url"
@@ -71,24 +70,6 @@ func (a *App) setSession(w http.ResponseWriter, r *http.Request, pending bool) e
 func (a *App) secure(r *http.Request) bool {
 	return strings.HasPrefix(a.cfg.Origin, "https://") || r.TLS != nil
 }
-func (a *App) clientIP(r *http.Request) string {
-	ip, _, err := net.SplitHostPort(r.RemoteAddr)
-	if err != nil {
-		ip = r.RemoteAddr
-	}
-	if a.cfg.TrustProxy {
-		if peer := net.ParseIP(ip); peer != nil && peer.IsLoopback() {
-			if f := r.Header.Get("X-Forwarded-For"); f != "" {
-				parts := strings.Split(f, ",")
-				if p := net.ParseIP(strings.TrimSpace(parts[len(parts)-1])); p != nil {
-					return p.String()
-				}
-			}
-		}
-	}
-	return ip
-}
-
 func (a *App) authStatus(w http.ResponseWriter, r *http.Request) error {
 	var count int
 	if err := a.db.QueryRowContext(r.Context(), "SELECT COUNT(*) FROM users").Scan(&count); err != nil {

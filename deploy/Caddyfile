@@ -1,4 +1,5 @@
-# Replace stats.example.com with your instance domain.
+# Replace stats.example.com with your instance domain. Start Plost with -trusted-proxies loopback so that it
+# reads the visitor's address from the X-Forwarded-For header Caddy sets; see "访客 IP 与代理" in the README.
 stats.example.com {
     encode zstd gzip
     reverse_proxy 127.0.0.1:3101

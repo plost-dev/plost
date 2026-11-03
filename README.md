@@ -28,10 +28,29 @@ go build -trimpath -ldflags='-s -w' -o plost ./cmd/plost
 生产环境使用对应 Linux 架构的预编译程序，在 HTTPS 反向代理后运行：
 
 ```sh
-./plost -listen 127.0.0.1:3101 -data /var/lib/plost -origin https://stats.example.com
+./plost -listen 127.0.0.1:3101 -data /var/lib/plost -origin https://stats.example.com -trusted-proxies loopback
 ```
 
-`-origin` 固定管理和采集服务的实际域名，并为登录 Cookie 启用 Secure。应使用 HTTPS，不向公网暴露首次初始化中的空实例。反向代理示例见 [deploy/Caddyfile](deploy/Caddyfile)。
+`-origin` 固定管理和采集服务的实际域名，并为登录 Cookie 启用 Secure。应使用 HTTPS，不向公网暴露首次初始化中的空实例。反向代理示例见 [deploy/Caddyfile](deploy/Caddyfile)。前面有反向代理或 CDN 时，必须告诉 Plost 信任哪些代理，否则访客地址都会是代理的地址，见下面的[访客 IP 与代理](#访客-ip-与代理)。
+
+### 访客 IP 与代理
+
+Plost 只相信受信任的代理转来的地址头。直接连过来的一方如果不受信任，它就是访客，不管请求里带了什么头，所以没人能靠伪造请求头冒充别的地址。直接连过来的是受信任的代理时，从右往左读 `X-Forwarded-For`（没有时读 RFC 7239 的 `Forwarded`，再没有读 `X-Real-IP`）：每一层代理都会在末尾追加它看到的地址，第一个不受信任的地址就是访客。这个规则对所有会追加 `X-Forwarded-For` 的 CDN 都适用，常见的 CDN 都会追加。
+
+| 部署方式 | 启动参数 |
+| --- | --- |
+| 域名直接解析到服务器，没有代理 | 不用设置 |
+| 本机的 Caddy、Nginx 反向代理 | `-trusted-proxies loopback` |
+| 反向代理在另一个 Docker 容器或内网机器 | `-trusted-proxies private` |
+| Cloudflare 橙云，回源到本机反代 | `-trusted-proxies loopback,cloudflare` |
+| Cloudflare 橙云，直接回源到 Plost | `-trusted-proxies cloudflare` |
+| 阿里云、腾讯云、EdgeOne 等其他 CDN | `-trusted-proxies loopback,<CDN 回源网段>`，网段多时写进文件用 `@/路径/cdn.txt` |
+
+- `-trusted-proxies` 用逗号分隔，可以写预设名 `loopback`（本机）、`private`（内网和 Docker）、`cloudflare`（内置 Cloudflare 公布的网段，随版本更新），也可以写网段或单个地址，或者 `@文件`（每行一个，`#` 后是注释）。不接受 `0.0.0.0/0` 这种信任所有地址的写法。旧的 `-trust-proxy` 等于 `-trusted-proxies loopback`，继续可用。
+- CDN 的回源网段在 CDN 控制台或接口里查；国内 CDN 大多没有固定公开的列表。
+- 本机反代要把 `X-Forwarded-For` 追加或覆盖后再转发：Caddy 默认会这样做；Nginx 用 `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`。
+- Caddy 默认不信任前面的 CDN，转给 Plost 的 `X-Forwarded-For` 只剩 CDN 节点的地址。这时加 `-client-ip-header CF-Connecting-IP`（阿里云 CDN 用 `Ali-CDN-Real-IP`，EdgeOne 用 `EO-Connecting-IP`），或者在 Caddy 的 `trusted_proxies` 里也写上 CDN 网段。`-client-ip-header` 只在请求确实经过受信任的 CDN 时才采用：CDN 直接连到 Plost，或者本机反代收到请求的上一跳（`X-Forwarded-For` 最后一项）是受信任的网段。直接访问源站伪造的同名头不会被采用。
+- 后台 **设置 → 系统设置 → 访客 IP 识别** 会显示这次访问是怎么识别的、当前的参数，以及最近 1000 次统计请求的情况。最近的访客地址大多是本机、内网或 Cloudflare 节点，带着转发头却来自不受信任的代理，或者大部分访客都来自同一个网段时，会提示该加什么参数。这些情况只在内存里按地址类型和网段哈希统计，不保存访客地址。
 
 管理员账号和统计都保存在数据目录。程序启动时自动创建数据库，数据目录权限为 0700、数据库文件权限为 0600。替换程序升级时保持相同的 `-data` 目录，升级前从后台下载备份。
 
@@ -65,8 +84,8 @@ go build -trimpath -ldflags='-s -w' -o plost ./cmd/plost
 
 地图沿用原版，后台可配置 Mapbox 公开 Token，无 Token 时使用内嵌备用地图。当前采集只提供国家，不采集城市或省州，相关视图为空。国家默认未知，有两种来源：
 
-- **Cloudflare 的 `CF-IPCountry`**：反向代理可信地覆盖客户端 IP 和该请求头，且从本机回源时，用 `-trust-proxy` 接受这些头。该选项只信任回环地址上的直接代理。
-- **本机的 GeoIP 库**：没有 Cloudflare（例如域名直接解析到源站）时，用 `-geoip-db /路径/GeoLite2-Country.mmdb` 指定 MaxMind 格式的数据库（GeoLite2 的 Country 或 City、DB-IP 的 Country 或 City 都可以，只读取其中的国家代码）。库文件需要自己下载并保持更新，程序不会下载；它用内存映射读取，每分钟检查一次文件，替换成新文件后自动换用，不必重启。更新工具须像常规做法那样“写好新文件再改名覆盖”，不要在原文件上原地改写。启动时指定的库打不开会拒绝启动。只有拿得到真实访客 IP 时才会查（与访客哈希同一条件：放在反向代理后面要加 `-trust-proxy`），Cloudflare 的头存在时优先用它。
+- **CDN 的国家头**（Cloudflare 的 `CF-IPCountry`、CloudFront 的 `CloudFront-Viewer-Country`）：和 `-client-ip-header` 一样，只在请求经过受信任的 CDN 时采用。只用旧的 `-trust-proxy` 时，沿用以前的规则直接相信本机反代转来的头，这时反代要删掉直接访问源站时带来的这些头。
+- **本机的 GeoIP 库**：没有 Cloudflare（例如域名直接解析到源站）时，用 `-geoip-db /路径/GeoLite2-Country.mmdb` 指定 MaxMind 格式的数据库（GeoLite2 的 Country 或 City、DB-IP 的 Country 或 City 都可以，只读取其中的国家代码）。库文件需要自己下载并保持更新，程序不会下载；它用内存映射读取，每分钟检查一次文件，替换成新文件后自动换用，不必重启。更新工具须像常规做法那样“写好新文件再改名覆盖”，不要在原文件上原地改写。启动时指定的库打不开会拒绝启动。只有拿得到真实访客 IP 时才会查（与访客哈希同一条件：放在反向代理后面要设置 `-trusted-proxies`），CDN 的国家头可用时优先用它。
 
 查询都在本机完成，没有启用外部 IP 查询服务，不会悄悄向第三方发送访客 IP。已经存下来的事件不会补查国家，因为原始 IP 从不保存。
 
@@ -74,7 +93,7 @@ go build -trimpath -ldflags='-s -w' -o plost ./cmd/plost
 
 ## 统计口径
 
-- **访客**：所选时段内产生 pageview 的不同访客，算法与 Umami 一致，方便互相对数：按“IP 地址 + 浏览器标识 + 月份”的哈希去重，同一个人换 IP 或代理会算作新的访客；刷新页面不会增加访客。放在反向代理后面时必须用 `-trust-proxy` 启动并让代理覆盖 `X-Forwarded-For`；拿不到真实 IP 的请求（经过未受信任的代理，或直接从本机回环地址发来）不做哈希，改按浏览器标识计数，避免所有访客被合成一个。更新前记录的事件没有哈希，也按浏览器标识计数。
+- **访客**：所选时段内产生 pageview 的不同访客，算法与 Umami 一致，方便互相对数：按“IP 地址 + 浏览器标识 + 月份”的哈希去重，同一个人换 IP 或代理会算作新的访客；刷新页面不会增加访客。放在反向代理或 CDN 后面时必须用 `-trusted-proxies` 声明它们（见[访客 IP 与代理](#访客-ip-与代理)）；拿不到真实 IP 的请求（经过未受信任的代理，或直接从本机回环地址发来）不做哈希，改按浏览器标识计数，避免所有访客被合成一个。更新前记录的事件没有哈希，也按浏览器标识计数。
 - **浏览量**：pageview 事件数量，重复访问会累加。
 - **访问次数**：同一访客（同上）连续活动视为一次访问，超过 30 分钟无活动后重新计次，也与 Umami 一致；刷新页面只增加浏览量，不增加访问次数。
 - **在线人数**：近 5 分钟产生过事件的访客，不是 WebSocket 连接数或持续心跳。
