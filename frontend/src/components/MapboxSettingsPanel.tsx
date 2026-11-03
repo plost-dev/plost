@@ -24,7 +24,6 @@ export function MapboxSettingsPanel({initial, onSaved}: {initial: {enabled: bool
       <Field label="Mapbox Access Token" hint={settings.configured ? t("已保存密钥，留空保留；填写新值可替换。") : t("填写以 pk. 开头的公开 Token。") }>
         <PasswordInput className="squircle input" aria-label="Mapbox Access Token" autoComplete="off" spellCheck={false} required={enabled && !settings.configured} value={token} placeholder={settings.configured ? "••••••••" : "pk.…"} onChange={event => setToken(event.target.value)}/>
       </Field>
-      <p className="mt-3 text-xs leading-6 text-gray-500">{t("地图会在浏览器使用此公开 Token。请限制为本站域名，并开启 styles:read、fonts:read；不要填写 sk. 私密密钥。")}</p>
       <FormActions><ActionButton type="submit" className="btn btn-primary" >{t("保存设置")}</ActionButton></FormActions>
     </SettingsForm>
   </Tile>

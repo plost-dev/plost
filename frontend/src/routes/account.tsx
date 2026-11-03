@@ -8,6 +8,7 @@ import { BackupPanel } from "~/components/BackupPanel"
 import { MapboxSettingsPanel } from "~/components/MapboxSettingsPanel"
 import { ClientIPPanel } from "~/components/ClientIPPanel"
 import { GoogleMapsSettingsPanel } from "~/components/GoogleMapsSettingsPanel"
+import { MapServiceTips } from "~/components/MapServiceTips"
 import { SettingsHeader } from "~/components/SettingsChrome"
 import { SettingsLayout, SettingsNav } from "~/components/SettingsLayout"
 import { Shell } from "~/components/Shell"
@@ -89,6 +90,7 @@ function AccountPage() {
           {/* Turning one map service on turns the other off, so both cards reload after a save. */}
           {tab === "system/mapbox" && mapbox ? <MapboxSettingsPanel key={`mapbox-${mapbox.enabled}`} initial={mapbox} onSaved={() => router.invalidate()} /> : null}
           {tab === "system/mapbox" && googleMaps ? <GoogleMapsSettingsPanel key={`google-${googleMaps.enabled}`} initial={googleMaps} onSaved={() => router.invalidate()} /> : null}
+          {tab === "system/mapbox" ? <MapServiceTips /> : null}
           {tab === "system/client-ip" && clientIP ? <ClientIPPanel initial={clientIP} /> : null}
           {tab === "system/backup" ? <BackupPanel /> : null}
         </SettingsLayout>

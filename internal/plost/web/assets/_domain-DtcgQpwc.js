@@ -1,0 +1,1 @@
+import{P as e}from"./index-B0NAUs86.js";var t=e;export{t as component};
