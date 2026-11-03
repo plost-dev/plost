@@ -1,1 +1,0 @@
-import{Ot as e}from"./index-CN_ndzCI.js";var t=e;export{t as component};

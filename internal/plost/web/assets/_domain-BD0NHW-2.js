@@ -1,0 +1,1 @@
+import{Ot as e}from"./index-Dhag0sEF.js";var t=e;export{t as component};

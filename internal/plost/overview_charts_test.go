@@ -33,14 +33,6 @@ func TestOverviewChartsSumsSites(t *testing.T) {
 	if got.Totals.Visitors != 3 || got.Totals.Pageviews != 6 || got.Previous.Visitors != 1 {
 		t.Fatalf("totals = %+v previous = %+v", got.Totals, got.Previous)
 	}
-	var visitors, pageviews int64
-	for _, p := range got.Points {
-		visitors += p.Visitors
-		pageviews += p.Pageviews
-	}
-	if len(got.Points) < 24 || visitors != 3 || pageviews != 6 {
-		t.Fatalf("points = %d, %d visitors, %d pageviews", len(got.Points), visitors, pageviews)
-	}
 	x.call(t, "POST", "/api/logout", map[string]any{}, 200)
 	x.call(t, "GET", "/api/overview/charts", nil, 401)
 }

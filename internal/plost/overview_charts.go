@@ -6,12 +6,10 @@ import (
 )
 
 // OverviewCharts feeds the key figures beside the globe on the site list: the last 24 hours against the 24 before,
-// with the hours for the small trend lines. Every figure is the sum over all sites; each site keeps its own time zone
-// for its buckets, and points are added up by position.
+// summed over all sites, each in its own time zone.
 type OverviewCharts struct {
 	Totals   Overview `json:"totals"`
 	Previous Overview `json:"previous"`
-	Points   []Point  `json:"points"`
 }
 
 func (a *App) overviewCharts(w http.ResponseWriter, r *http.Request) error {
@@ -33,7 +31,7 @@ func (a *App) overviewCharts(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	out := OverviewCharts{Points: []Point{}}
+	out := OverviewCharts{}
 	add := func(to *Overview, o Overview) {
 		to.Visitors += o.Visitors
 		to.Visits += o.Visits
@@ -55,18 +53,6 @@ func (a *App) overviewCharts(w http.ResponseWriter, r *http.Request) error {
 		}
 		add(&out.Totals, over)
 		add(&out.Previous, old)
-		points, err := a.series(r.Context(), s.ID, day, nil)
-		if err != nil {
-			return err
-		}
-		for i, p := range points {
-			if i == len(out.Points) {
-				out.Points = append(out.Points, Point{At: p.At})
-			}
-			out.Points[i].Visitors += p.Visitors
-			out.Points[i].Visits += p.Visits
-			out.Points[i].Pageviews += p.Pageviews
-		}
 	}
 	return jsonResponse(w, out)
 }

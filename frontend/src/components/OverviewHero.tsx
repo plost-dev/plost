@@ -2,7 +2,6 @@ import { Link, useRouter } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { UIIcon } from "~/components/UIIcon"
 import { OverviewGlobe, type OverviewPlace } from "~/components/OverviewGlobe"
-import { SiteSparkline } from "~/components/SiteSparkline"
 import { overviewChartsFn, overviewLiveFn, type OverviewCharts, type sitesFn } from "~/lib/actions"
 import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
@@ -47,7 +46,8 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
     <section className="squircle overview-hero" aria-labelledby="overview-hero-title">
       <div className="overview-hero-body">
         <div className="overview-hero-head">
-          <div>
+          <div className="overview-hero-heading">
+            <span className="squircle overview-hero-badge" aria-hidden="true"><UIIcon name="globe" /></span>
             <h1 id="overview-hero-title" className="overview-hero-title">{t("nav.sites")}</h1>
             <p className="overview-hero-sub">
               {t("footer.sites").replace("{n}", numberShort(sites.length))} · <span role="status">{minutes < 1 ? t("刚刚更新") : t("{n} 分钟前更新").replace("{n}", String(minutes))}</span>
@@ -82,11 +82,11 @@ function Delta({ value }: { value: number }) {
 
 function MetricsChart({ charts }: { charts: OverviewCharts }) {
   const { t } = useT()
-  const { totals, previous, points } = charts
-  const tiles: Array<{ label: string, value: number, line?: number[], delta?: number }> = [
-    { label: t("访客"), value: totals.visitors, line: points.map(p => p.visitors), delta: change(totals.visitors, previous.visitors) },
-    { label: t("访问次数"), value: totals.visits, line: points.map(p => p.visits), delta: change(totals.visits, previous.visits) },
-    { label: t("浏览量"), value: totals.pageviews, line: points.map(p => p.pageviews), delta: change(totals.pageviews, previous.pageviews) },
+  const { totals, previous } = charts
+  const tiles: Array<{ label: string, value: number, delta?: number }> = [
+    { label: t("访客"), value: totals.visitors, delta: change(totals.visitors, previous.visitors) },
+    { label: t("访问次数"), value: totals.visits, delta: change(totals.visits, previous.visits) },
+    { label: t("浏览量"), value: totals.pageviews, delta: change(totals.pageviews, previous.pageviews) },
     { label: t("当前在线"), value: totals.online },
   ]
   return (
@@ -94,11 +94,10 @@ function MetricsChart({ charts }: { charts: OverviewCharts }) {
       <p className="overview-hero-note">{t("近 24 小时 · 全部站点")}</p>
       <div className="overview-hero-tiles">
         {tiles.map(tile => (
-          <div key={tile.label} className={`squircle overview-hero-tile${tile.line ? "" : " is-online"}`}>
-            <span className="label">{tile.line ? null : <i />}{tile.label}</span>
+          <div key={tile.label} className={`squircle overview-hero-tile${tile.delta === undefined ? " is-online" : ""}`}>
+            <span className="label">{tile.delta === undefined ? <i /> : null}{tile.label}</span>
             <strong>{numberShort(tile.value)}</strong>
             {tile.delta === undefined ? <span className="overview-hero-note">{t("实时，5 分钟内")}</span> : <Delta value={tile.delta} />}
-            {tile.line ? <span className="spark"><SiteSparkline values={tile.line} /></span> : null}
           </div>
         ))}
       </div>
