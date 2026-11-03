@@ -116,9 +116,9 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
       ctx.clearRect(0, 0, width, height)
       shown = []
       if (mode === "globe") {
-        // Small enough to sit whole inside the card, a little below centre to clear the corner buttons.
-        const radius = Math.min(width * 0.4, height * 0.46)
-        const cx = width / 2, cy = height * 0.54
+        // Larger than the card, as in the reference design: the globe runs past the top and bottom edges.
+        const radius = Math.min(width * 0.46, height * 0.68)
+        const cx = width / 2, cy = height * 0.52
         const projection = d3.geoOrthographic().scale(radius).translate([cx, cy]).rotate(rotation).clipAngle(90)
         const center: [number, number] = [-rotation[0], -rotation[1]]
         ctx.fillStyle = sphere
@@ -171,8 +171,8 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
       // A hover labels that place. Otherwise one place keeps the label while it stays in view, so the card
       // follows its dot instead of hopping between dots as the globe turns; then the busiest in view takes over.
       // A label lets go once its dot nears the rim, and a new one is taken only from the front of the globe.
-      // The dot must also be on the canvas and below the corner buttons.
-      const inView = (dot: { x: number, y: number }) => dot.y > 64 && dot.y < height - 12 && dot.x > 12 && dot.x < width - 12
+      // The dot must also be on the canvas, below the corner buttons, since the globe runs past the top edge.
+      const inView = (dot: { x: number, y: number }) => dot.y > 96 && dot.y < height - 12 && dot.x > 12 && dot.x < width - 12
       let label = hoverRef.current ? shown.find((dot) => dot.marker.key === hoverRef.current) : shown.find((dot) => dot.marker.key === labelRef.current.key && dot.edge < 1.15 && inView(dot))
       if (!label && !hoverRef.current) label = shown.filter((dot) => dot.edge < 0.95 && inView(dot)).sort((a, b) => b.marker.visitors - a.marker.visitors)[0]
       if (label && label.marker.key !== labelRef.current.key) {
