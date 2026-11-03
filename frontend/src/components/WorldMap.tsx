@@ -1,4 +1,5 @@
 import { UIIcon } from "./UIIcon"
+import { useLiveArrivals } from "~/lib/live-arrivals"
 import { Surface } from "~/components/Surface"
 import { useT } from "~/lib/i18n"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -106,6 +107,7 @@ function WorldMap({
     }
     return counts
   }, [live])
+  const arrivals = useLiveArrivals(live)
 
   useEffect(() => {
     let active = true
@@ -238,9 +240,17 @@ function WorldMap({
         const dist = n === 1 ? 0 : 3.2 + i * 0.7
         const x = xy[0] + Math.cos(angle) * dist
         const y = xy[1] + Math.sin(angle) * dist
-        dots.append("circle").attr("class", "live-dot-pulse").attr("cx", x).attr("cy", y).attr("r", 7)
-        dots.append("circle").attr("class", "live-dot").attr("cx", x).attr("cy", y).attr("r", 2.8)
+        dots.append("circle").attr("class", "live-dot-pulse").attr("cx", x).attr("cy", y).attr("r", 9)
+        dots.append("circle").attr("class", "live-dot").attr("cx", x).attr("cy", y).attr("r", 3.6)
       }
+    }
+    // A country that just gained a visitor sends out a few wide rings.
+    for (const code of arrivals) {
+      const a3 = COUNTRIES_BY_TWO_LETTER_CODE[iso2(code)]?.alpha_3
+      const ll = a3 ? centroids.get(a3) : undefined
+      const xy = ll ? projection(ll) : null
+      if (!xy) continue
+      for (const delay of [0, 0.6, 1.2]) dots.append("circle").attr("class", "live-dot-arrival").attr("cx", xy[0]).attr("cy", xy[1]).attr("r", 16).style("animation-delay", `${delay}s`)
     }
 
     const zoom = d3.zoom<SVGSVGElement, unknown>()
@@ -257,7 +267,7 @@ function WorldMap({
       svg.on(".zoom", null)
       svg.selectAll("*").remove()
     }
-  }, [features, maxValue, dataByAlpha3Code, liveByAlpha3, onCountryClick])
+  }, [features, maxValue, dataByAlpha3Code, liveByAlpha3, arrivals, onCountryClick])
 
   function zoomBy(k: number) {
     const el = svgRef.current

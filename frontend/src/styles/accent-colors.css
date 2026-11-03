@@ -22,7 +22,12 @@ html {
   --mapbox-accent-low:#c7d2fe;
   --mapbox-accent-high:#6366f1;
   --mapbox-accent-border:#818cf8;
+  /* Visitors online on the map: a colour that stands out against each accent's map (2026-11-03). */
+  --map-live:#22c55e;
 }
+html[data-accent="green"] { --map-live:#facc15; }
+html[data-accent="blue"] { --map-live:#fb923c; }
+html[data-accent="black"] { --map-live:#22d3ee; }
 
 /* The purple fills (logo, selected pills, charts) stay the same as in light mode (2026-11-03); only the soft tint and
    text on dark surfaces change. */

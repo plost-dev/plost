@@ -1,4 +1,5 @@
 import { UIIcon } from "./UIIcon"
+import { useLiveArrivals } from "~/lib/live-arrivals"
 import { useEffect, useRef, useState } from "react"
 import type { GeoJSONSource, Map as MapboxMap, Marker } from "mapbox-gl"
 import { useT } from "~/lib/i18n"
@@ -19,8 +20,9 @@ export function MapboxVisitorMap({token, rows, live, showFlags = true, styleId =
   const mapRef = useRef<MapboxMap | null>(null)
   const styleLifecycle = useRef<ReturnType<typeof createMapboxStyleLifecycle> | null>(null)
   const update = useRef<(() => void) | null>(null)
-  const props = useRef({rows, live, styleId, onCountryClick, onFailure, t})
-  props.current = {rows, live, styleId, onCountryClick, onFailure, t}
+  const arrivals = useLiveArrivals(live)
+  const props = useRef({rows, live, arrivals, styleId, onCountryClick, onFailure, t})
+  props.current = {rows, live, arrivals, styleId, onCountryClick, onFailure, t}
   const [loaded, setLoaded] = useState(false)
   const [hovered, setHovered] = useState<{country: VisitorCountry; x: number; y: number} | null>(null)
 
@@ -78,7 +80,7 @@ export function MapboxVisitorMap({token, rows, live, showFlags = true, styleId =
           markers.forEach(marker => marker.remove()); markers = []
           for (const country of data.countries) {
             const button = document.createElement("button")
-            button.type = "button"; button.className = `mapbox-country-marker${country.live ? " has-live" : ""}`
+            button.type = "button"; button.className = `mapbox-country-marker${country.live ? " has-live" : ""}${props.current.arrivals.has(country.code.toUpperCase()) ? " is-arrival" : ""}`
             button.setAttribute("aria-label", `${country.name} · ${country.visitors} ${props.current.t("访客")}`)
             button.title = `${country.name} · ${country.visitors}`
             const flag = document.createElement("img")
@@ -156,7 +158,7 @@ export function MapboxVisitorMap({token, rows, live, showFlags = true, styleId =
       markers.forEach(marker => marker.remove()); map?.remove(); mapRef.current = null; update.current = null
     }
   }, [token])
-  useEffect(() => {update.current?.()}, [rows, live, t])
+  useEffect(() => {update.current?.()}, [rows, live, arrivals, t])
   useEffect(() => {styleLifecycle.current?.setStyle(styleId)}, [styleId])
 
   return <div className="relative">

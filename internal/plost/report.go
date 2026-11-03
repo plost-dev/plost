@@ -40,22 +40,24 @@ type Point struct {
 	Duration   float64 `json:"duration"`
 }
 type Report struct {
-	Site      Site           `json:"site"`
-	Range     Range          `json:"range"`
-	Overview  Overview       `json:"overview"`
-	Previous  Overview       `json:"previous"`
-	Series    []Point        `json:"series"`
-	Sources   []Row          `json:"sources"`
-	Pages     []Row          `json:"pages"`
-	Countries []Row          `json:"countries"`
-	Browsers  []Row          `json:"browsers"`
-	OS        []Row          `json:"os"`
-	Devices   []Row          `json:"devices"`
-	Languages []Row          `json:"languages"`
-	Screens   []Row          `json:"screens"`
-	Events    []Row          `json:"events"`
-	Readonly  bool           `json:"readonly"`
-	Details   map[string]any `json:"details,omitempty"`
+	Site      Site     `json:"site"`
+	Range     Range    `json:"range"`
+	Overview  Overview `json:"overview"`
+	Previous  Overview `json:"previous"`
+	Series    []Point  `json:"series"`
+	Sources   []Row    `json:"sources"`
+	Pages     []Row    `json:"pages"`
+	Countries []Row    `json:"countries"`
+	Browsers  []Row    `json:"browsers"`
+	OS        []Row    `json:"os"`
+	Devices   []Row    `json:"devices"`
+	Languages []Row    `json:"languages"`
+	Screens   []Row    `json:"screens"`
+	Events    []Row    `json:"events"`
+	Readonly  bool     `json:"readonly"`
+	// Live counts the visitors online now (the last five minutes, like Overview.Online) by country, for the map.
+	Live    []Row          `json:"live"`
+	Details map[string]any `json:"details,omitempty"`
 }
 
 func parseRange(q url.Values, zone string) (Range, error) {
@@ -309,6 +311,10 @@ func (a *App) report(r *http.Request, site Site, readonly bool) (Report, error) 
 			return result, err
 		}
 	}
+	result.Live, err = a.liveCountries(r.Context(), site.ID, q)
+	if err != nil {
+		return result, err
+	}
 	if q.Get("ui") == "1" {
 		result.Details, err = a.reportDetails(r.Context(), site, rng, q)
 		if err != nil {
@@ -461,4 +467,24 @@ func (a *App) exportCSV(w http.ResponseWriter, r *http.Request) error {
 
 func (a *App) openapi(w http.ResponseWriter, r *http.Request) {
 	_ = jsonResponse(w, map[string]any{"openapi": "3.1.0", "info": map[string]string{"title": "Plost Go statistics API", "version": "0.1.0"}, "paths": map[string]any{"/api/v1/stats": map[string]any{"get": map[string]any{"summary": "Online, today and yesterday metrics for the shared site", "security": []any{map[string]any{"bearerAuth": []string{}}}, "responses": map[string]any{"200": map[string]any{"description": "Site statistics"}, "401": map[string]any{"description": "Invalid share token"}}}}}, "components": map[string]any{"securitySchemes": map[string]any{"bearerAuth": map[string]string{"type": "http", "scheme": "bearer"}}}})
+}
+
+// liveCountries counts the visitors of the last five minutes by country, with the report's filters.
+func (a *App) liveCountries(ctx context.Context, site int64, q url.Values) ([]Row, error) {
+	live := Range{From: time.Now().Add(-5 * time.Minute), To: time.Now().Add(time.Second)}
+	w, args := where(site, live, q)
+	rows, err := a.db.QueryContext(ctx, "SELECT country_code, count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+w+" AND country_code<>'' GROUP BY 1 ORDER BY 2 DESC LIMIT 250", args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Row{}
+	for rows.Next() {
+		var r Row
+		if err := rows.Scan(&r.Name, &r.Value); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
 }
