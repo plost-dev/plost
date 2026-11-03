@@ -999,8 +999,9 @@ button.map-live-count:focus-visible { outline:2px solid var(--analytics-accent);
 .mapbox-stage[data-show-flags="false"] .mapbox-country-marker img { display:none; }
 .mapbox-stage[data-show-flags="false"] .mapbox-live-dot { top:50%; left:50%; right:auto; transform:translate(-50%,-50%); }
 .mapbox-live-dot { position:absolute; top:-4px; right:-4px; width:10px; height:10px; border:2px solid var(--surface); border-radius:50%; background:var(--map-live); }
-/* A visitor online placed by city (Mapbox and Google Maps), with the same pulse and arrival rings as the built-in map. */
-.map-live-point { position:relative; display:block; width:var(--point-size,8px); height:var(--point-size,8px); border:2px solid var(--surface); border-radius:50%; background:var(--map-live); box-sizing:content-box; pointer-events:auto; }
+/* A visitor online placed by city (Mapbox and Google Maps), with the same pulse and arrival rings as the built-in map.
+   Absolute like the other markers: a relative dot would sit in the overlay's flow and drift down by every dot before it. */
+.map-live-point { position:absolute; display:block; width:var(--point-size,8px); height:var(--point-size,8px); border:2px solid var(--surface); border-radius:50%; background:var(--map-live); box-sizing:content-box; pointer-events:auto; }
 .map-live-point::before { content:""; position:absolute; inset:-6px; border-radius:50%; background:var(--map-live); opacity:.28; animation:live-pulse 1.8s ease-out infinite; }
 .map-live-point.is-arrival::after { content:""; position:absolute; inset:-6px; border:2px solid var(--map-live); border-radius:50%; animation:live-arrival 1.6s ease-out 3 both; }
 @media (prefers-reduced-motion: reduce) { .map-live-point::before, .map-live-point.is-arrival::after { animation:none; } }
