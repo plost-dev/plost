@@ -1358,7 +1358,7 @@
   "其他 {0} 个站点": "{0} other sites",
   "近 24 小时 · 全部站点": "Last 24 hours · all sites",
   "实时，5 分钟内": "Live, last 5 minutes",
-  "Token 和 Key 保存在服务的 env 文件里，不存数据库，保存后立即生效。Mapbox 填 pk. 开头的公开 Token，Google 填 AIza 开头的浏览器 Key，都请限制为本站域名。": "Tokens and keys are kept in the service's env file, not the database, and take effect as soon as they are saved. Use a public Mapbox token starting with pk. and a Google browser key starting with AIza, each limited to this site's domain.",
+  "Token 和 Key 保存在服务的 env 文件里，不存数据库，保存后立即生效。请在 Mapbox 和 Google Cloud 里把它们限制为本站域名。": "Tokens and keys are kept in the service's env file, not the database, and take effect as soon as they are saved. Limit them to this site's domain in Mapbox and Google Cloud.",
   "两种地图同时只能开一种，都不开时显示内置地图。地图样式选择后自动保存，统计页重新打开后生效。": "Only one map service can be on at a time; with neither on, the built-in map is shown. A map style saves as you pick it and shows when the statistics page is reopened.",
   "已写入 env 文件，立即生效。": "Saved to the env file and in use now.",
   "启动 Plost 时没有指定 env 文件（-env-file），请直接在 env 文件里修改 {0}。": "Plost was started without an env file (-env-file); change {0} in the env file directly.",
