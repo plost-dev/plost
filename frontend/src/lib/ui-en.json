@@ -1306,5 +1306,6 @@
   "{n} 分钟前更新": "Updated {n} min ago",
   "位访客（近 24 小时，全部站点）": "visitors in the last 24 hours, all sites",
   "{n} 人在线 · {site}": "{n} online on {site}",
-  "当前在线访客位置": "Where visitors online now are"
+  "当前在线访客位置": "Where visitors online now are",
+  "{n} 人在线 · {k} 个站点": "{n} online on {k} sites"
 }

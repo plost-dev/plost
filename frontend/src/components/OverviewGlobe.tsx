@@ -62,6 +62,7 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
   const [tip, setTip] = useState<Marker | null>(null)
   const tipRef = useRef<HTMLDivElement>(null)
   const tipAt = useRef<[number, number]>([0, 0])
+  const labelRef = useRef<{ key: string, right: boolean }>({ key: "", right: false })
   const [fullscreen, setFullscreen] = useState(false)
   const frameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -102,7 +103,8 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
     // Start facing the busiest country so the first frame already shows a visitor.
     let rotation: [number, number] = markers[0] ? [-markers[0].lonLat[0], -Math.max(-30, Math.min(30, markers[0].lonLat[1]))] : [-20, -20]
     let drag: { x: number, y: number, rotation: [number, number] } | null = null
-    let shown: Array<{ marker: Marker, x: number, y: number, r: number }> = []
+    // `edge` is the angle from the globe's centre in radians (0 on the flat map), to keep labels off the rim.
+    let shown: Array<{ marker: Marker, x: number, y: number, r: number, edge: number }> = []
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect()
@@ -143,7 +145,7 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
         for (const marker of markers) {
           if (d3.geoDistance(marker.lonLat, center) > Math.PI / 2 - 0.05) continue
           const xy = projection(marker.lonLat)
-          if (xy) shown.push({ marker, x: xy[0], y: xy[1], r: 3 + 1.5 * Math.sqrt(marker.visitors / max) })
+          if (xy) shown.push({ marker, x: xy[0], y: xy[1], r: 2 + 1.2 * Math.sqrt(marker.visitors / max), edge: d3.geoDistance(marker.lonLat, center) })
         }
       } else {
         const projection = d3.geoEquirectangular().fitExtent([[12, 16], [width - 12, height - 12]], { type: "Sphere" } as d3.GeoPermissibleObjects)
@@ -157,32 +159,41 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
         ctx.globalAlpha = 1
         for (const marker of markers) {
           const xy = projection(marker.lonLat)
-          if (xy) shown.push({ marker, x: xy[0], y: xy[1], r: 3 + 1.5 * Math.sqrt(marker.visitors / max) })
+          if (xy) shown.push({ marker, x: xy[0], y: xy[1], r: 2 + 1.2 * Math.sqrt(marker.visitors / max), edge: 0 })
         }
       }
       for (const dot of shown) {
         // A thin soft ring, not a wide glow.
-        const halo = ctx.createRadialGradient(dot.x, dot.y, dot.r, dot.x, dot.y, dot.r * 1.8)
+        const halo = ctx.createRadialGradient(dot.x, dot.y, dot.r, dot.x, dot.y, dot.r * 1.7)
         halo.addColorStop(0, accent)
         halo.addColorStop(1, "transparent")
-        ctx.globalAlpha = 0.3
+        ctx.globalAlpha = 0.25
         ctx.fillStyle = halo
-        ctx.beginPath(); ctx.arc(dot.x, dot.y, dot.r * 1.8, 0, Math.PI * 2); ctx.fill()
+        ctx.beginPath(); ctx.arc(dot.x, dot.y, dot.r * 1.7, 0, Math.PI * 2); ctx.fill()
         ctx.globalAlpha = 1
         ctx.fillStyle = accent
         ctx.beginPath(); ctx.arc(dot.x, dot.y, dot.r, 0, Math.PI * 2); ctx.fill()
       }
-      // Without a hover, label the busiest visitor in view.
-      const label = shown.find((dot) => dot.marker.key === hoverRef.current) || (hoverRef.current ? undefined : shown.slice().sort((a, b) => b.marker.visitors - a.marker.visitors)[0])
+      // A hover labels that place. Otherwise one place keeps the label while it stays in view, so the card
+      // follows its dot instead of hopping between dots as the globe turns; then the busiest in view takes over.
+      // A label lets go once its dot nears the rim, and a new one is taken only from the front of the globe.
+      // The dot must also be on the canvas, below the corner buttons, since the globe runs past the top edge.
+      const inView = (dot: { x: number, y: number }) => dot.y > 96 && dot.y < height - 12 && dot.x > 12 && dot.x < width - 12
+      let label = hoverRef.current ? shown.find((dot) => dot.marker.key === hoverRef.current) : shown.find((dot) => dot.marker.key === labelRef.current.key && dot.edge < 1.15 && inView(dot))
+      if (!label && !hoverRef.current) label = shown.filter((dot) => dot.edge < 0.95 && inView(dot)).sort((a, b) => b.marker.visitors - a.marker.visitors)[0]
+      if (label && label.marker.key !== labelRef.current.key) {
+        // The side is chosen once per place, so the card never flips while it follows the dot.
+        const tipWidth = tipRef.current?.offsetWidth || 160
+        labelRef.current = { key: label.marker.key, right: label.x - tipWidth - label.r - 10 < 8 }
+      }
       // Position is written straight to the element so rotation never re-renders React.
       if (label) {
-        // Sit above-left of the marker, flipping away from the controls and the edges.
-        const tipWidth = tipRef.current?.offsetWidth || 150, tipHeight = tipRef.current?.offsetHeight || 44
-        const gap = label.r + 8
-        let x = label.x - tipWidth - gap, y = label.y - tipHeight - gap
-        if (x < 8) x = label.x + gap
-        if (y < 60) y = label.y + gap
-        tipAt.current = [Math.min(width - tipWidth - 8, x), Math.min(height - tipHeight - 8, y)]
+        const tipWidth = tipRef.current?.offsetWidth || 160, tipHeight = tipRef.current?.offsetHeight || 44
+        const gap = label.r + 10
+        const x = labelRef.current.right ? label.x + gap : label.x - tipWidth - gap
+        // Stay below the mode and full-screen buttons in the top corner.
+        const y = Math.max(60, Math.min(height - tipHeight - 8, label.y - tipHeight / 2))
+        tipAt.current = [Math.max(8, Math.min(width - tipWidth - 8, x)), y]
         if (tipRef.current) tipRef.current.style.transform = `translate(${Math.round(tipAt.current[0])}px, ${Math.round(tipAt.current[1])}px)`
       }
       setTip(label?.marker || null)
@@ -257,9 +268,9 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
       <canvas ref={canvasRef} className="overview-globe-canvas" role="img" aria-label={t("当前在线访客位置")} />
       {failed ? <p className="overview-globe-state" role="status">{t("地图加载失败")}</p> : null}
       {tip && top ? (
-        <div ref={tipRef} className="squircle overview-globe-tip" style={{ transform: `translate(${Math.round(tipAt.current[0])}px, ${Math.round(tipAt.current[1])}px)` }}>
+        <div ref={tipRef} key={tip.key} className="squircle overview-globe-tip" style={{ transform: `translate(${Math.round(tipAt.current[0])}px, ${Math.round(tipAt.current[1])}px)` }}>
           <strong><CountryFlag code={tip.country} shape="rect" className="overview-globe-flag" />{countryName(tip.country, locale)}</strong>
-          <span>{t("{n} 人在线 · {site}").replace("{n}", numberShort(tip.visitors)).replace("{site}", top.name)}{tip.sites.length > 1 ? ` +${tip.sites.length - 1}` : ""}</span>
+          <span><i aria-hidden="true" />{(tip.sites.length > 1 ? t("{n} 人在线 · {k} 个站点").replace("{k}", String(tip.sites.length)) : t("{n} 人在线 · {site}").replace("{site}", top.name)).replace("{n}", numberShort(tip.visitors))}</span>
         </div>
       ) : null}
       <div className="overview-globe-tools">
