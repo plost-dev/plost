@@ -497,9 +497,11 @@ func (a *App) liveCountries(ctx context.Context, site int64, q url.Values) ([]Ro
 // so the site overview can place them on its globe.
 func (a *App) overviewCountries(w http.ResponseWriter, r *http.Request) error {
 	since := time.Now().Add(-24 * time.Hour).Unix()
+	// CROSS JOIN keeps sites as the outer loop, so each site reads only its recent rows
+	// through events_site_time instead of scanning every stored event.
 	rows, err := a.db.QueryContext(r.Context(), `SELECT s.id,COALESCE(NULLIF(s.name,''),s.domain),e.country_code,count(DISTINCT `+visitorSQL+`)
-		FROM events_v2 e JOIN sites s ON s.id=e.site_id
-		WHERE e.timestamp>=? AND e.name='pageview' AND e.country_code<>''
+		FROM sites s CROSS JOIN events_v2 e
+		WHERE e.site_id=s.id AND e.timestamp>=? AND e.name='pageview' AND e.country_code<>''
 		GROUP BY s.id,e.country_code`, since)
 	if err != nil {
 		return err
