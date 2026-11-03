@@ -3,11 +3,11 @@ import { SiteSparkline } from "~/components/SiteSparkline"
 import { Surface } from "~/components/Surface"
 import { ActionLink } from "~/components/ActionButton"
 import { SiteFavicon } from "~/components/SiteFavicon"
-import { redirect, Link, createFileRoute, useRouter } from "@tanstack/react-router"
+import { redirect, Link, createFileRoute } from "@tanstack/react-router"
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { Shell } from "~/components/Shell"
-import { meFn, overviewLiveFn, sitesFn } from "~/lib/actions"
-import { OverviewGlobe, type OverviewPlace } from "~/components/OverviewGlobe"
+import { meFn, sitesFn } from "~/lib/actions"
+import { OverviewHero } from "~/components/OverviewHero"
 import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
 import { readSiteLayout, setSiteLayout, subscribeSiteLayout, type SiteLayout } from "~/lib/site-layout-preference"
@@ -146,71 +146,6 @@ function DashboardPage() {
 }
 
 type OverviewSite = Awaited<ReturnType<typeof sitesFn>>[number]
-
-function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[], layout: SiteLayout, onLayout: (value: SiteLayout) => void }) {
-  const { t } = useT()
-  const router = useRouter()
-  const [places, setPlaces] = useState<OverviewPlace[]>([])
-  const [updatedAt, setUpdatedAt] = useState(() => Date.now())
-  const [now, setNow] = useState(() => Date.now())
-  const [refreshing, setRefreshing] = useState(false)
-  const visitors = sites.reduce((sum, site) => sum + (site.visitors || 0), 0)
-
-  // Each loader refresh hands over a new list; the globe follows it.
-  useEffect(() => {
-    let alive = true
-    setUpdatedAt(Date.now())
-    void overviewLiveFn().then((rows) => { if (alive) setPlaces(rows) }).catch(() => {})
-    return () => { alive = false }
-  }, [sites])
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 30_000)
-    return () => window.clearInterval(timer)
-  }, [])
-
-  const minutes = Math.floor(Math.max(0, now - updatedAt) / 60_000)
-  async function refresh() {
-    setRefreshing(true)
-    try { await router.invalidate() } finally { setRefreshing(false); setNow(Date.now()) }
-  }
-
-  return (
-    <section className="squircle overview-hero" aria-labelledby="overview-hero-title">
-      <div className="overview-hero-body">
-        <div>
-          <h1 id="overview-hero-title" className="overview-hero-title">{t("nav.sites")}</h1>
-          <p className="overview-hero-sub">{t("footer.sites").replace("{n}", numberShort(sites.length))}</p>
-        </div>
-        <div className="overview-hero-metric">
-          <strong>{numberShort(visitors)}</strong>
-          <span>{t("位访客（近 24 小时，全部站点）")}</span>
-        </div>
-        <div className="overview-hero-actions management-site-tools">
-          <Link to="/sites/new" className="squircle btn btn-primary" aria-label={t("添加网站")} title={t("添加网站")}>
-            <UIIcon name="plus" className="size-4" />
-            <span className="management-tool-label">{t("添加网站")}</span>
-          </Link>
-          <div className="squircle site-layout-switch" role="group" aria-label={t("站点显示方式")}>
-            <span className="squircle site-layout-thumb" aria-hidden="true"/>
-            <button className="squircle btn" data-layout="grid" type="button" aria-label={t("卡片")} title={t("卡片")} aria-pressed={layout === "grid"} onClick={() => onLayout("grid")}>
-              <UIIcon name="grid" className="size-4" />
-              <span className="management-tool-label">{t("卡片")}</span>
-            </button>
-            <button className="squircle btn" data-layout="compact" type="button" aria-label={t("紧凑")} title={t("紧凑")} aria-pressed={layout === "compact"} onClick={() => onLayout("compact")}>
-              <UIIcon name="list" className="size-4" />
-              <span className="management-tool-label">{t("紧凑")}</span>
-            </button>
-          </div>
-          <button type="button" className="overview-hero-refresh" disabled={refreshing} onClick={refresh} aria-label={t("刷新")} title={t("刷新")}>
-            <UIIcon name="refresh" className={refreshing ? "is-spinning" : undefined} />
-            <span role="status">{minutes < 1 ? t("刚刚更新") : t("{n} 分钟前更新").replace("{n}", String(minutes))}</span>
-          </button>
-        </div>
-      </div>
-      <OverviewGlobe places={places} />
-    </section>
-  )
-}
 
 export function CompactMetrics({site}: {site: OverviewSite}) {
   const {t} = useT()

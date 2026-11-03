@@ -63,8 +63,6 @@
 .tracking-snippet pre.squircle { --sq-r: 19px; --sq-tl: 0px; --sq-tr: 0px; }
 .squircle.segmented-control { --sq-r: 16px; }
 .squircle.segmented-control > button.squircle { --sq-r: 12px; }
-.squircle.site-layout-switch { --sq-r:calc(var(--ui-control-height) * .46); }
-.squircle.site-layout-thumb { --sq-r:calc((var(--ui-control-height) - 10px) * .46); }
 
 .management-shell .settings-content .snippet-copy.squircle { --sq-r: calc(var(--ui-control-compact) * .46); }
 .management-shell .settings-nav .settings-nav-link.squircle { --sq-r: 20.24px; }
