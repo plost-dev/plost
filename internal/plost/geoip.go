@@ -67,6 +67,9 @@ func newManagedGeoIP(path string) *geoIP {
 	return g
 }
 
+// placesKnown reports whether visitors' addresses can be looked up: in a loaded database, or online.
+func (a *App) placesKnown() bool { return a.geoOnline.Load() || a.geo.ready() }
+
 // ready reports whether a database is loaded; a nil geoIP (no database configured) is not ready.
 func (g *geoIP) ready() bool { return g != nil && g.db.Load() != nil }
 
@@ -190,12 +193,15 @@ func (a *App) requestCountry(r *http.Request, now time.Time) string {
 	if code := a.visitorCountryHeader(r); code != "" {
 		return code
 	}
-	if !a.geo.ready() || !a.visitorKnown(r) {
+	if !a.placesKnown() || !a.visitorKnown(r) {
 		return ""
 	}
 	ip, _ := a.visitorAddr(r)
 	if !ip.IsValid() {
 		return ""
+	}
+	if a.geoOnline.Load() {
+		return a.online.place(ip, now).country
 	}
 	return a.geo.country(ip, now)
 }

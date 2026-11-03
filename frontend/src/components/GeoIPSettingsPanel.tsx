@@ -12,6 +12,7 @@ import { Tile } from "./ui"
 const SOURCES: { id: GeoIPSource; label: string }[] = [
   { id: "plost", label: "Plost 镜像（ipdata.plost.io，无需账号）" },
   { id: "maxmind", label: "自己的 MaxMind 账号" },
+  { id: "online", label: "在线查询（geo.plost.io，本机不存库）" },
   { id: "off", label: "不使用" },
 ]
 const EDITIONS: { id: GeoIPEdition; label: string }[] = [
@@ -47,7 +48,7 @@ export function GeoIPSettingsPage() {
       "IP 数据库用来判断访客所在的国家；GeoLite2-City 还能让实时访客地图显示到城市。经过 Cloudflare 时优先使用它给出的国家。",
       "Plost 每天检查一次新版本，下载后先核对 SHA-256、再校验整个数据库，通过后才替换正在使用的库，并删除旧版本和未完成的下载。",
       "想直接从 MaxMind 下载：在 MaxMind 官网注册免费账号，在「Manage License Keys」里生成 Key，填进上面的 MaxMind 卡片。保存后会自动改用 MaxMind，并立即检测、下载、校验和替换，之后每天自动检测新版本。账号 ID 和 License Key 只写入 env 文件，不存数据库。",
-      "查询全部在本机完成，访客 IP 不会发给任何第三方。",
+      "除「在线查询」外，查询都在本机完成，访客 IP 不会发给任何人；选「在线查询」时，访客 IP 会发送到 Plost 的 geo.plost.io 服务查询（该服务不记录、不保存查询的 IP）。",
     ]} />
   </>
 }
@@ -69,7 +70,7 @@ function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (nex
       const next = await saveGeoIPSettingsFn(change)
       onChange(next)
       setSource(next.source)
-      showToast(next.source === "off" ? "已停用 IP 数据库，本机的库文件已删除。" : "已保存，正在后台下载 IP 数据库。")
+      showToast(next.source === "off" ? "已停用 IP 数据库，本机的库文件已删除。" : next.source === "online" ? "已改用在线查询，本机的库文件已删除。" : "已保存，正在后台下载 IP 数据库。")
     } catch (error) {
       setSource(data.source)
       showToast(error instanceof Error ? error.message : "保存失败", "error")
@@ -117,12 +118,13 @@ function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (nex
           </select>
         </Field>
         <Field label="数据库">
-          <select className="squircle input" value={data.edition} disabled={source === "off"} onChange={event => void save({ edition: event.target.value as GeoIPEdition })}>
+          <select className="squircle input" value={data.edition} disabled={source === "off" || source === "online"} onChange={event => void save({ edition: event.target.value as GeoIPEdition })}>
             {EDITIONS.map(item => <option key={item.id} value={item.id}>{t(item.label)}</option>)}
           </select>
         </Field>
       </fieldset>
-      {data.source !== "off" ? <>
+      {data.source === "online" ? <p className="mt-6 text-sm leading-6 text-gray-600">{t("每位访客的 IP 会发送到 geo.plost.io 查询国家和城市，本机不保存数据库；同一个 IP 的结果在内存里保留一天。查询超过 1.5 秒或失败时，这条访问不记国家。")}</p> : null}
+      {data.source !== "off" && data.source !== "online" ? <>
         <dl className="squircle backup-status-grid mt-6">
           <div><dt>{t("状态")}</dt><dd className={state.error && !data.updating && !checking ? "text-red-600" : undefined}>{status}</dd></div>
           <div><dt>{t("数据版本")}</dt><dd>{data.loaded && state.builtAt ? formatTimestamp(state.builtAt * 1000, locale) : "—"}</dd></div>

@@ -91,8 +91,10 @@ type App struct {
 	siteProbe     siteChecker // Network probes behind the site check; tests replace them.
 	outboundAllow []netip.Prefix
 
-	geoUpdating   atomic.Bool  // A GeoLite2 download is running (geoip_update.go).
-	geoAgain      atomic.Bool  // Settings changed while it ran; run once more.
+	geoUpdating   atomic.Bool // A GeoLite2 download is running (geoip_update.go).
+	geoAgain      atomic.Bool // Settings changed while it ran; run once more.
+	geoOnline     atomic.Bool // Addresses are looked up at geo.plost.io instead (geoip_online.go).
+	online        *onlineGeo
 	geoHTTP       *http.Client // Test seams: a local fake for the download servers.
 	geoMirrorURL  string
 	geoMaxMindURL string
@@ -180,6 +182,8 @@ func Open(cfg Config) (*App, error) {
 	a.jobCtx, a.cancelJobs = context.WithCancel(context.Background())
 	a.outboundAllow = cfg.OutboundAllow
 	a.siteProbe = newSiteChecker(cfg.OutboundAllow)
+	a.online = newOnlineGeo(geoOnlineBase, newOnlineClient(cfg.OutboundAllow))
+	a.geoOnline.Store(cfg.GeoIPPath == "" && a.setting(context.Background(), "geoip_source", "plost") == "online")
 	// Google Maps counts as on only with a key, so the page policy never allows its hosts for nothing.
 	a.googleMaps.Store(cfg.GoogleMapsKey != "" && a.setting(context.Background(), "google_maps_enabled", "false") == "true")
 	a.workers.Add(4)

@@ -49,7 +49,7 @@ var geoFirstCheck = 20 * time.Second
 
 var (
 	geoEditions        = map[string]bool{"GeoLite2-City": true, "GeoLite2-Country": true}
-	geoSources         = map[string]bool{"plost": true, "maxmind": true, "off": true}
+	geoSources         = map[string]bool{"plost": true, "maxmind": true, "online": true, "off": true}
 	maxMindAccountForm = regexp.MustCompile(`^[0-9]{1,10}$`)
 	maxMindKeyForm     = regexp.MustCompile(`^[A-Za-z0-9_]{16,64}$`)
 	sha256Form         = regexp.MustCompile(`^[0-9a-f]{64}$`)
@@ -105,7 +105,7 @@ func (a *App) saveGeoState(state geoState) {
 
 // geoDue reports whether the background check should look for a new version now.
 func geoDue(source, edition string, state geoState, loaded bool, now time.Time) bool {
-	if source == "off" {
+	if source == "off" || source == "online" { // no database is kept; remove one that is
 		return loaded || state.Source != ""
 	}
 	if !loaded || state.Source != source || state.Edition != edition {
@@ -157,7 +157,7 @@ func (a *App) runGeoUpdate(ctx context.Context) (geoState, error) {
 	source, edition, state := a.geoSettings(ctx)
 	a.mu.RUnlock()
 	now := time.Now()
-	if source == "off" {
+	if source == "off" || source == "online" {
 		a.geo.unload()
 		err := a.clearGeoDir("")
 		state = geoState{}
@@ -399,7 +399,7 @@ type geoView struct {
 	Managed  bool     `json:"managed"`  // false: -geoip-db names the database and this page only reports it
 	FlagPath string   `json:"flagPath"` // the -geoip-db file
 	Loaded   bool     `json:"loaded"`   // a database is in use
-	Source   string   `json:"source"`   // plost, maxmind or off
+	Source   string   `json:"source"`   // plost, maxmind, online or off
 	Edition  string   `json:"edition"`  // GeoLite2-City or GeoLite2-Country
 	Account  string   `json:"account"`  // the MaxMind account ID, shown by its start
 	Key      string   `json:"key"`      // the MaxMind licence key, shown by its start
@@ -469,6 +469,10 @@ func (a *App) geoipPut(w http.ResponseWriter, r *http.Request) error {
 		if _, err := a.db.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", k, v); err != nil {
 			return err
 		}
+	}
+	a.geoOnline.Store(source == "online")
+	if source != "online" {
+		a.online.clear()
 	}
 	a.startGeoUpdate()
 	view := a.geoViewOf(r.Context())
