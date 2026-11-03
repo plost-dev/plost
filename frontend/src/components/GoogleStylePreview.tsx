@@ -20,9 +20,11 @@ function worldOutlines() {
   }).catch(error => { outlines = undefined; throw error })
 }
 
-// The Mapbox previews' camera (public/map-previews/SOURCES.md). Mapbox zoom levels use 512px tiles, Google's 256px,
-// so the same view is one level higher in Google Maps.
-const PREVIEW_CAMERA = { center: { lat: 37.77, lng: -122.44 }, zoom: 12.3 }
+// The Mapbox previews' camera (public/map-previews/SOURCES.md): a 720px-wide capture at zoom 11.3, shown shrunk to
+// the card. Mapbox zoom levels use 512px tiles and Google's 256px, so the same view is one level higher in Google Maps,
+// less however much the card shrinks the capture.
+const PREVIEW_CENTER = { lat: 37.77, lng: -122.44 }
+const previewZoom = (width: number) => 12.3 - Math.log2(720 / Math.max(width, 1))
 
 /**
  * The real Google map for a style, live through the Maps JavaScript API with the saved key, at the same place as the
@@ -45,6 +47,7 @@ function GoogleLivePreview({styleId, label, apiKey, onFailure}: {styleId: Google
     if (!element) return
     let disposed = false
     let theme: MutationObserver | undefined
+    let resize: ResizeObserver | undefined
     const failure = () => { if (!disposed) fail.current() }
     const timer = setTimeout(failure, 15_000)
     const previous = window.gm_authFailure
@@ -55,14 +58,16 @@ function GoogleLivePreview({styleId, label, apiKey, onFailure}: {styleId: Google
       if (disposed) return
       clearTimeout(timer)
       const map = new maps.Map(element, {
-        ...PREVIEW_CAMERA, ...googleMapLook(styleId, dark()), isFractionalZoomEnabled: true,
+        center: PREVIEW_CENTER, zoom: previewZoom(element.clientWidth), ...googleMapLook(styleId, dark()), isFractionalZoomEnabled: true,
         disableDefaultUI: true, gestureHandling: "none", keyboardShortcuts: false, clickableIcons: false,
       })
       theme = new MutationObserver(() => map.setOptions(googleMapLook(styleId, dark())))
+      resize = new ResizeObserver(() => map.setOptions({center: PREVIEW_CENTER, zoom: previewZoom(element.clientWidth)}))
+      resize.observe(element)
       theme.observe(document.documentElement, {attributes: true, attributeFilter: ["data-theme"]})
     }, failure)
     return () => {
-      disposed = true; clearTimeout(timer); theme?.disconnect()
+      disposed = true; clearTimeout(timer); theme?.disconnect(); resize?.disconnect()
       if (window.gm_authFailure === onAuthFailure) window.gm_authFailure = previous
     }
   }, [apiKey, styleId, locale])
