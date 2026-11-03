@@ -7,9 +7,10 @@ import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
 import { COUNTRIES_BY_TWO_LETTER_CODE, countryCentroids, loadWorldMap, type WorldJsonCountryData } from "~/lib/world-countries"
 
-export type OverviewCountry = { code: string, visitors: number, sites: Array<{ name: string, visitors: number }> }
+/** Visitors online now at one place; a place without coordinates is a whole country. */
+export type OverviewPlace = { lat?: number, lon?: number, country: string, visitors: number, sites: Array<{ name: string, visitors: number }> }
 type Mode = "globe" | "map"
-type Marker = OverviewCountry & { lonLat: [number, number] }
+type Marker = OverviewPlace & { key: string, lonLat: [number, number] }
 type Dots = { globe: Array<[number, number]>, map: Array<[number, number]> }
 
 let dotsPromise: Promise<{ dots: Dots, features: WorldJsonCountryData[] }> | undefined
@@ -53,7 +54,7 @@ function cssColor(el: Element, name: string, fallback: string) {
   return getComputedStyle(el).getPropertyValue(name).trim() || fallback
 }
 
-export function OverviewGlobe({ countries }: { countries: OverviewCountry[] }) {
+export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
   const { t, locale } = useT()
   const [mode, setMode] = useState<Mode>("globe")
   const [data, setData] = useState<{ dots: Dots, features: WorldJsonCountryData[] } | null>(null)
@@ -81,12 +82,14 @@ export function OverviewGlobe({ countries }: { countries: OverviewCountry[] }) {
   const markers = useMemo<Marker[]>(() => {
     if (!data) return []
     const centroids = countryCentroids(data.features)
-    return countries.flatMap((country) => {
-      const a3 = COUNTRIES_BY_TWO_LETTER_CODE[country.code]?.alpha_3
+    return places.flatMap((place) => {
+      const key = `${place.country}:${place.lat ?? ""}:${place.lon ?? ""}`
+      if (place.lat !== undefined && place.lon !== undefined) return [{ ...place, key, lonLat: [place.lon, place.lat] as [number, number] }]
+      const a3 = COUNTRIES_BY_TWO_LETTER_CODE[place.country]?.alpha_3
       const lonLat = a3 ? centroids.get(a3) : undefined
-      return lonLat ? [{ ...country, lonLat }] : []
+      return lonLat ? [{ ...place, key, lonLat }] : []
     })
-  }, [countries, data])
+  }, [places, data])
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -123,12 +126,6 @@ export function OverviewGlobe({ countries }: { countries: OverviewCountry[] }) {
         const cx = width / 2, cy = height * 0.6
         const projection = d3.geoOrthographic().scale(radius).translate([cx, cy]).rotate(rotation).clipAngle(90)
         const center: [number, number] = [-rotation[0], -rotation[1]]
-        const glow = ctx.createRadialGradient(cx, cy, radius * 0.97, cx, cy, radius * 1.06)
-        glow.addColorStop(0, "transparent")
-        glow.addColorStop(0.45, cssColor(frame, "--overview-globe-rim", "rgba(161,161,170,.28)"))
-        glow.addColorStop(1, "transparent")
-        ctx.fillStyle = glow
-        ctx.beginPath(); ctx.arc(cx, cy, radius * 1.06, 0, Math.PI * 2); ctx.fill()
         ctx.fillStyle = sphere
         ctx.beginPath(); ctx.arc(cx, cy, radius, 0, Math.PI * 2); ctx.fill()
         ctx.fillStyle = dotColor
@@ -146,7 +143,7 @@ export function OverviewGlobe({ countries }: { countries: OverviewCountry[] }) {
         for (const marker of markers) {
           if (d3.geoDistance(marker.lonLat, center) > Math.PI / 2 - 0.05) continue
           const xy = projection(marker.lonLat)
-          if (xy) shown.push({ marker, x: xy[0], y: xy[1], r: 2.5 + 3.5 * Math.sqrt(marker.visitors / max) })
+          if (xy) shown.push({ marker, x: xy[0], y: xy[1], r: 3 + 1.5 * Math.sqrt(marker.visitors / max) })
         }
       } else {
         const projection = d3.geoEquirectangular().fitExtent([[12, 16], [width - 12, height - 12]], { type: "Sphere" } as d3.GeoPermissibleObjects)
@@ -160,22 +157,23 @@ export function OverviewGlobe({ countries }: { countries: OverviewCountry[] }) {
         ctx.globalAlpha = 1
         for (const marker of markers) {
           const xy = projection(marker.lonLat)
-          if (xy) shown.push({ marker, x: xy[0], y: xy[1], r: 2.5 + 3.5 * Math.sqrt(marker.visitors / max) })
+          if (xy) shown.push({ marker, x: xy[0], y: xy[1], r: 3 + 1.5 * Math.sqrt(marker.visitors / max) })
         }
       }
       for (const dot of shown) {
-        const halo = ctx.createRadialGradient(dot.x, dot.y, dot.r, dot.x, dot.y, dot.r * 2.6)
+        // A thin soft ring, not a wide glow.
+        const halo = ctx.createRadialGradient(dot.x, dot.y, dot.r, dot.x, dot.y, dot.r * 1.8)
         halo.addColorStop(0, accent)
         halo.addColorStop(1, "transparent")
-        ctx.globalAlpha = 0.35
+        ctx.globalAlpha = 0.3
         ctx.fillStyle = halo
-        ctx.beginPath(); ctx.arc(dot.x, dot.y, dot.r * 2.6, 0, Math.PI * 2); ctx.fill()
+        ctx.beginPath(); ctx.arc(dot.x, dot.y, dot.r * 1.8, 0, Math.PI * 2); ctx.fill()
         ctx.globalAlpha = 1
         ctx.fillStyle = accent
         ctx.beginPath(); ctx.arc(dot.x, dot.y, dot.r, 0, Math.PI * 2); ctx.fill()
       }
       // Without a hover, label the busiest visitor in view.
-      const label = shown.find((dot) => dot.marker.code === hoverRef.current) || (hoverRef.current ? undefined : shown.slice().sort((a, b) => b.marker.visitors - a.marker.visitors)[0])
+      const label = shown.find((dot) => dot.marker.key === hoverRef.current) || (hoverRef.current ? undefined : shown.slice().sort((a, b) => b.marker.visitors - a.marker.visitors)[0])
       // Position is written straight to the element so rotation never re-renders React.
       if (label) {
         // Sit above-left of the marker, flipping away from the controls and the edges.
@@ -212,7 +210,7 @@ export function OverviewGlobe({ countries }: { countries: OverviewCountry[] }) {
       }
       const x = event.clientX - rect.left, y = event.clientY - rect.top
       const hit = shown.find((dot) => Math.hypot(dot.x - x, dot.y - y) <= Math.max(10, dot.r + 4))
-      const code = hit?.marker.code || null
+      const code = hit?.marker.key || null
       if (code !== hoverRef.current) {
         hoverRef.current = code
         draw()
@@ -256,12 +254,12 @@ export function OverviewGlobe({ countries }: { countries: OverviewCountry[] }) {
   const top = tip?.sites[0]
   return (
     <div ref={frameRef} className={`overview-globe is-${mode}${fullscreen ? " is-fullscreen" : ""}`}>
-      <canvas ref={canvasRef} className="overview-globe-canvas" role="img" aria-label={t("访客地区分布（近 24 小时）")} />
+      <canvas ref={canvasRef} className="overview-globe-canvas" role="img" aria-label={t("当前在线访客位置")} />
       {failed ? <p className="overview-globe-state" role="status">{t("地图加载失败")}</p> : null}
       {tip && top ? (
         <div ref={tipRef} className="squircle overview-globe-tip" style={{ transform: `translate(${Math.round(tipAt.current[0])}px, ${Math.round(tipAt.current[1])}px)` }}>
-          <strong><CountryFlag code={tip.code} shape="rect" className="overview-globe-flag" />{countryName(tip.code, locale)}</strong>
-          <span>{t("{n} 位访客 · {site}").replace("{n}", numberShort(top.visitors)).replace("{site}", top.name)}{tip.sites.length > 1 ? ` +${tip.sites.length - 1}` : ""}</span>
+          <strong><CountryFlag code={tip.country} shape="rect" className="overview-globe-flag" />{countryName(tip.country, locale)}</strong>
+          <span>{t("{n} 人在线 · {site}").replace("{n}", numberShort(tip.visitors)).replace("{site}", top.name)}{tip.sites.length > 1 ? ` +${tip.sites.length - 1}` : ""}</span>
         </div>
       ) : null}
       <div className="overview-globe-tools">

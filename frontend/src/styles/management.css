@@ -299,8 +299,8 @@ html.dark .tag-optional { background:var(--color-gray-700); color:var(--color-gr
 html.dark .tag-required { background:#450a0a; color:#fca5a5; }
 
 /* Site overview hero: totals and controls beside a dotted visitor globe. */
-.overview-hero { --sq-r:20px; position:relative; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,46%); min-height:300px; margin:32px 0 24px; overflow:hidden; border:1px solid var(--color-gray-200); background:var(--surface); --overview-globe-dot:var(--color-gray-500); --overview-globe-sphere:var(--color-gray-100); --overview-globe-rim:rgb(161 161 170 / .3); }
-html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overview-globe-sphere:#050506; --overview-globe-rim:rgb(212 212 216 / .16); }
+.overview-hero { --sq-r:20px; position:relative; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,46%); min-height:300px; margin:32px 0 24px; overflow:hidden; border:1px solid var(--color-gray-200); background:var(--surface); --overview-globe-dot:var(--color-gray-500); --overview-globe-sphere:var(--color-gray-100); }
+html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overview-globe-sphere:#050506; }
 .overview-hero-body { position:relative; z-index:1; display:flex; flex-direction:column; gap:24px; padding:32px 0 32px 32px; }
 .overview-hero-title { font-size:28px; line-height:1.2; font-weight:700; letter-spacing:-.025em; color:var(--color-gray-900); }
 .overview-hero-sub { margin-top:6px; font-size:14px; color:var(--color-gray-500); }

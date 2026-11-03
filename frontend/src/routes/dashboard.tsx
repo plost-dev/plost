@@ -6,8 +6,8 @@ import { SiteFavicon } from "~/components/SiteFavicon"
 import { redirect, Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { Shell } from "~/components/Shell"
-import { meFn, overviewGeoFn, sitesFn } from "~/lib/actions"
-import { OverviewGlobe, type OverviewCountry } from "~/components/OverviewGlobe"
+import { meFn, overviewLiveFn, sitesFn } from "~/lib/actions"
+import { OverviewGlobe, type OverviewPlace } from "~/components/OverviewGlobe"
 import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
 import { readSiteLayout, setSiteLayout, subscribeSiteLayout, type SiteLayout } from "~/lib/site-layout-preference"
@@ -184,7 +184,7 @@ type OverviewSite = Awaited<ReturnType<typeof sitesFn>>[number]
 function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[], layout: SiteLayout, onLayout: (value: SiteLayout) => void }) {
   const { t } = useT()
   const router = useRouter()
-  const [countries, setCountries] = useState<OverviewCountry[]>([])
+  const [places, setPlaces] = useState<OverviewPlace[]>([])
   const [updatedAt, setUpdatedAt] = useState(() => Date.now())
   const [now, setNow] = useState(() => Date.now())
   const [refreshing, setRefreshing] = useState(false)
@@ -194,7 +194,7 @@ function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[], layo
   useEffect(() => {
     let alive = true
     setUpdatedAt(Date.now())
-    void overviewGeoFn().then((rows) => { if (alive) setCountries(rows) }).catch(() => {})
+    void overviewLiveFn().then((rows) => { if (alive) setPlaces(rows) }).catch(() => {})
     return () => { alive = false }
   }, [sites])
   useEffect(() => {
@@ -227,9 +227,11 @@ function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[], layo
           <div className="squircle site-layout-switch" role="group" aria-label={t("站点显示方式")}>
             <span className="squircle site-layout-thumb" aria-hidden="true"/>
             <button className="squircle btn" data-layout="grid" type="button" aria-label={t("卡片")} title={t("卡片")} aria-pressed={layout === "grid"} onClick={() => onLayout("grid")}>
+              <UIIcon name="grid" className="size-4" />
               <span className="management-tool-label">{t("卡片")}</span>
             </button>
             <button className="squircle btn" data-layout="compact" type="button" aria-label={t("紧凑")} title={t("紧凑")} aria-pressed={layout === "compact"} onClick={() => onLayout("compact")}>
+              <UIIcon name="list" className="size-4" />
               <span className="management-tool-label">{t("紧凑")}</span>
             </button>
           </div>
@@ -239,7 +241,7 @@ function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[], layo
           </button>
         </div>
       </div>
-      <OverviewGlobe countries={countries} />
+      <OverviewGlobe places={places} />
     </section>
   )
 }

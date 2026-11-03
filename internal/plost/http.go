@@ -145,7 +145,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("PUT /api/map-style", a.api(a.mapStyle, true))
 	mux.HandleFunc("PUT /api/sparkline", a.api(a.sparklineSettingsPut, true))
 	mux.HandleFunc("GET /api/sites", a.api(a.listSites, true))
-	mux.HandleFunc("GET /api/overview/countries", a.api(a.overviewCountries, true))
+	mux.HandleFunc("GET /api/overview/live", a.api(a.overviewLive, true))
 	mux.HandleFunc("POST /api/sites", a.api(a.createSite, true))
 	mux.HandleFunc("GET /api/sites/{domain}/settings", a.api(a.siteSettings, true))
 	mux.HandleFunc("PUT /api/sites/{domain}/settings", a.api(a.updateSite, true))
