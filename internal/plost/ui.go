@@ -56,7 +56,7 @@ func (a *App) setting(ctx context.Context, key, fallback string) string {
 }
 func (a *App) preferences(w http.ResponseWriter, r *http.Request) error {
 	style, span := a.sparklineSettings(r.Context())
-	return jsonResponse(w, map[string]string{"mapboxStyle": a.setting(r.Context(), "mapbox_style", "standard"), "googleMapStyle": a.setting(r.Context(), "google_map_style", "standard"), "sparklineStyle": style, "sparklineRange": span})
+	return jsonResponse(w, map[string]string{"mapboxStyle": a.setting(r.Context(), "mapbox_style", "standard"), "googleMapStyle": a.setting(r.Context(), "google_map_style", "roadmap"), "sparklineStyle": style, "sparklineRange": span})
 }
 
 // The small trend on each site card in the site list: one of these styles, over the last 24 hours (hourly) or the

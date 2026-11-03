@@ -1486,6 +1486,8 @@ select:disabled { opacity:.65; cursor:not-allowed; }
 /* Google map style previews, in the colours googleMapLook gives each style. */
 .google-style-preview { --water:#e4e4e7; --land:#f4f4f5; --border:#d4d4d8; }
 :root[data-theme="dark"] .google-style-preview[data-style="standard"], .google-style-preview[data-style="dark"] { --water:#0c0c0e; --land:#1c1c1f; --border:#3f3f46; }
-.google-style-preview[data-style="roadmap"] { --water:#aadaff; --land:#f5f3ef; --border:#9aa0a6; }
+.google-style-preview[data-style="roadmap"] { --water:#90daee; --land:#f5f1e6; --border:#a8a29e; }
 .google-style-water { fill:var(--water); }
 .google-style-land { fill:var(--land); stroke:var(--border); stroke-width:.5; }
+.google-style-green { fill:#c8ebd4; opacity:.9; }
+.google-style-border { fill:none; stroke:var(--border); stroke-width:.5; }

@@ -43,7 +43,7 @@ func TestGoogleMapStyleSetting(t *testing.T) {
 	if err := json.Unmarshal(x.call(t, "GET", "/api/preferences", nil, 200), &prefs); err != nil {
 		t.Fatal(err)
 	}
-	if prefs["googleMapStyle"] != "standard" {
+	if prefs["googleMapStyle"] != "roadmap" {
 		t.Fatalf("default: %v", prefs)
 	}
 	x.call(t, "PUT", "/api/google-map-style", map[string]any{"styleId": "streets-v12"}, 400)

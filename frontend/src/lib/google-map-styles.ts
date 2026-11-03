@@ -7,7 +7,8 @@ export const GOOGLE_MAP_STYLES = [
 ] as const
 
 export type GoogleMapStyleId = typeof GOOGLE_MAP_STYLES[number]["id"]
-export const DEFAULT_GOOGLE_MAP_STYLE: GoogleMapStyleId = "standard"
+// Google's own road map is what people know it by, so it is the default; Mapbox keeps Standard.
+export const DEFAULT_GOOGLE_MAP_STYLE: GoogleMapStyleId = "roadmap"
 
 export function normalizeGoogleMapStyle(id: unknown): GoogleMapStyleId {
   return GOOGLE_MAP_STYLES.find(style => style.id === id)?.id || DEFAULT_GOOGLE_MAP_STYLE
@@ -31,7 +32,7 @@ const DARK = [
 
 /** The Map options for a style; Streets is Google's own unstyled road map. */
 export function googleMapLook(id: GoogleMapStyleId, dark: boolean) {
-  if (id === "roadmap") return { styles: [], backgroundColor: "#aadaff" }
+  if (id === "roadmap") return { styles: [], backgroundColor: "#90daee" }
   const night = id === "dark" || dark
   return { styles: night ? DARK : LIGHT, backgroundColor: night ? "#0c0c0e" : "#e4e4e7" }
 }
