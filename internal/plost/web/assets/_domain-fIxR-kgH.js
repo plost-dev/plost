@@ -1,1 +1,0 @@
-import{B as e}from"./index-iJl_SSGw.js";var t=e;export{t as component};

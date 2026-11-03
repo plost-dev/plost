@@ -131,7 +131,7 @@ function DashboardPage() {
                   </Surface>
                 </Link>
                 <div className="absolute top-2 right-2">
-                  <ActionLink to="/sites/$domain/settings" params={{ domain: site.domain }} search={{ tab: "general" }}
+                  <ActionLink to="/sites/$domain/settings/{-$tab}" params={{ domain: site.domain }}
                     className="btn-ghost site-card-menu-trigger" aria-label={`${t("设置")} ${site.domain}`} title={t("设置")}>
                     <UIIcon name="settings" className="size-[18px]" />
                   </ActionLink>

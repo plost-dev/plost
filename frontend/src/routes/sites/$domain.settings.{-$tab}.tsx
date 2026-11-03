@@ -31,8 +31,19 @@ const TABS = [
   { id: "danger-zone", label: "危险操作" },
 ] as const
 
-export const Route = createFileRoute("/sites/$domain/settings")({
-  validateSearch: (s: Record<string, unknown>) => ({tab: TABS.find(tab => tab.id === s.tab)?.id || "general"}),
+type Tab = typeof TABS[number]["id"]
+// The general page lives at /settings itself, the others at /settings/<page>.
+const tabParam = (tab: Tab) => tab === "general" ? undefined : tab
+
+export const Route = createFileRoute("/sites/$domain/settings/{-$tab}")({
+  // Older links named the page as ?tab=…; they, and unknown pages, are sent on to the page's own address.
+  validateSearch: (s: Record<string, unknown>): { tab?: string } => typeof s.tab === "string" ? { tab: s.tab } : {},
+  beforeLoad: ({ params, search }) => {
+    const tab = TABS.find(item => item.id === (search.tab ?? params.tab))?.id ?? "general"
+    if (search.tab !== undefined || params.tab !== tabParam(tab)) {
+      throw redirect({ to: "/sites/$domain/settings/{-$tab}", params: { domain: params.domain, tab: tabParam(tab) }, search: {}, replace: true })
+    }
+  },
   loader: async ({ params }) => {
     const me = await meFn()
     if (!me) throw redirect({ to: "/login" })
@@ -44,8 +55,8 @@ export const Route = createFileRoute("/sites/$domain/settings")({
 
 function SettingsPage() {
   const { me, data } = Route.useLoaderData()
-  const { domain } = Route.useParams()
-  const { tab } = Route.useSearch()
+  const { domain, tab: page } = Route.useParams()
+  const tab: Tab = TABS.find(item => item.id === page)?.id ?? "general"
   const router = useRouter()
   const { t } = useT()
   const [name, setName] = useState(data.site.name || "")
@@ -77,7 +88,7 @@ function SettingsPage() {
           )}
         />
         <SettingsLayout navigationTitle={t(TABS.find(item => item.id === tab)?.label || "设置")} sidebar={<SettingsNav label={t("站点设置")}>
-          {TABS.map(item => <Link key={item.id} to="/sites/$domain/settings" params={{domain}} search={{tab:item.id}} aria-current={tab === item.id ? "page" : undefined} className={`squircle settings-nav-link${tab === item.id ? " is-active" : ""}`}>{t(item.label)}</Link>)}
+          {TABS.map(item => <Link key={item.id} to="/sites/$domain/settings/{-$tab}" params={{domain, tab: tabParam(item.id)}} aria-current={tab === item.id ? "page" : undefined} className={`squircle settings-nav-link${tab === item.id ? " is-active" : ""}`}>{t(item.label)}</Link>)}
         </SettingsNav>}>
           {tab === "general" ? <Tile icon="globe" title={t("站点详情")}>
             <SettingsForm onSubmit={async event => {
@@ -85,7 +96,7 @@ function SettingsPage() {
               const saved = await saveSettingsFn({data:{domain,name,timezone,newDomain,public:data.site.public}})
               // The checks follow the site, so they are saved under its new address if it was renamed.
               if (data.health) await saveSiteCheckFn({data:{domain:saved.domain,enabled:healthEnabled,path:healthPath || "/"}})
-              if (saved.domain !== domain) await router.navigate({to:"/sites/$domain/settings",params:{domain:saved.domain},search:{tab:"general"}})
+              if (saved.domain !== domain) await router.navigate({to:"/sites/$domain/settings/{-$tab}",params:{domain:saved.domain}})
               else await router.invalidate()
               showToast("设置已保存")
             }}>

@@ -1,0 +1,1 @@
+import{V as e}from"./index-BQknLNe-.js";var t=e;export{t as component};

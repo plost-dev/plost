@@ -72,3 +72,5 @@
 - 2026-11-03 用户要求 Key 存在 env 文件、不存数据库（用户反映保存过的 Key 丢了；核对线上库：库文件 11-01 起从未替换，但除 Google Key 外 Mapbox Token 和 R2 凭据都不在库里）。现在 `PLOST_MAPBOX_TOKEN`、`PLOST_GOOGLE_MAPS_KEY`、`PLOST_BACKUP_ACCESS_KEY`、`PLOST_BACKUP_SECRET_KEY`、`PLOST_BACKUP_PASSWORD` 只从环境变量读（`env_keys.go`，启动时校验格式），服务单元用 `EnvironmentFile=-/etc/plost/plost.env`；设置页只显示是否已设置（`EnvKeyStatus`），接口拒绝带 Key 的请求，保存备份设置时清空旧的凭据列。原来的 `secrets.key` 封存机制已删除。地图开关、样式和备份去向仍存数据库。
 
 - 2026-11-04 用户要求站点首页头部（`OverviewHero.tsx`）左侧不再只放一个总数：五种图表都保留，可在头部「图表样式」菜单里切换（24 小时柱形图默认、30 天柱形图、时段热力图、站点占比、关键数字），选择按浏览器保存在 `litestats:overview-chart`；数据来自 `GET /api/overview/charts?view=…`（全部站点相加，只算所选样式需要的部分）。「站点占比」只单独列出访客最多的 3 个站点，其余合并为「其他 N 个站点」。「添加网站」「卡片/紧凑」「刷新」收成标题右侧 32px 图标按钮，更新时间写在副标题里；右侧地球不变。
+
+- 2026-11-04 用户要求站点设置不用 `?tab=` 查询参数：常规页就是 `/sites/<域名>/settings`，其他分页用路径 `/settings/visibility`、`/settings/installation`、`/settings/danger-zone`（路由文件 `$domain.settings.{-$tab}.tsx`）。旧的 `?tab=…`、`/settings/general` 和未知分页都替换跳转到对应的新地址。新增指向站点设置的链接用 `to="/sites/$domain/settings/{-$tab}"`，不要再传 `search={{tab}}`。
