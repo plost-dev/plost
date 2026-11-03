@@ -84,7 +84,7 @@ export function SiteSwitcher({
             >
               {t("返回站点")}</Link>
             {canManage ? <Link
-              to="/sites/$domain/settings/{-$tab}"
+              to="/sites/$domain/settings"
               params={{ domain }}
               className="squircle mx-1 my-1 flex flex-1 items-center justify-center rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition-all duration-200 hover:border-gray-400/70 hover:text-gray-900"
               onClick={() => setOpen(false)}

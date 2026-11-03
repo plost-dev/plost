@@ -1,1 +1,0 @@
-import{L as e}from"./index-DDE5-cKS.js";var t=e;export{t as component};

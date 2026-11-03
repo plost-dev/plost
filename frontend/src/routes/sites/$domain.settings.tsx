@@ -1,0 +1,68 @@
+import { Surface } from "~/components/Surface"
+import { ActionLink } from "~/components/ActionButton"
+import { SettingsLayout, SettingsNav } from "~/components/SettingsLayout"
+import { Link, Outlet, createFileRoute, redirect, useLocation } from "@tanstack/react-router"
+import { SettingsHeader } from "~/components/SettingsChrome"
+import { Shell } from "~/components/Shell"
+import { useT } from "~/lib/i18n"
+import { meFn, siteSettingsFn } from "~/lib/actions"
+
+// Each page has its own static address; the general page is /settings itself.
+const PAGES = [
+  { to: "/sites/$domain/settings", label: "常规" },
+  { to: "/sites/$domain/settings/visibility", label: "可见性" },
+  { to: "/sites/$domain/settings/installation", label: "安装脚本" },
+  { to: "/sites/$domain/settings/danger-zone", label: "危险操作" },
+] as const
+const LEGACY: Record<string, typeof PAGES[number]["to"]> = {
+  visibility: "/sites/$domain/settings/visibility",
+  installation: "/sites/$domain/settings/installation",
+  "danger-zone": "/sites/$domain/settings/danger-zone",
+}
+
+export const Route = createFileRoute("/sites/$domain/settings")({
+  // Older links named the page as ?tab=…; they are sent on to the page's own address.
+  validateSearch: (s: Record<string, unknown>): { tab?: string } => typeof s.tab === "string" ? { tab: s.tab } : {},
+  beforeLoad: ({ params, search }) => {
+    if (search.tab !== undefined) throw redirect({ to: LEGACY[search.tab] ?? "/sites/$domain/settings", params, search: {}, replace: true })
+  },
+  loader: async ({ params }) => {
+    // Both at once: each is a round trip to the server.
+    const settings = siteSettingsFn({ data: { domain: params.domain } })
+    settings.catch(() => {})
+    const me = await meFn()
+    if (!me) throw redirect({ to: "/login" })
+    return { me, data: await settings }
+  },
+  component: SettingsPage,
+})
+
+function SettingsPage() {
+  const { me, data } = Route.useLoaderData()
+  const { domain } = Route.useParams()
+  const pathname = useLocation({ select: location => location.pathname.replace(/\/+$/, "") })
+  const { t } = useT()
+  const page = PAGES.find(item => pathname === item.to.replace("$domain", encodeURIComponent(domain))) ?? PAGES[0]
+
+  return (
+    <Shell user={me}>
+      <Surface radius="large" className="site-settings-workspace">
+        <SettingsHeader
+          title={t("settings.site_for")}
+          domain={domain}
+          name={data.site.name || ""}
+          back={(
+            <ActionLink to="/sites/$domain" params={{ domain }} className="btn-secondary settings-back">
+              {t("settings.back_stats")}
+            </ActionLink>
+          )}
+        />
+        <SettingsLayout navigationTitle={t(page.label)} sidebar={<SettingsNav label={t("站点设置")}>
+          {PAGES.map(item => <Link key={item.to} to={item.to} params={{ domain }} aria-current={page === item ? "page" : undefined} className={`squircle settings-nav-link${page === item ? " is-active" : ""}`}>{t(item.label)}</Link>)}
+        </SettingsNav>}>
+          <Outlet />
+        </SettingsLayout>
+      </Surface>
+    </Shell>
+  )
+}

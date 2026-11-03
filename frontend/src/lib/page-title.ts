@@ -33,14 +33,14 @@ export function pageTitle(pathname: string, locale: Locale): string {
 
   let label: PageLabel = "notFound"
   if (path === "/dashboard" || path === "/sites") label = "sites"
-  else if (path === "/account" || path === "/backup") label = "settings"
+  else if (path === "/settings" || path.startsWith("/settings/") || path === "/account" || path === "/backup") label = "settings"
   else if (path === "/sites/new") label = "addSite"
   else if (path === "/login") label = "login"
   else if (path === "/setup") label = "setup"
   else if (path === "/docs/api") label = "api"
   else if (/^\/share\/[^/]+$/.test(path)) label = "share"
   else {
-    const site = /^\/sites\/([^/]+)(?:\/(settings|activity|health))?$/.exec(path)
+    const site = /^\/sites\/([^/]+)(?:\/(settings|activity|health))?(?:(?<=settings)\/[a-z-]+)?$/.exec(path)
     if (site && domainLabel(site[1])) {
       if (site[2] === "settings") label = "siteSettings"
       else if (site[2] === "activity") label = "activity"

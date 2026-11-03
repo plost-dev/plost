@@ -115,14 +115,14 @@ export function Shell({
 function headerNav(t: (key: string) => string): HeaderNavItem[] {
   const items: HeaderNavItem[] = [
     { key: "sites", to: "/dashboard", label: t("nav.sites") },
-    { key: "account", to: "/account", search: { tab: "preferences" }, label: t("settings.title") },
+    { key: "account", to: "/settings", label: t("settings.title") },
   ]
   return items
 }
 
 function navActive(key: string, pathname: string) {
   if (key === "sites") return pathname === "/dashboard" || pathname.startsWith("/sites/") || pathname === "/sites" || pathname.startsWith("/share/")
-  if (key === "account") return pathname === "/account"
+  if (key === "account") return pathname === "/settings" || pathname.startsWith("/settings/")
   if (key === "backup") return pathname === "/backup"
   if (key === "api") return pathname === "/docs/api"
   return false
@@ -130,8 +130,7 @@ function navActive(key: string, pathname: string) {
 
 type HeaderNavItem = {
   key: string
-  to: "/dashboard" | "/account" | "/backup" | "/docs/api"
-  search?: { tab: string }
+  to: "/dashboard" | "/settings" | "/backup" | "/docs/api"
   label: string
 }
 
@@ -149,7 +148,6 @@ function HeaderNav({
         <Link
           key={item.key}
           to={item.to}
-          search={item.search}
           aria-current={navActive(item.key, pathname) ? "page" : undefined}
           className={`squircle site-header-nav-link${navActive(item.key, pathname) ? " is-active" : ""}`}
         >
@@ -327,7 +325,6 @@ function UserMenu({
               <Link
                 key={item.key}
                 to={item.to}
-                search={item.search}
                 aria-current={navActive(item.key, pathname) ? "page" : undefined}
                 className={`squircle site-header-menu-item${navActive(item.key, pathname) ? " is-active" : ""}`}
                 onClick={() => setOpen(false)}
@@ -338,10 +335,9 @@ function UserMenu({
             <div className="site-header-menu-line" />
           </div>
           <Link
-            to="/account"
-            search={{ tab: "preferences" }}
-            aria-current={pathname === "/account" ? "page" : undefined}
-            className={`squircle site-header-menu-item${pathname === "/account" ? " is-active" : ""}`}
+            to="/settings"
+            aria-current={pathname === "/settings" ? "page" : undefined}
+            className={`squircle site-header-menu-item${pathname === "/settings" ? " is-active" : ""}`}
             onClick={() => setOpen(false)}
           >
             {t("个人资料设置")}

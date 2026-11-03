@@ -1,1 +1,0 @@
-import{c as e}from"./useSelector-DzGlCpWO.js";var t=e();function n({as:e=`div`,radius:n=`large`,className:r=``,...i}){return(0,t.jsx)(e,{...i,"data-radius":n,className:`ui-surface ${n===`pill`?``:`squircle `}${r}`})}export{n as t};

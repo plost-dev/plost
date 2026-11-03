@@ -299,7 +299,8 @@ func (a *App) page(w http.ResponseWriter, r *http.Request) {
 		} else if u != nil {
 			redirect = "/dashboard"
 		}
-	case "/dashboard", "/account", "/sites/new":
+	case "/dashboard", "/account", "/sites/new", "/settings", "/settings/security", "/settings/api", "/settings/appearance",
+		"/settings/sparkline", "/settings/map", "/settings/geoip", "/settings/backup":
 		if count == 0 {
 			redirect = "/setup"
 		} else if u == nil {

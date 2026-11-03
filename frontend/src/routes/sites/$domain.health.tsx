@@ -37,7 +37,7 @@ function SiteHealthPage() {
     <ManagementHeader title={t("站点检查")} description={domain} icon="shield">
       <ActionLink to="/sites/$domain" params={{domain}}>{t("返回统计")}</ActionLink>
       {data.canManage && data.report.enabled ? <ActionButton className="btn-primary" disabled={pending} onClick={() => void perform(() => runSiteCheckFn({data: {domain}}))}>{t(pending ? "检查中…" : "立即检查")}</ActionButton> : null}
-      {data.canManage && !data.report.enabled ? <ActionLink to="/sites/$domain/settings/{-$tab}" params={{domain}} className="btn-primary">{t("开启检查")}</ActionLink> : null}
+      {data.canManage && !data.report.enabled ? <ActionLink to="/sites/$domain/settings" params={{domain}} className="btn-primary">{t("开启检查")}</ActionLink> : null}
     </ManagementHeader>
     {error ? <p role="alert" className="squircle settings-feedback is-error">{t(error)}</p> : null}
     <SiteHealthPanel report={data.report}/>
