@@ -95,10 +95,8 @@ func (a *App) writeBackup(ctx context.Context, reason string) (string, error) {
 	switch {
 	case err != nil:
 		return "", safeError("无法读取备份设置")
-	case s.Unreadable:
-		return "", safeError("已保存的备份凭据无法解密，请在备份设置中重新填写")
 	case len(s.BackupPassword) < 12:
-		return "", safeError("请先在备份设置中设置计划备份密码")
+		return "", safeError("请先在 env 文件里设置 " + EnvBackupPassword)
 	case s.Keep == 0 && !s.CloudEnabled:
 		return "", safeError("本地保留 0 份时需要启用云存储上传")
 	}
@@ -330,9 +328,6 @@ func (a *App) savedCloud(ctx context.Context) (cloudSettings, error) {
 	a.mu.RUnlock()
 	if err != nil {
 		return cloudSettings{}, err
-	}
-	if s.Unreadable {
-		return cloudSettings{}, failure(409, "已保存的云存储凭据无法解密，请重新填写并保存")
 	}
 	if err = requireCloud(s.cloudSettings); err != nil {
 		return cloudSettings{}, failure(400, "请先保存云存储设置")

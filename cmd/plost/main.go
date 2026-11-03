@@ -60,7 +60,11 @@ func main() {
 	if header != "" && !*proxy && len(trustedNets) == 0 {
 		log.Fatal("-client-ip-header only applies behind a trusted proxy; add -trusted-proxies")
 	}
-	app, err := plost.Open(plost.Config{DataDir: *data, Origin: *origin, TrustProxy: *proxy, TrustedProxies: trustedNets, TrustedProxyNames: trustedNames, ClientIPHeader: header, GeoIPPath: *geoip, Version: version, OutboundAllow: allow})
+	cfg := plost.Config{DataDir: *data, Origin: *origin, TrustProxy: *proxy, TrustedProxies: trustedNets, TrustedProxyNames: trustedNames, ClientIPHeader: header, GeoIPPath: *geoip, Version: version, OutboundAllow: allow}
+	if err := plost.EnvKeys(&cfg); err != nil {
+		log.Fatal(err)
+	}
+	app, err := plost.Open(cfg)
 	if err != nil {
 		log.Fatal("Cannot open Plost: ", err)
 	}

@@ -22,13 +22,13 @@ func TestGoogleMapsSettings(t *testing.T) {
 	if strings.Contains(csp(), "googleapis") {
 		t.Fatal("Google hosts allowed before Google Maps is on")
 	}
-	x.call(t, "PUT", "/api/google-maps", map[string]any{"enabled": true}, 400) // No key yet.
-	x.call(t, "PUT", "/api/google-maps", map[string]any{"key": "sk-not-a-maps-key", "enabled": true}, 400)
+	x.call(t, "PUT", "/api/google-maps", map[string]any{"enabled": true}, 400) // No key in the env file yet.
 	key := "AIza" + strings.Repeat("A", 35)
-	x.call(t, "PUT", "/api/mapbox", map[string]any{"token": "pk.test", "enabled": true}, 200)
+	x.app.cfg.GoogleMapsKey, x.app.cfg.MapboxToken = key, "pk.test" // As if read from the env file.
+	x.call(t, "PUT", "/api/mapbox", map[string]any{"enabled": true}, 200)
 	var google map[string]any
-	if err := json.Unmarshal(x.call(t, "PUT", "/api/google-maps", map[string]any{"key": key, "enabled": false}, 200), &google); err != nil || google["configured"] != true {
-		t.Fatalf("saving the key: %v %v", err, google)
+	if err := json.Unmarshal(x.call(t, "GET", "/api/google-maps", nil, 200), &google); err != nil || google["configured"] != true {
+		t.Fatalf("the env key: %v %v", err, google)
 	}
 	json.Unmarshal(x.call(t, "PUT", "/api/google-maps", map[string]any{"enabled": true}, 200), &google)
 	if _, ok := google["previewKey"]; ok || google["enabled"] != true {
@@ -54,5 +54,33 @@ func TestGoogleMapsSettings(t *testing.T) {
 	json.Unmarshal(x.call(t, "GET", "/api/google-maps", nil, 200), &google)
 	if google["enabled"] != false || strings.Contains(csp(), "googleapis") {
 		t.Fatal("Google Maps stayed on after Mapbox was turned on")
+	}
+}
+
+func TestEnvKeys(t *testing.T) {
+	for name, value := range map[string]string{EnvMapboxToken: "pk.abc", EnvGoogleMapsKey: "AIza" + strings.Repeat("B", 35),
+		EnvBackupAccessKey: "AK", EnvBackupSecretKey: "SK", EnvBackupPassword: "a-long-backup-password"} {
+		t.Setenv(name, value)
+	}
+	var cfg Config
+	if err := EnvKeys(&cfg); err != nil || cfg.MapboxToken != "pk.abc" || cfg.BackupPassword != "a-long-backup-password" {
+		t.Fatalf("%v %+v", err, cfg)
+	}
+	for name, value := range map[string]string{EnvMapboxToken: "sk.secret", EnvGoogleMapsKey: "AIza-short", EnvBackupSecretKey: "has space", EnvBackupPassword: "short"} {
+		t.Run(name, func(t *testing.T) {
+			t.Setenv(name, value)
+			if EnvKeys(&Config{}) == nil {
+				t.Fatalf("%s=%q accepted", name, value)
+			}
+		})
+	}
+	x := newTestApp(t)
+	x.setup(t)
+	x.call(t, "PUT", "/api/mapbox", map[string]any{"token": "pk.from-the-page"}, 400) // The page cannot send a key any more.
+	x.call(t, "PUT", "/api/google-maps", map[string]any{"key": "AIza" + strings.Repeat("C", 35)}, 400)
+	var n int
+	x.app.db.QueryRow("SELECT count(*) FROM settings WHERE key IN ('mapbox_public_token','google_maps_key')").Scan(&n)
+	if n != 0 {
+		t.Fatal("a key reached the database")
 	}
 }

@@ -20,7 +20,6 @@ type cloudSettings struct {
 type backupSettings struct {
 	cloudSettings
 	BackupPassword                    string
-	Unreadable                        bool // Stored secrets cannot be opened, e.g. after moving to a host without secrets.key.
 	CloudEnabled                      bool
 	Schedule                          string
 	Hour, Minute, Weekday, Keep       int
@@ -63,44 +62,21 @@ var (
 
 func (a *App) loadSettings(ctx context.Context) (backupSettings, error) {
 	var s backupSettings
-	var ak, sk, pw string
-	err := a.db.QueryRowContext(ctx, `SELECT provider,endpoint,region,bucket,prefix,access_key,secret_key,backup_password,cloud_enabled,
+	err := a.db.QueryRowContext(ctx, `SELECT provider,endpoint,region,bucket,prefix,cloud_enabled,
  schedule,hour,minute,weekday,keep,last_run_at,last_attempt_at,last_status,last_error,last_backup FROM backup_settings WHERE id=1`).
-		Scan(&s.Provider, &s.Endpoint, &s.Region, &s.Bucket, &s.Prefix, &ak, &sk, &pw, &s.CloudEnabled,
+		Scan(&s.Provider, &s.Endpoint, &s.Region, &s.Bucket, &s.Prefix, &s.CloudEnabled,
 			&s.Schedule, &s.Hour, &s.Minute, &s.Weekday, &s.Keep, &s.LastRunAt, &s.LastAttemptAt, &s.LastStatus, &s.LastError, &s.LastBackup)
-	if err != nil {
-		return s, err
-	}
-	for _, f := range []struct {
-		sealed, field string
-		out           *string
-	}{{ak, "backup.access_key", &s.AccessKey}, {sk, "backup.secret_key", &s.SecretKey}, {pw, "backup.password", &s.BackupPassword}} {
-		plain, err := a.open(f.sealed, f.field)
-		if err != nil {
-			s.Unreadable = true
-			continue
-		}
-		*f.out = plain
-	}
-	return s, nil
+	// The credentials and the backup password are only ever in the env file (env_keys.go).
+	s.AccessKey, s.SecretKey, s.BackupPassword = a.cfg.BackupAccessKey, a.cfg.BackupSecretKey, a.cfg.BackupPassword
+	return s, err
 }
 
+// saveSettings stores everything but the credentials and the backup password, which stay in the env file; the old
+// columns are cleared.
 func (a *App) saveSettings(ctx context.Context, s backupSettings) error {
-	ak, err := a.seal(s.AccessKey, "backup.access_key")
-	if err != nil {
-		return err
-	}
-	sk, err := a.seal(s.SecretKey, "backup.secret_key")
-	if err != nil {
-		return err
-	}
-	pw, err := a.seal(s.BackupPassword, "backup.password")
-	if err != nil {
-		return err
-	}
-	_, err = a.db.ExecContext(ctx, `UPDATE backup_settings SET provider=?,endpoint=?,region=?,bucket=?,prefix=?,access_key=?,secret_key=?,backup_password=?,
+	_, err := a.db.ExecContext(ctx, `UPDATE backup_settings SET provider=?,endpoint=?,region=?,bucket=?,prefix=?,access_key='',secret_key='',backup_password='',
  cloud_enabled=?,schedule=?,hour=?,minute=?,weekday=?,keep=? WHERE id=1`,
-		s.Provider, s.Endpoint, s.Region, s.Bucket, s.Prefix, ak, sk, pw, s.CloudEnabled, s.Schedule, s.Hour, s.Minute, s.Weekday, s.Keep)
+		s.Provider, s.Endpoint, s.Region, s.Bucket, s.Prefix, s.CloudEnabled, s.Schedule, s.Hour, s.Minute, s.Weekday, s.Keep)
 	return err
 }
 
@@ -136,7 +112,7 @@ func (a *App) publicSettings(s backupSettings) map[string]any {
 	return map[string]any{
 		"provider": s.Provider, "endpoint": s.Endpoint, "region": s.Region, "bucket": s.Bucket, "prefix": s.Prefix,
 		"hasAccessKey": s.AccessKey != "", "hasSecretKey": s.SecretKey != "", "hasBackupPassword": s.BackupPassword != "",
-		"credentialsUnreadable": s.Unreadable, "cloudEnabled": s.CloudEnabled, "cloudConfigured": configured,
+		"cloudEnabled": s.CloudEnabled, "cloudConfigured": configured,
 		"schedule": s.Schedule, "hour": s.Hour, "minute": s.Minute, "weekday": s.Weekday, "keep": s.Keep,
 		"lastRunAt": s.LastRunAt, "lastAttemptAt": s.LastAttemptAt, "lastStatus": s.LastStatus, "lastBackup": s.LastBackup,
 		"lastError": s.LastError, "effectivePrefix": prefix, "scheduleTimezone": scheduleZone(), "running": a.backupRunning.Load(),
@@ -281,10 +257,14 @@ func (a *App) backupSettingsPut(w http.ResponseWriter, r *http.Request) error {
 	if !a.checkPassword(r.Context(), in.CurrentPassword) {
 		return failure(400, "当前账号密码错误")
 	}
+	if in.AccessKey != "" || in.SecretKey != "" || in.BackupPassword != "" {
+		return failure(400, "Access Key、Secret Key 和计划备份密码请写在 env 文件（"+EnvBackupAccessKey+"、"+EnvBackupSecretKey+"、"+EnvBackupPassword+"），然后重启服务")
+	}
 	saved, err := a.loadSettings(r.Context())
 	if err != nil {
 		return err
 	}
+	in.AccessKey, in.SecretKey = saved.AccessKey, saved.SecretKey
 	next := saved
 	if next.cloudSettings, err = resolveCloud(in.cloudInput, saved.cloudSettings, a.allowPrivateCloud); err != nil {
 		return err
@@ -300,15 +280,9 @@ func (a *App) backupSettingsPut(w http.ResponseWriter, r *http.Request) error {
 		return failure(400, "自动备份设置无效")
 	}
 	next.Schedule, next.Hour, next.Minute, next.Weekday, next.Keep = in.Schedule, in.Hour, in.Minute, in.Weekday, in.Keep
-	if in.BackupPassword != "" {
-		if len(in.BackupPassword) < 12 || len(in.BackupPassword) > 256 {
-			return failure(400, "计划备份密码需为 12 至 256 个字节")
-		}
-		next.BackupPassword = in.BackupPassword
-	}
 	if next.Schedule != "off" {
 		if len(next.BackupPassword) < 12 {
-			return failure(400, "请设置计划备份密码，自动备份需要它加密文件")
+			return failure(400, "请先在 env 文件里设置 "+EnvBackupPassword+"，自动备份需要它加密文件")
 		}
 		if next.Keep == 0 && !next.CloudEnabled {
 			return failure(400, "本地保留 0 份时，需要启用云存储上传")

@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
-	"strings"
 	"sync"
 	"time"
 
@@ -135,28 +134,22 @@ func (a *App) googleMapStyle(w http.ResponseWriter, r *http.Request) error {
 	return jsonResponse(w, in)
 }
 func (a *App) mapboxSettings(w http.ResponseWriter, r *http.Request) error {
-	token := a.setting(r.Context(), "mapbox_public_token", "")
+	// The token itself is only ever in the env file (env_keys.go); the database keeps the switch.
+	token := a.cfg.MapboxToken
 	enabled := a.setting(r.Context(), "mapbox_enabled", "true") == "true"
 	if r.Method == "GET" {
 		return jsonResponse(w, map[string]any{"enabled": enabled, "configured": token != ""})
 	}
 	var in struct {
-		Token   *string `json:"token"`
-		Enabled *bool   `json:"enabled"`
+		Enabled *bool `json:"enabled"`
 	}
 	if err := readJSON(w, r, &in); err != nil {
 		return err
 	}
-	if in.Token != nil {
-		token = strings.TrimSpace(*in.Token)
-		if token != "" && (!strings.HasPrefix(token, "pk.") || len(token) > 2048) {
-			return failure(400, "只接受 Mapbox 公开 Token")
-		}
-	}
 	if in.Enabled != nil {
 		enabled = *in.Enabled
 		if enabled && token == "" {
-			return failure(400, "请先填写 Mapbox Token")
+			return failure(400, "请先在 env 文件里设置 "+EnvMapboxToken+" 并重启服务")
 		}
 	}
 	tx, err := a.db.BeginTx(r.Context(), nil)
@@ -164,9 +157,6 @@ func (a *App) mapboxSettings(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	if _, err = tx.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES('mapbox_public_token',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", token); err != nil {
-		return err
-	}
 	flag := "false"
 	if enabled {
 		flag = "true"
@@ -208,12 +198,12 @@ func (a *App) groupRows(ctx context.Context, site int64, rng Range, q url.Values
 }
 
 func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Values) (map[string]any, error) {
-	result := map[string]any{"mapboxToken": a.setting(ctx, "mapbox_public_token", ""), "googleMapsKey": ""}
+	result := map[string]any{"mapboxToken": a.cfg.MapboxToken, "googleMapsKey": ""}
 	if a.setting(ctx, "mapbox_enabled", "true") != "true" {
 		result["mapboxToken"] = ""
 	}
-	if a.setting(ctx, "google_maps_enabled", "false") == "true" {
-		result["googleMapsKey"] = a.setting(ctx, "google_maps_key", "")
+	if a.googleMaps.Load() {
+		result["googleMapsKey"] = a.cfg.GoogleMapsKey
 		result["mapboxToken"] = ""
 	}
 	channel := `CASE WHEN referrer_source IN ('','Direct') THEN 'direct' WHEN referrer_source IN ('google.com','bing.com','baidu.com','duckduckgo.com','yahoo.com','yandex.com','yandex.ru','search.brave.com','ecosia.org','sogou.com','so.com') THEN 'organic_search' WHEN referrer_source IN ('twitter.com','x.com','t.co','facebook.com','instagram.com','reddit.com','weibo.com','youtube.com','bsky.app','threads.net','tiktok.com') THEN 'organic_social' WHEN referrer_source IN ('chatgpt.com','chat.openai.com','perplexity.ai','claude.ai','gemini.google.com','copilot.microsoft.com','grok.com','deepseek.com','chat.deepseek.com') THEN 'ai' ELSE 'referral' END`
@@ -445,29 +435,23 @@ var googleMapsKey = regexp.MustCompile(`^AIza[0-9A-Za-z_-]{35}$`)
 // googleMapsSettings is the Google Maps alternative to Mapbox for the visitor map. The key is sent to every
 // dashboard and share page that shows the map, so it must be a browser key limited to this site's referrer.
 func (a *App) googleMapsSettings(w http.ResponseWriter, r *http.Request) error {
-	key := a.setting(r.Context(), "google_maps_key", "")
-	enabled := a.setting(r.Context(), "google_maps_enabled", "false") == "true"
+	// The key itself is only ever in the env file (env_keys.go); the database keeps the switch.
+	key := a.cfg.GoogleMapsKey
+	enabled := a.googleMaps.Load()
 	if r.Method == "GET" {
 		return jsonResponse(w, googleMapsState(enabled, key))
 	}
 	var in struct {
-		Key     *string `json:"key"`
-		Enabled *bool   `json:"enabled"`
+		Enabled *bool `json:"enabled"`
 	}
 	if err := readJSON(w, r, &in); err != nil {
 		return err
-	}
-	if in.Key != nil {
-		key = strings.TrimSpace(*in.Key)
-		if key != "" && !googleMapsKey.MatchString(key) {
-			return failure(400, "Google 地图 API Key 格式不对，应以 AIza 开头、共 39 个字符")
-		}
 	}
 	if in.Enabled != nil {
 		enabled = *in.Enabled
 	}
 	if enabled && key == "" {
-		return failure(400, "请先填写 Google 地图 API Key")
+		return failure(400, "请先在 env 文件里设置 "+EnvGoogleMapsKey+" 并重启服务")
 	}
 	tx, err := a.db.BeginTx(r.Context(), nil)
 	if err != nil {
@@ -478,10 +462,8 @@ func (a *App) googleMapsSettings(w http.ResponseWriter, r *http.Request) error {
 	if enabled {
 		flag = "true"
 	}
-	for _, kv := range [][2]string{{"google_maps_key", key}, {"google_maps_enabled", flag}} {
-		if _, err = tx.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", kv[0], kv[1]); err != nil {
-			return err
-		}
+	if _, err = tx.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES('google_maps_enabled',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", flag); err != nil {
+		return err
 	}
 	// One map service at a time: turning Google Maps on turns Mapbox off.
 	if enabled {

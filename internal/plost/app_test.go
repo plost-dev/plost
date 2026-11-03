@@ -617,8 +617,8 @@ func TestUISettingsAuthorizationAndShareVisibility(t *testing.T) {
 	x := newTestApp(t)
 	x.setup(t)
 	x.addSite(t, "example.com")
-	x.call(t, "PUT", "/api/mapbox", map[string]string{"token": "sk.private-must-be-rejected"}, 400)
-	x.call(t, "PUT", "/api/mapbox", map[string]string{"token": "pk.test-public-only"}, 200)
+	x.call(t, "PUT", "/api/mapbox", map[string]bool{"enabled": true}, 400) // No token in the env file yet.
+	x.app.cfg.MapboxToken = "pk.test-public-only"                          // As if read from the env file.
 	x.call(t, "PUT", "/api/mapbox", map[string]bool{"enabled": false}, 200)
 	var mapSettings struct{ Enabled, Configured bool }
 	json.Unmarshal(x.call(t, "GET", "/api/mapbox", nil, 200), &mapSettings)

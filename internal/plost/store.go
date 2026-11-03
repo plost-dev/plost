@@ -39,6 +39,13 @@ type Config struct {
 	// normally refused (private, loopback, reserved). It exists for setups such as a local proxy that
 	// answers every name with a fake address, and is only ever set by whoever starts the program.
 	OutboundAllow []netip.Prefix
+	// Keys come only from the environment (the service's env file), never the database, so a database
+	// restore or a new data directory cannot lose them: the visitor map's MapboxToken (PLOST_MAPBOX_TOKEN)
+	// and GoogleMapsKey (PLOST_GOOGLE_MAPS_KEY), and the cloud backup's BackupAccessKey
+	// (PLOST_BACKUP_ACCESS_KEY), BackupSecretKey (PLOST_BACKUP_SECRET_KEY) and BackupPassword
+	// (PLOST_BACKUP_PASSWORD).
+	MapboxToken, GoogleMapsKey                       string
+	BackupAccessKey, BackupSecretKey, BackupPassword string
 }
 
 type App struct {
@@ -62,8 +69,6 @@ type App struct {
 	trendMu sync.Mutex // Guards trends, the 30-day site card trends, which the site list asks for on every refresh.
 	trends  map[int64]cachedTrend
 
-	keyMu         sync.Mutex // Guards the lazily loaded key for stored backup credentials.
-	key           []byte
 	backupRunning atomic.Bool
 	jobsMu        sync.Mutex // Orders job starts against Close.
 	closing       bool
@@ -159,7 +164,8 @@ func Open(cfg Config) (*App, error) {
 	a.jobCtx, a.cancelJobs = context.WithCancel(context.Background())
 	a.outboundAllow = cfg.OutboundAllow
 	a.siteProbe = newSiteChecker(cfg.OutboundAllow)
-	a.googleMaps.Store(a.setting(context.Background(), "google_maps_enabled", "false") == "true")
+	// Google Maps counts as on only with a key, so the page policy never allows its hosts for nothing.
+	a.googleMaps.Store(cfg.GoogleMapsKey != "" && a.setting(context.Background(), "google_maps_enabled", "false") == "true")
 	a.workers.Add(3)
 	go a.ingestLoop()
 	go a.scheduleLoop()

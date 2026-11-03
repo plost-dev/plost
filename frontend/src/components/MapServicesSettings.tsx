@@ -16,10 +16,10 @@ export function MapServicesSettings({ mapbox, google, onSaved }: { mapbox: Mapbo
   const [googleOn, setGoogleOn] = useState(google.enabled && google.configured)
   const fail = (error: unknown) => { showToast(error instanceof Error ? error.message : "保存失败", "error"); return false }
 
-  async function toggleMapbox(next: boolean, token: string) {
-    if (next && !mapbox.configured && !token) return fail(new Error("请先填写 Mapbox Token"))
+  async function toggleMapbox(next: boolean) {
+    if (next && !mapbox.configured) return fail(new Error("请先在 env 文件里设置 PLOST_MAPBOX_TOKEN 并重启服务"))
     try {
-      await saveMapboxSettingsFn({ data: { enabled: next, ...(token ? { token } : {}) } })
+      await saveMapboxSettingsFn({ data: { enabled: next } })
       setMapboxOn(next)
       if (next) setGoogleOn(false)
       showToast(next ? "已改用 Mapbox，重新打开统计页后生效。" : googleOn ? "已关闭 Mapbox。" : "已关闭 Mapbox，统计页使用内置地图。")
@@ -27,10 +27,10 @@ export function MapServicesSettings({ mapbox, google, onSaved }: { mapbox: Mapbo
       return true
     } catch (error) { return fail(error) }
   }
-  async function toggleGoogle(next: boolean, key: string) {
-    if (next && !google.configured && !key) return fail(new Error("请先填写 Google 地图 API Key"))
+  async function toggleGoogle(next: boolean) {
+    if (next && !google.configured) return fail(new Error("请先在 env 文件里设置 PLOST_GOOGLE_MAPS_KEY 并重启服务"))
     try {
-      await saveGoogleMapsSettingsFn({ data: { enabled: next, ...(key ? { key } : {}) } })
+      await saveGoogleMapsSettingsFn({ data: { enabled: next } })
       setGoogleOn(next)
       if (next) setMapboxOn(false)
       showToast(next ? "已改用 Google 地图，重新打开统计页后生效。" : mapboxOn ? "已关闭 Google 地图。" : "已关闭 Google 地图，统计页使用内置地图。")
@@ -39,8 +39,8 @@ export function MapServicesSettings({ mapbox, google, onSaved }: { mapbox: Mapbo
     } catch (error) { return fail(error) }
   }
   return <>
-    <MapboxSettingsPanel initial={mapbox} enabled={mapboxOn} onToggle={toggleMapbox} onSaved={onSaved} />
-    <GoogleMapsSettingsPanel initial={google} enabled={googleOn} onToggle={toggleGoogle} onSaved={onSaved} />
+    <MapboxSettingsPanel initial={mapbox} enabled={mapboxOn} onToggle={toggleMapbox} />
+    <GoogleMapsSettingsPanel initial={google} enabled={googleOn} onToggle={toggleGoogle} />
     <MapServiceTips />
   </>
 }

@@ -4,4 +4,4 @@ export const saveMapStyleFn=({data}:{data:{styleId:MapboxStyleId}})=>rpc<{styleI
 
 export type MapboxSettings={enabled:boolean;configured:boolean}
 export const mapboxSettingsFn=()=>rpc<MapboxSettings>("/api/mapbox")
-export const saveMapboxSettingsFn=({data}:{data:{enabled:boolean;token?:string}})=>rpc<MapboxSettings>("/api/mapbox","PUT",data)
+export const saveMapboxSettingsFn=({data}:{data:{enabled:boolean}})=>rpc<MapboxSettings>("/api/mapbox","PUT",data)

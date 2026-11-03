@@ -6,6 +6,8 @@ After=network.target
 Type=simple
 User=plost
 Group=plost
+# Map and cloud backup keys (PLOST_MAPBOX_TOKEN, PLOST_GOOGLE_MAPS_KEY, PLOST_BACKUP_*), never kept in the database.
+EnvironmentFile=-/etc/plost/plost.env
 StateDirectory=plost
 StateDirectoryMode=0700
 ExecStart=/usr/local/bin/plost -listen 127.0.0.1:3101 -data /var/lib/plost -origin https://stats.example.com

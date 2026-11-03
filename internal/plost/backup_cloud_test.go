@@ -133,15 +133,21 @@ func (f *fakeS3) count(prefix string) int {
 
 func (f *fakeS3) settings(extra map[string]any) map[string]any {
 	m := map[string]any{"provider": "s3", "endpoint": f.srv.URL, "region": "us-east-1", "bucket": fakeBucket, "prefix": "",
-		"accessKey": fakeAccess, "secretKey": fakeSecret, "backupPassword": testBackupPassword, "currentPassword": testPassword,
-		"cloudEnabled": true, "schedule": "off", "hour": 3, "minute": 0, "weekday": 0, "keep": 2}
+		"currentPassword": testPassword,
+		"cloudEnabled":    true, "schedule": "off", "hour": 3, "minute": 0, "weekday": 0, "keep": 2}
 	for k, v := range extra {
 		m[k] = v
 	}
 	return m
 }
 
+// envBackupKeys stands in for the env file's backup credentials and password.
+func (x *testApp) envBackupKeys() {
+	x.app.cfg.BackupAccessKey, x.app.cfg.BackupSecretKey, x.app.cfg.BackupPassword = fakeAccess, fakeSecret, testBackupPassword
+}
+
 func (x *testApp) useFakeS3(f *fakeS3) {
+	x.envBackupKeys()
 	x.app.allowPrivateCloud = true
 	x.app.newCloud = func(c cloudSettings) *s3Client { return &s3Client{cfg: c, http: f.srv.Client(), now: time.Now} }
 }
@@ -310,42 +316,6 @@ func TestBackupScheduleDueRules(t *testing.T) {
 	}
 }
 
-func TestSealedSecretsStayOutsideTheDatabase(t *testing.T) {
-	dir := t.TempDir()
-	a, err := Open(Config{DataDir: dir})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer a.Close()
-	keyPath := filepath.Join(dir, "secrets.key")
-	if v, err := a.open("v1:AAAA", "f"); err == nil || v != "" {
-		t.Fatal("garbage was opened")
-	}
-	if _, err := os.Stat(keyPath); err == nil {
-		t.Fatal("opening a value created a key that would hide a lost one")
-	}
-	sealed, err := a.seal("super-secret", "backup.access_key")
-	if err != nil || !strings.HasPrefix(sealed, "v1:") || strings.Contains(sealed, "super-secret") {
-		t.Fatalf("not sealed: %q %v", sealed, err)
-	}
-	if info, err := os.Stat(keyPath); err != nil || info.Mode().Perm() != 0600 {
-		t.Fatal("key file missing or not private")
-	}
-	if plain, err := a.open(sealed, "backup.access_key"); err != nil || plain != "super-secret" {
-		t.Fatal("roundtrip failed")
-	}
-	if _, err := a.open(sealed, "backup.secret_key"); err == nil {
-		t.Fatal("ciphertext was accepted under another field name")
-	}
-	tampered := sealed[:len(sealed)-2] + "AA"
-	if _, err := a.open(tampered, "backup.access_key"); err == nil {
-		t.Fatal("tampered ciphertext accepted")
-	}
-	if empty, err := a.seal("", "x"); err != nil || empty != "" {
-		t.Fatal("empty value should stay empty")
-	}
-}
-
 func TestBackupSettingsAPI(t *testing.T) {
 	f := newFakeS3(t)
 	x := newTestApp(t)
@@ -359,7 +329,7 @@ func TestBackupSettingsAPI(t *testing.T) {
 
 	var fresh map[string]any
 	json.Unmarshal(x.call(t, "GET", "/api/backup/settings", nil, 200), &fresh)
-	if fresh["schedule"] != "off" || fresh["hasBackupPassword"] != false || fresh["cloudConfigured"] != false {
+	if fresh["schedule"] != "off" || fresh["hasBackupPassword"] != true || fresh["cloudConfigured"] != false {
 		t.Fatalf("unexpected defaults %v", fresh)
 	}
 
@@ -368,12 +338,13 @@ func TestBackupSettingsAPI(t *testing.T) {
 	bad(map[string]any{"schedule": "monthly"})
 	bad(map[string]any{"hour": 24})
 	bad(map[string]any{"keep": 91})
-	bad(map[string]any{"backupPassword": "short"})
+	// Keys and the backup password only come from the env file.
+	bad(map[string]any{"backupPassword": "a-new-backup-password"})
+	bad(map[string]any{"accessKey": "NEWKEY"})
+	bad(map[string]any{"secretKey": "NEWSECRET"})
 	bad(map[string]any{"endpoint": "http://insecure.example.com"})
 	bad(map[string]any{"bucket": "Bad_Bucket"})
 	bad(map[string]any{"prefix": "a/../b"})
-	bad(map[string]any{"accessKey": "has space"})
-	bad(map[string]any{"schedule": "daily", "backupPassword": "", "cloudEnabled": false}) // no password stored yet
 	bad(map[string]any{"schedule": "daily", "keep": 0, "cloudEnabled": false})
 	bad(map[string]any{"cloudEnabled": true, "bucket": ""})
 	// Every attempt, even an invalid one, costs a password check and counts toward the limit.
@@ -392,34 +363,20 @@ func TestBackupSettingsAPI(t *testing.T) {
 	}
 
 	var ak, sk, pw string
-	if err := x.app.db.QueryRow("SELECT access_key,secret_key,backup_password FROM backup_settings").Scan(&ak, &sk, &pw); err != nil {
-		t.Fatal(err)
-	}
-	for _, v := range []string{ak, sk, pw} {
-		if !strings.HasPrefix(v, "v1:") {
-			t.Fatal("secret stored without sealing")
-		}
+	if err := x.app.db.QueryRow("SELECT access_key,secret_key,backup_password FROM backup_settings").Scan(&ak, &sk, &pw); err != nil || ak+sk+pw != "" {
+		t.Fatal("the database holds backup credentials", err)
 	}
 	for _, name := range []string{"plost.db", "plost.db-wal"} {
 		raw, _ := os.ReadFile(filepath.Join(x.app.cfg.DataDir, name))
 		for _, secret := range []string{fakeSecret, fakeAccess, testBackupPassword} {
 			if bytes.Contains(raw, []byte(secret)) {
-				t.Fatalf("%s contains a plaintext secret", name)
+				t.Fatalf("%s contains a secret", name)
 			}
 		}
 	}
-
-	// Blank credentials keep the saved ones for the same destination.
-	kept := f.settings(map[string]any{"accessKey": "", "secretKey": "", "backupPassword": "", "prefix": "/team/stats/"})
-	json.Unmarshal(x.call(t, "PUT", "/api/backup/settings", kept, 200), &saved)
-	if saved["hasAccessKey"] != true || saved["hasSecretKey"] != true || saved["hasBackupPassword"] != true || saved["prefix"] != "team/stats" {
-		t.Fatalf("blank values did not keep stored secrets: %v", saved)
-	}
-	// A different destination never inherits them.
-	moved := f.settings(map[string]any{"accessKey": "", "secretKey": "", "endpoint": "https://other.example.com"})
-	x.call(t, "PUT", "/api/backup/settings", moved, 400)
-	moved["accessKey"], moved["secretKey"] = "NEWKEY", "NEWSECRET"
-	x.call(t, "PUT", "/api/backup/settings", moved, 200)
+	// Without the env file's password a schedule cannot be saved.
+	x.app.cfg.BackupPassword = ""
+	bad(map[string]any{"schedule": "daily"})
 }
 
 func TestCloudTestReportsSafeErrors(t *testing.T) {
@@ -528,7 +485,7 @@ func TestCloudBackupEndToEnd(t *testing.T) {
 	}
 	var after map[string]any
 	json.Unmarshal(x.call(t, "GET", "/api/backup/settings", nil, 200), &after)
-	if after["hasBackupPassword"] != true || after["credentialsUnreadable"] != false {
+	if after["hasBackupPassword"] != true || after["hasAccessKey"] != true {
 		t.Fatalf("restore lost readable backup settings: %v", after)
 	}
 
@@ -571,7 +528,8 @@ func TestFailedUploadIsReportedWithoutLeaks(t *testing.T) {
 func TestScheduledTickRunsOnceAndPrunes(t *testing.T) {
 	x := newTestApp(t)
 	x.setup(t)
-	x.call(t, "PUT", "/api/backup/settings", map[string]any{"provider": "r2", "currentPassword": testPassword, "backupPassword": testBackupPassword,
+	x.envBackupKeys()
+	x.call(t, "PUT", "/api/backup/settings", map[string]any{"provider": "r2", "currentPassword": testPassword,
 		"cloudEnabled": false, "schedule": "hourly", "keep": 2}, 200)
 	now := time.Now()
 	x.app.scheduleTick(now)
@@ -605,7 +563,8 @@ func TestScheduledTickRunsOnceAndPrunes(t *testing.T) {
 func TestOneBackupAtATimeAndShutdown(t *testing.T) {
 	x := newTestApp(t)
 	x.setup(t)
-	x.call(t, "PUT", "/api/backup/settings", map[string]any{"provider": "r2", "currentPassword": testPassword, "backupPassword": testBackupPassword,
+	x.envBackupKeys()
+	x.call(t, "PUT", "/api/backup/settings", map[string]any{"provider": "r2", "currentPassword": testPassword,
 		"cloudEnabled": false, "schedule": "off", "keep": 1}, 200)
 	if !x.app.beginBackup() {
 		t.Fatal("slot should be free")
@@ -625,39 +584,4 @@ func TestOneBackupAtATimeAndShutdown(t *testing.T) {
 	x.app.jobsMu.Lock()
 	x.app.closing = false
 	x.app.jobsMu.Unlock()
-}
-
-func TestSecretsFromAnotherInstanceAreUnreadableNotFatal(t *testing.T) {
-	f := newFakeS3(t)
-	x := newTestApp(t)
-	x.useFakeS3(f)
-	x.setup(t)
-	x.call(t, "PUT", "/api/backup/settings", f.settings(nil), 200)
-
-	var ak, sk, pw string
-	x.app.db.QueryRow("SELECT access_key,secret_key,backup_password FROM backup_settings").Scan(&ak, &sk, &pw)
-
-	other := newTestApp(t)
-	other.setup(t)
-	if _, err := other.app.db.Exec("UPDATE backup_settings SET access_key=?,secret_key=?,backup_password=?,cloud_enabled=1,bucket=?,schedule='hourly'", ak, sk, pw, fakeBucket); err != nil {
-		t.Fatal(err)
-	}
-	var s map[string]any
-	json.Unmarshal(other.call(t, "GET", "/api/backup/settings", nil, 200), &s)
-	if s["credentialsUnreadable"] != true || s["hasAccessKey"] != false || s["hasBackupPassword"] != false {
-		t.Fatalf("foreign secrets were not flagged: %v", s)
-	}
-	if !other.app.beginBackup() {
-		t.Fatal("slot busy")
-	}
-	if _, err := other.app.runBackup(context.Background(), "manual"); err == nil || !strings.Contains(err.Error(), "无法解密") {
-		t.Fatalf("run should explain the credentials are unreadable, got %v", err)
-	}
-	// Entering them again repairs it.
-	other.useFakeS3(f)
-	other.call(t, "PUT", "/api/backup/settings", f.settings(nil), 200)
-	json.Unmarshal(other.call(t, "GET", "/api/backup/settings", nil, 200), &s)
-	if s["credentialsUnreadable"] != false || s["hasBackupPassword"] != true {
-		t.Fatalf("re-entering secrets did not repair settings: %v", s)
-	}
 }
