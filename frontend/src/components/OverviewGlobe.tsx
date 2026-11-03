@@ -93,7 +93,8 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
     const max = Math.max(1, ...markers.map((m) => m.visitors))
     let width = 0, height = 0, raf = 0, visible = true
     // Start facing the busiest country so the first frame already shows a visitor.
-    let rotation: [number, number] = markers[0] ? [-markers[0].lonLat[0], -Math.max(-30, Math.min(30, markers[0].lonLat[1]))] : [-20, -20]
+    // Tilted towards the viewer, so the globe is seen a little from above, with the north half in front.
+    let rotation: [number, number] = [markers[0] ? -markers[0].lonLat[0] : -20, -25]
     let drag: { x: number, y: number, rotation: [number, number] } | null = null
     // `edge` is the angle from the globe's centre in radians (0 on the flat map), to keep labels off the rim.
     let shown: Array<{ marker: Marker, x: number, y: number, r: number, edge: number }> = []
@@ -116,9 +117,9 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
       ctx.clearRect(0, 0, width, height)
       shown = []
       if (mode === "globe") {
-        // Larger than the card, as in the reference design: the globe runs past the top and bottom edges.
-        const radius = Math.min(width * 0.46, height * 0.68)
-        const cx = width / 2, cy = height * 0.52
+        // As in the reference design: the top of the globe shows whole and the lower part runs past the bottom edge.
+        const radius = Math.min(width * 0.46, height * 0.62)
+        const cx = width / 2, cy = height * 0.68
         const projection = d3.geoOrthographic().scale(radius).translate([cx, cy]).rotate(rotation).clipAngle(90)
         const center: [number, number] = [-rotation[0], -rotation[1]]
         ctx.fillStyle = sphere
@@ -171,8 +172,8 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
       // A hover labels that place. Otherwise one place keeps the label while it stays in view, so the card
       // follows its dot instead of hopping between dots as the globe turns; then the busiest in view takes over.
       // A label lets go once its dot nears the rim, and a new one is taken only from the front of the globe.
-      // The dot must also be on the canvas, below the corner buttons, since the globe runs past the top edge.
-      const inView = (dot: { x: number, y: number }) => dot.y > 96 && dot.y < height - 12 && dot.x > 12 && dot.x < width - 12
+      // The dot must also be on the canvas and below the corner buttons.
+      const inView = (dot: { x: number, y: number }) => dot.y > 64 && dot.y < height - 12 && dot.x > 12 && dot.x < width - 12
       let label = hoverRef.current ? shown.find((dot) => dot.marker.key === hoverRef.current) : shown.find((dot) => dot.marker.key === labelRef.current.key && dot.edge < 1.15 && inView(dot))
       if (!label && !hoverRef.current) label = shown.filter((dot) => dot.edge < 0.95 && inView(dot)).sort((a, b) => b.marker.visitors - a.marker.visitors)[0]
       if (label && label.marker.key !== labelRef.current.key) {
