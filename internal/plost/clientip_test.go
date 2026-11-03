@@ -1,13 +1,9 @@
 package plost
 
 import (
-	"encoding/json"
-	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strconv"
-	"strings"
 	"testing"
 )
 
@@ -17,7 +13,7 @@ func testTrust(t *testing.T, spec, header string, loopback bool) *App {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return &App{cfg: Config{TrustProxy: loopback, TrustedProxies: nets, TrustedProxyNames: names, ClientIPHeader: header}, ipSamples: newIPSamples()}
+	return &App{cfg: Config{TrustProxy: loopback, TrustedProxies: nets, TrustedProxyNames: names, ClientIPHeader: header}}
 }
 
 func TestClientAddr(t *testing.T) {
@@ -170,116 +166,62 @@ func TestParseTrustedProxies(t *testing.T) {
 	}
 }
 
-func TestAddressWarnings(t *testing.T) {
-	record := func(a *App, n int, peer string, headers map[string]string) {
-		for i := 0; i < n; i++ {
+func TestVisitorAddrWithoutDeclaredProxies(t *testing.T) {
+	a := testTrust(t, "", "", false)
+	cases := []struct {
+		name, peer string
+		headers    map[string]string
+		want, via  string
+		known      bool
+	}{
+		{"direct visitor", "203.0.113.7:4000", nil, "203.0.113.7", viaDirect, true},
+		{"Cloudflare straight to the program", "162.158.1.2:443", map[string]string{"CF-Connecting-IP": "198.51.100.4", "X-Forwarded-For": "198.51.100.4"}, "198.51.100.4", viaHeader, true},
+		{"local Caddy that overwrites the chain", "127.0.0.1:5000", map[string]string{"X-Forwarded-For": "198.51.100.4"}, "198.51.100.4", viaForwarded, true},
+		{"Nginx behind another CDN appends its node", "127.0.0.1:5000", map[string]string{"X-Forwarded-For": "198.51.100.4, 47.246.3.3"}, "198.51.100.4", viaForwarded, true},
+		{"Aliyun CDN header", "127.0.0.1:5000", map[string]string{"Ali-CDN-Real-IP": "198.51.100.4", "X-Forwarded-For": "198.51.100.4, 47.246.3.3"}, "198.51.100.4", viaHeader, true},
+		{"Docker proxy", "172.18.0.5:5000", map[string]string{"X-Forwarded-For": "198.51.100.4"}, "198.51.100.4", viaForwarded, true},
+		{"private hops before the visitor are skipped", "127.0.0.1:5000", map[string]string{"X-Forwarded-For": "10.0.0.3, 198.51.100.4"}, "198.51.100.4", viaForwarded, true},
+		{"LAN visitor", "127.0.0.1:5000", map[string]string{"X-Forwarded-For": "192.168.1.50"}, "192.168.1.50", viaForwarded, true},
+		{"X-Real-IP only", "127.0.0.1:5000", map[string]string{"X-Real-IP": "198.51.100.4"}, "198.51.100.4", viaRealIP, true},
+		{"local proxy that says nothing", "127.0.0.1:5000", nil, "127.0.0.1", viaDirect, false},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
 			r := httptest.NewRequest("POST", "/api/send", nil)
-			r.RemoteAddr = peer
-			for k, v := range headers {
+			r.RemoteAddr = c.peer
+			for k, v := range c.headers {
 				r.Header.Set(k, v)
 			}
-			a.recordAddress(r)
-		}
+			addr, via := a.visitorAddr(r)
+			if addr.String() != c.want || via != c.via || a.visitorKnown(r) != c.known {
+				t.Fatalf("got %s via %s known %v", addr, via, a.visitorKnown(r))
+			}
+		})
 	}
-	codes := func(a *App) map[string]string {
-		out := map[string]string{}
-		for _, w := range a.ipSamples.summary().Warnings {
-			out[w.Code] = w.Suggest
-		}
-		return out
+	// Rate limits keep the strict reading: a forged header does not change the address they count.
+	r := httptest.NewRequest("POST", "/api/login", nil)
+	r.RemoteAddr = "203.0.113.7:4000"
+	r.Header.Set("X-Forwarded-For", "1.1.1.1")
+	r.Header.Set("CF-Connecting-IP", "1.1.1.1")
+	if got := a.clientIP(r); got != "203.0.113.7" {
+		t.Fatalf("rate-limit address: %s", got)
 	}
-	// A proxy on this machine that nobody trusted: every visitor looks like 127.0.0.1.
-	a := testTrust(t, "", "", false)
-	record(a, 120, "127.0.0.1:5000", map[string]string{"X-Forwarded-For": "198.51.100.4"})
-	if got := codes(a); got["untrusted_proxy"] != "loopback" || len(got) != 1 {
-		t.Fatalf("untrusted local proxy: %v", got)
-	}
-	// The local proxy is trusted but the Cloudflare edge in front of it is not.
-	a = testTrust(t, "loopback", "", false)
-	record(a, 120, "127.0.0.1:5000", map[string]string{"X-Forwarded-For": "198.51.100.4, 162.158.1.2"})
-	if got := codes(a); got["cdn_addresses"] != "cloudflare" || len(got) != 1 {
-		t.Fatalf("untrusted Cloudflare edge: %v", got)
-	}
-	// Another CDN's edge, which Plost cannot recognise: every visitor shares its network.
-	a = testTrust(t, "loopback", "", false)
-	record(a, 120, "127.0.0.1:5000", map[string]string{"X-Forwarded-For": "198.51.100.4, 47.246.3.3"})
-	if got := codes(a); len(got) != 1 || got["shared_network"] != "" {
-		t.Fatalf("unknown CDN edge: %v", got)
-	}
-	if _, ok := codes(a)["shared_network"]; !ok {
-		t.Fatal("one edge network for every visitor was not reported")
-	}
-	// Set up right: no warnings.
-	a = testTrust(t, "loopback,cloudflare", "", false)
-	for i := 0; i < 120; i++ {
-		r := httptest.NewRequest("POST", "/api/send", nil)
-		r.RemoteAddr = "127.0.0.1:5000"
-		r.Header.Set("X-Forwarded-For", "198.51."+itoa(i)+".4, 162.158.1.2")
-		a.recordAddress(r)
-	}
-	if got := codes(a); len(got) != 0 {
-		t.Fatalf("good setup: %v", got)
-	}
-	// Too few events say nothing yet.
-	a = testTrust(t, "", "", false)
-	record(a, minSamples-1, "127.0.0.1:5000", map[string]string{"X-Forwarded-For": "198.51.100.4"})
-	if got := codes(a); len(got) != 0 {
-		t.Fatalf("few events: %v", got)
+	r.Header.Set("CF-IPCountry", "jp")
+	if got := a.visitorCountryHeader(r); got != "JP" {
+		t.Fatalf("country header: %q", got)
 	}
 }
 
-func itoa(i int) string { return strconv.Itoa(i) }
-
-func TestClientIPCheckEndpoint(t *testing.T) {
-	x := newTestApp(t)
-	x.call(t, "GET", "/api/client-ip", nil, 401)
-	x.setup(t)
-	x.addSite(t, "example.com")
-	// The test server is reached over loopback, which was not trusted: collection notes it.
-	for i := 0; i < minSamples; i++ {
-		r, _ := http.NewRequest("POST", x.server.URL+"/api/event", strings.NewReader(`{"d":"example.com","u":"https://example.com/","n":"pageview"}`))
-		r.Header.Set("X-Forwarded-For", "198.51.100.4")
-		r.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh) AppleWebKit/537.36 Chrome/150 Safari/537.36")
-		resp, err := http.DefaultClient.Do(r)
-		if err != nil {
-			t.Fatal(err)
-		}
-		resp.Body.Close()
-	}
-	var out struct {
-		Request struct {
-			Via   string `json:"via"`
-			Known bool   `json:"known"`
-		} `json:"request"`
-		Recent ipSummary `json:"recent"`
-	}
-	if err := json.Unmarshal(x.call(t, "GET", "/api/client-ip", nil, 200), &out); err != nil {
-		t.Fatal(err)
-	}
-	if out.Request.Via != viaDirect || out.Request.Known || out.Recent.Total != minSamples || len(out.Recent.Warnings) == 0 || out.Recent.Warnings[0].Suggest != "loopback" {
-		t.Fatalf("got %+v", out)
-	}
-}
-
-func TestClientIPCheckHopsAndSuggestion(t *testing.T) {
+func TestVisitorAddrStrictWhenProxiesDeclared(t *testing.T) {
 	a := testTrust(t, "loopback", "", false)
-	for i := 0; i < minSamples; i++ {
-		r := httptest.NewRequest("POST", "/api/send", nil)
-		r.RemoteAddr = "127.0.0.1:5000"
-		r.Header.Set("X-Forwarded-For", "198.51.100.4, 162.158.1.2")
-		a.recordAddress(r)
+	r := httptest.NewRequest("POST", "/api/send", nil)
+	r.RemoteAddr = "203.0.113.7:4000"
+	r.Header.Set("CF-Connecting-IP", "1.1.1.1")
+	r.Header.Set("CF-IPCountry", "JP")
+	if addr, via := a.visitorAddr(r); addr.String() != "203.0.113.7" || via != viaDirect {
+		t.Fatalf("got %s via %s", addr, via)
 	}
-	if got := a.suggestedProxyFlags(a.ipSamples.summary()); got != "-trusted-proxies loopback,cloudflare" {
-		t.Fatalf("suggestion: %q", got)
-	}
-	b := testTrust(t, "loopback,cloudflare", "", false)
-	for i := 0; i < minSamples; i++ {
-		r := httptest.NewRequest("POST", "/api/send", nil)
-		r.RemoteAddr = "127.0.0.1:5000"
-		r.Header.Set("X-Forwarded-For", "198.51."+itoa(i)+".4, 162.158.1.2")
-		b.recordAddress(r)
-	}
-	if got := b.suggestedProxyFlags(b.ipSamples.summary()); got != "" {
-		t.Fatalf("nothing to change, got %q", got)
+	if got := a.visitorCountryHeader(r); got != "" {
+		t.Fatalf("country header from an untrusted peer: %q", got)
 	}
 }

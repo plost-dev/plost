@@ -142,7 +142,6 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("GET /api/mapbox", a.api(a.mapboxSettings, true))
 	mux.HandleFunc("PUT /api/google-maps", a.api(a.googleMapsSettings, true))
 	mux.HandleFunc("GET /api/google-maps", a.api(a.googleMapsSettings, true))
-	mux.HandleFunc("GET /api/client-ip", a.api(a.clientIPCheck, true))
 	mux.HandleFunc("PUT /api/map-style", a.api(a.mapStyle, true))
 	mux.HandleFunc("PUT /api/sparkline", a.api(a.sparklineSettingsPut, true))
 	mux.HandleFunc("GET /api/sites", a.api(a.listSites, true))

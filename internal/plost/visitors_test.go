@@ -104,17 +104,18 @@ func TestCollectionStoresTheSessionHashNextToTheBrowserId(t *testing.T) {
 	}
 }
 
-// Without -trust-proxy, a proxy in front hides every visitor's address. Hashing the proxy's address would merge all
-// visitors into one, so those events keep no hash and count by browser id.
+// With no proxies declared, the forwarded address is the visitor's. A proxy on this machine that says nothing about
+// whom it serves still hides every visitor; hashing its address would merge them all, so those events keep no hash
+// and count by browser id.
 func TestCollectionDoesNotMergeVisitorsWhoseAddressIsUnknown(t *testing.T) {
 	x := newTestApp(t)
 	x.setup(t)
 	x.addSite(t, "example.com")
-	post(t, x, "browser-aaaaaaaa", "203.0.113.1") // forwarded by a proxy the program was not told to trust
+	post(t, x, "browser-aaaaaaaa", "203.0.113.1") // forwarded by a proxy nobody declared: found on its own
 	post(t, x, "browser-bbbbbbbb", "")            // the test client itself connects from the loopback address
 	_, hash := storedIDs(t, x.app)
-	if len(hash) != 2 || hash[0] != "" || hash[1] != "" {
-		t.Fatalf("events with an unknown address must carry no hash: %q", hash)
+	if len(hash) != 2 || hash[0] == "" || hash[1] != "" {
+		t.Fatalf("the forwarded visitor needs a hash and the silent local one none: %q", hash)
 	}
 	var site int64
 	_ = x.app.db.QueryRow("SELECT id FROM sites").Scan(&site)

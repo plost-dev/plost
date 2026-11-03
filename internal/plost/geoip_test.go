@@ -33,6 +33,8 @@ func writeGeoDB(t *testing.T, path string, records map[string]any, mod time.Time
 		}
 		var value mmdbtype.DataType
 		switch v := rec.(type) {
+		case mmdbtype.Map:
+			value = v
 		case string:
 			value = mmdbtype.Map{"country": mmdbtype.Map{"iso_code": mmdbtype.String(v)}}
 		default:
@@ -231,20 +233,21 @@ func TestRequestCountryTrustsOnlyAddressesItKnows(t *testing.T) {
 		r    *http.Request
 		want string
 	}{
-		"a direct visitor":                         {direct, request("203.0.113.7:4000", nil), "US"},
-		"a direct visitor on IPv6":                 {direct, request("[2001:db8::7]:4000", nil), "JP"},
-		"a proxy that was not trusted":             {direct, request("203.0.113.7:4000", map[string]string{"X-Forwarded-For": "2001:db8::1"}), ""},
-		"a local proxy that was not trusted":       {direct, request("127.0.0.1:4000", map[string]string{"X-Forwarded-For": "203.0.113.7"}), ""},
-		"a local proxy that was trusted":           {behind, request("127.0.0.1:4000", map[string]string{"X-Forwarded-For": "203.0.113.7"}), "US"},
-		"the last forwarded address":               {behind, request("127.0.0.1:4000", map[string]string{"X-Forwarded-For": "2001:db8::1, 203.0.113.7"}), "US"},
-		"Cloudflare's header":                      {behind, request("127.0.0.1:4000", map[string]string{"CF-IPCountry": "de", "X-Forwarded-For": "203.0.113.7"}), "DE"},
-		"Cloudflare's header from a remote peer":   {behind, request("198.51.100.9:4000", map[string]string{"CF-IPCountry": "DE"}), ""},
-		"a broken Cloudflare header":               {behind, request("127.0.0.1:4000", map[string]string{"CF-IPCountry": "T1", "X-Forwarded-For": "203.0.113.7"}), "US"},
-		"a trusted proxy that sent no address":     {behind, request("127.0.0.1:4000", nil), ""},
-		"a trusted proxy with a nonsense address":  {behind, request("127.0.0.1:4000", map[string]string{"X-Forwarded-For": "not-an-address"}), ""},
-		"an address missing from the database":     {direct, request("198.51.100.7:4000", nil), ""},
-		"a private address":                        {direct, request("10.0.0.7:4000", nil), ""},
-		"Cloudflare's header without a trust flag": {direct, request("127.0.0.1:4000", map[string]string{"CF-IPCountry": "DE"}), ""},
+		"a direct visitor":                           {direct, request("203.0.113.7:4000", nil), "US"},
+		"a direct visitor on IPv6":                   {direct, request("[2001:db8::7]:4000", nil), "JP"},
+		"no proxies declared: the forwarded visitor": {direct, request("203.0.113.9:4000", map[string]string{"X-Forwarded-For": "2001:db8::1"}), "JP"},
+		"no proxies declared: behind a local proxy":  {direct, request("127.0.0.1:4000", map[string]string{"X-Forwarded-For": "203.0.113.7"}), "US"},
+		"a local proxy that was trusted":             {behind, request("127.0.0.1:4000", map[string]string{"X-Forwarded-For": "203.0.113.7"}), "US"},
+		"the last forwarded address":                 {behind, request("127.0.0.1:4000", map[string]string{"X-Forwarded-For": "2001:db8::1, 203.0.113.7"}), "US"},
+		"Cloudflare's header":                        {behind, request("127.0.0.1:4000", map[string]string{"CF-IPCountry": "de", "X-Forwarded-For": "203.0.113.7"}), "DE"},
+		"Cloudflare's header from a remote peer":     {behind, request("198.51.100.9:4000", map[string]string{"CF-IPCountry": "DE"}), ""},
+		"a broken Cloudflare header":                 {behind, request("127.0.0.1:4000", map[string]string{"CF-IPCountry": "T1", "X-Forwarded-For": "203.0.113.7"}), "US"},
+		"a trusted proxy that sent no address":       {behind, request("127.0.0.1:4000", nil), ""},
+		"a trusted proxy with a nonsense address":    {behind, request("127.0.0.1:4000", map[string]string{"X-Forwarded-For": "not-an-address"}), ""},
+		"an address missing from the database":       {direct, request("198.51.100.7:4000", nil), ""},
+		"a private address":                          {direct, request("10.0.0.7:4000", nil), ""},
+		"no proxies declared: Cloudflare's header":   {direct, request("127.0.0.1:4000", map[string]string{"CF-IPCountry": "DE"}), "DE"},
+		"no proxies declared: a silent local proxy":  {direct, request("127.0.0.1:4000", nil), ""},
 	} {
 		if got := c.app.requestCountry(c.r, now); got != c.want {
 			t.Errorf("%s: got %q, want %q", name, got, c.want)

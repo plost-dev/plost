@@ -33,8 +33,9 @@ func (a *App) sessionVisitorID(site int64, ip, ua string, at time.Time) string {
 // reverse proxy that the program was not started to trust (-trusted-proxies), every request arrives from the proxy, so
 // hashing would merge all visitors into one; those events count by browser id instead of collapsing.
 func (a *App) sessionVisitor(r *http.Request, site int64, ua string, at time.Time) string {
-	if !a.addressKnown(r) {
+	if !a.visitorKnown(r) {
 		return ""
 	}
-	return a.sessionVisitorID(site, a.clientIP(r), ua, at)
+	addr, _ := a.visitorAddr(r)
+	return a.sessionVisitorID(site, addr.String(), ua, at)
 }

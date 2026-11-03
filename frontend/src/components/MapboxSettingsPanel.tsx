@@ -8,20 +8,23 @@ import { Tile } from "./ui"
 import { Toggle } from "./Toggle"
 import { PasswordInput } from "~/components/PasswordInput"
 
-export function MapboxSettingsPanel({initial, onSaved}: {initial: {enabled: boolean; configured: boolean}; onSaved?: () => void}) {
+/** The Mapbox card. Its switch belongs to MapServicesSettings, which keeps it and Google Maps from both being on. */
+export function MapboxSettingsPanel({initial, enabled, onToggle, onSaved}: {
+  initial: {enabled: boolean; configured: boolean}; enabled: boolean
+  onToggle: (next: boolean, token: string) => Promise<boolean>; onSaved?: () => void
+}) {
   const {t} = useT()
   const [settings, setSettings] = useState(initial)
-  const [enabled, setEnabled] = useState(initial.enabled)
   const [token, setToken] = useState("")
   return <Tile icon="globe" title="Mapbox" logo={{src: "/brands/mapbox.svg", width: 104}}
     titleAddon={<a className="settings-heading-link" href="https://console.mapbox.com/account/access-tokens/" target="_blank" rel="noreferrer">{t("打开 Mapbox 获取 Token")}</a>}
-    actions={<Toggle checked={enabled} onChange={setEnabled} hideLabel title={t("使用 Mapbox 访客地图")}>{t("使用 Mapbox 访客地图")}</Toggle>}>
+    actions={<Toggle checked={enabled} onChange={next => void onToggle(next, token.trim()).then(ok => { if (ok && token.trim()) { setSettings({...settings, configured: true}); setToken("") } })} hideLabel title={t("使用 Mapbox 访客地图")}>{t("使用 Mapbox 访客地图")}</Toggle>}>
     <SettingsForm onSubmit={async () => {
       const next = await saveMapboxSettingsFn({data: {enabled, ...(token.trim() ? {token: token.trim()} : {})}})
       setSettings(next); setToken(""); showToast("地图设置已保存，重新打开统计页后生效。")
       onSaved?.()
     }}>
-      <Field label="Mapbox Access Token" hint={settings.configured ? t("已保存密钥，留空保留；填写新值可替换。") : t("填写以 pk. 开头的公开 Token。") }>
+      <Field label="Mapbox Access Token" hint={settings.configured ? t("已保存密钥，留空保留；填写新值可替换。") : undefined}>
         <PasswordInput className="squircle input" aria-label="Mapbox Access Token" autoComplete="off" spellCheck={false} required={enabled && !settings.configured} value={token} placeholder={settings.configured ? "••••••••" : "pk.…"} onChange={event => setToken(event.target.value)}/>
       </Field>
       <FormActions><ActionButton type="submit" className="btn btn-primary" >{t("保存设置")}</ActionButton></FormActions>

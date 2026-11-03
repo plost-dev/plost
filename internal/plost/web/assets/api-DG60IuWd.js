@@ -1,1 +1,0 @@
-import{t as e}from"./ApiDocs-B5-kgv9Z.js";import{r as t}from"./UIIcon-C5CW-XV-.js";import{c as n}from"./useSelector-DzGlCpWO.js";var r=n();function i(){return(0,r.jsx)(t,{children:(0,r.jsx)(e,{})})}export{i as component};

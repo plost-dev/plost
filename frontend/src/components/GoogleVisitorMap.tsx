@@ -3,7 +3,7 @@ import { UIIcon } from "./UIIcon"
 import { CountryFlag } from "./icons"
 import { useT } from "~/lib/i18n"
 import { numberShort } from "~/lib/format"
-import { useLiveArrivals } from "~/lib/live-arrivals"
+import { liveDot, pointKey, useLiveArrivals, usePointArrivals, type LivePoint } from "~/lib/live-arrivals"
 import { loadWorldMap, type WorldJsonCountryData } from "~/lib/world-countries"
 import { mapboxVisitorData, type MapRows, type VisitorCountry } from "~/lib/mapbox-data"
 
@@ -53,8 +53,8 @@ function mix(low: string, high: string, weight: number) {
   return `rgb(${a.map((v, i) => Math.round(v + (b[i] - v) * weight)).join(",")})`
 }
 
-export function GoogleVisitorMap({ apiKey, rows, live, showFlags = true, onCountryClick, onFailure }: {
-  apiKey: string; rows: MapRows; live: Array<{ country: string }>; showFlags?: boolean
+export function GoogleVisitorMap({ apiKey, rows, live, points = [], showFlags = true, onCountryClick, onFailure }: {
+  apiKey: string; rows: MapRows; live: Array<{ country: string }>; points?: LivePoint[]; showFlags?: boolean
   onCountryClick?: (code: string) => void; onFailure: () => void
 }) {
   const { t, locale } = useT()
@@ -62,8 +62,9 @@ export function GoogleVisitorMap({ apiKey, rows, live, showFlags = true, onCount
   const mapRef = useRef<Maps | null>(null)
   const update = useRef<(() => void) | null>(null)
   const arrivals = useLiveArrivals(live)
-  const props = useRef({ rows, live, arrivals, onCountryClick, onFailure, t })
-  props.current = { rows, live, arrivals, onCountryClick, onFailure, t }
+  const pointArrivals = usePointArrivals(points)
+  const props = useRef({ rows, live, arrivals, points, pointArrivals, onCountryClick, onFailure, t })
+  props.current = { rows, live, arrivals, points, pointArrivals, onCountryClick, onFailure, t }
   const [loaded, setLoaded] = useState(false)
   const [hovered, setHovered] = useState<{ country: VisitorCountry; x: number; y: number } | null>(null)
 
@@ -133,6 +134,12 @@ export function GoogleVisitorMap({ apiKey, rows, live, showFlags = true, onCount
               this.layer.append(button)
               return { el: button, center: country.center }
             })
+            for (const point of props.current.points) {
+              const dot = liveDot(point, props.current.pointArrivals.has(pointKey(point)), props.current.t)
+              dot.classList.add("google-country-marker")
+              this.layer.append(dot)
+              this.items.push({ el: dot, center: [point.lon, point.lat] })
+            }
             this.draw()
           }
         }
@@ -165,7 +172,7 @@ export function GoogleVisitorMap({ apiKey, rows, live, showFlags = true, onCount
       mapRef.current = null; update.current = null
     }
   }, [apiKey, locale])
-  useEffect(() => { update.current?.() }, [rows, live, arrivals, t])
+  useEffect(() => { update.current?.() }, [rows, live, arrivals, points, pointArrivals, t])
 
   return <div className="relative">
     <div className="squircle map-stage mapbox-stage google-map-stage" data-show-flags={showFlags}>

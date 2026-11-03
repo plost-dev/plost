@@ -1227,7 +1227,7 @@
   "使用提示": "Notes",
   "Mapbox 填以 pk. 开头的公开 Token，限制为本站域名，并开启 styles:read、fonts:read；不要填写 sk. 私密密钥。": "For Mapbox, enter a public token starting with pk., restricted to this site's domain, with styles:read and fonts:read; never a secret sk. key.",
   "Google 地图填以 AIza 开头的浏览器 Key。它会在浏览器里使用，请在 Google Cloud 里限制为本站域名（HTTP 引荐来源），API 只开启 Maps JavaScript API。": "For Google Maps, enter a browser key starting with AIza. It is used in the browser, so in Google Cloud restrict it to this site's domain (HTTP referrers) and to the Maps JavaScript API only.",
-  "保存后重新打开统计页生效。两种都没开启，或者 Token、Key 加载失败时，显示内置地图。": "Changes apply when the statistics page is reopened. With neither service on, or when the token or key fails to load, the built-in map is shown.",
+  "开关点一下就保存，重新打开统计页后生效。两种都没开启，或者 Token、Key 加载失败时，显示内置地图。": "Each switch saves at once; reopen the statistics page to see it. With neither service on, or when the token or key fails to load, the built-in map is shown.",
   "转发链": "Forwarding chain",
   "X-Forwarded-For 从右往左，跳过受信任的代理": "X-Forwarded-For read from the right, skipping trusted proxies",
   "指定的地址头": "Named header",
@@ -1289,5 +1289,13 @@
   "两步验证开启后，登录时在密码之后还要输入验证器里的 6 位数字。恢复码在丢失验证器时使用，每条只能用一次，请另外妥善保存。": "With two-step verification on, signing in also asks for the 6-digit code from your authenticator. Recovery codes are for when you lose it; each works once, so keep them somewhere safe.",
   "Passkey 用本机指纹、面容或安全密钥登录，无需输入密码。浏览器只允许在域名或 localhost 上创建，用 IP 地址打开时不能添加。": "A passkey signs you in with your device's fingerprint, face or security key, without a password. Browsers create them only on a domain or localhost, not when opened by IP address.",
   "这页检查统计记下的是不是访客自己的地址，而不是本机、代理或 CDN 节点的地址。": "This page checks that the statistics record each visitor's own address, not that of this machine, a proxy or a CDN node.",
-  "-trusted-proxies 等是启动参数，只能在服务器上修改，改完重启 Plost 生效。": "-trusted-proxies and the others are startup options; change them on the server and restart Plost."
+  "-trusted-proxies 等是启动参数，只能在服务器上修改，改完重启 Plost 生效。": "-trusted-proxies and the others are startup options; change them on the server and restart Plost.",
+  "不论直连，还是经过反向代理、Cloudflare 或其他 CDN，访客的 IP 和国家都会自动识别，不用额外设置。": "Direct, behind a reverse proxy, Cloudflare or another CDN: visitors' addresses and countries are found on their own, with nothing to set up.",
+  "请先填写 Mapbox Token": "Enter a Mapbox token first",
+  "已改用 Mapbox，重新打开统计页后生效。": "Now using Mapbox. Reopen the statistics page to see it.",
+  "已关闭 Mapbox。": "Mapbox is off.",
+  "已关闭 Mapbox，统计页使用内置地图。": "Mapbox is off; the statistics page uses the built-in map.",
+  "已关闭 Google 地图。": "Google Maps is off.",
+  "已关闭 Google 地图，统计页使用内置地图。": "Google Maps is off; the statistics page uses the built-in map.",
+  "{0} 位访客在线": "{0} visitors online"
 }

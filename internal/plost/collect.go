@@ -212,7 +212,6 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 		}
 		return
 	}
-	a.recordAddress(r)
 	loc, _ := time.LoadLocation(site.Timezone)
 	if loc == nil {
 		loc = time.UTC
@@ -226,7 +225,8 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 	}
 	identity := visitor
 	if identity == "" {
-		identity = a.clientIP(r) + "|" + ua + "|" + now.In(loc).Format("2006-01-02")
+		addr, _ := a.visitorAddr(r)
+		identity = addr.String() + "|" + ua + "|" + now.In(loc).Format("2006-01-02")
 	}
 	h := hmac.New(sha256.New, a.secret)
 	h.Write([]byte(strconvID(site.ID) + "|" + identity))
@@ -329,6 +329,13 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 		if claimed != "" {
 			a.recent.release(claimed)
 		}
+	}
+	if name == "pageview" {
+		visitor := sessionVisitor
+		if visitor == "" {
+			visitor = userID
+		}
+		a.recordPlace(r, site.ID, visitor, country, now)
 	}
 	req := &ingest{event: ev, done: make(chan error, 1), epoch: epoch}
 	select {

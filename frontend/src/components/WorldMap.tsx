@@ -1,6 +1,6 @@
 import { UIIcon } from "./UIIcon"
 import { GoogleVisitorMap } from "./GoogleVisitorMap"
-import { useLiveArrivals } from "~/lib/live-arrivals"
+import { pointKey, pointRadius, unplacedLive, useLiveArrivals, usePointArrivals, type LivePoint } from "~/lib/live-arrivals"
 import { Surface } from "~/components/Surface"
 import { useT } from "~/lib/i18n"
 import { useEffect, useMemo, useRef, useState } from "react"
@@ -59,11 +59,13 @@ function countryCentroids(features: WorldJsonCountryData[]) {
 function WorldMap({
   rows,
   live = [],
+  points = [],
   showFlags = true,
   onCountryClick,
 }: {
   rows: Array<{ name: string, value: number, label?: string }>
   live?: Array<{ country: string }>
+  points?: LivePoint[]
   showFlags?: boolean
   onCountryClick?: (code: string) => void
 }) {
@@ -109,6 +111,7 @@ function WorldMap({
     return counts
   }, [live])
   const arrivals = useLiveArrivals(live)
+  const pointArrivals = usePointArrivals(points)
 
   useEffect(() => {
     let active = true
@@ -245,6 +248,15 @@ function WorldMap({
         dots.append("circle").attr("class", "live-dot").attr("cx", x).attr("cy", y).attr("r", 3.6)
       }
     }
+    // Visitors placed by city: one dot per place, a little larger for more visitors there.
+    for (const point of points) {
+      const xy = projection([point.lon, point.lat])
+      if (!xy) continue
+      const r = pointRadius(point.count)
+      dots.append("circle").attr("class", "live-dot-pulse").attr("cx", xy[0]).attr("cy", xy[1]).attr("r", r * 2.4)
+      dots.append("circle").attr("class", "live-dot").attr("cx", xy[0]).attr("cy", xy[1]).attr("r", r)
+      if (pointArrivals.has(pointKey(point))) for (const delay of [0, 0.6, 1.2]) dots.append("circle").attr("class", "live-dot-arrival").attr("cx", xy[0]).attr("cy", xy[1]).attr("r", 16).style("animation-delay", `${delay}s`)
+    }
     // A country that just gained a visitor sends out a few wide rings.
     for (const code of arrivals) {
       const a3 = COUNTRIES_BY_TWO_LETTER_CODE[iso2(code)]?.alpha_3
@@ -268,7 +280,7 @@ function WorldMap({
       svg.on(".zoom", null)
       svg.selectAll("*").remove()
     }
-  }, [features, maxValue, dataByAlpha3Code, liveByAlpha3, arrivals, onCountryClick])
+  }, [features, maxValue, dataByAlpha3Code, liveByAlpha3, arrivals, points, pointArrivals, onCountryClick])
 
   function zoomBy(k: number) {
     const el = svgRef.current
@@ -335,8 +347,8 @@ function VisitorMap({token, googleKey = "", ...props}: {token: string; googleKey
   const {t} = useT()
   const styleId = useMapStyle()
   const [failed, setFailed] = useState(false)
-  if (googleKey && !failed) return <GoogleVisitorMap apiKey={googleKey} rows={props.rows} live={props.live || []} showFlags={props.showFlags} onCountryClick={props.onCountryClick} onFailure={() => setFailed(true)}/>
-  if (token && !failed) return <MapboxVisitorMap token={token} styleId={styleId} rows={props.rows} live={props.live || []} showFlags={props.showFlags} onCountryClick={props.onCountryClick} onFailure={() => setFailed(true)}/>
+  if (googleKey && !failed) return <GoogleVisitorMap apiKey={googleKey} rows={props.rows} live={props.live || []} points={props.points || []} showFlags={props.showFlags} onCountryClick={props.onCountryClick} onFailure={() => setFailed(true)}/>
+  if (token && !failed) return <MapboxVisitorMap token={token} styleId={styleId} rows={props.rows} live={props.live || []} points={props.points || []} showFlags={props.showFlags} onCountryClick={props.onCountryClick} onFailure={() => setFailed(true)}/>
   return <>
     {failed ? <p role="status" className="map-fallback-note">{t(googleKey ? "Google 地图暂时无法加载，已显示备用地图。请检查 API Key 和它的域名限制。" : "Mapbox 暂时无法加载，已显示备用地图。")}
       <button type="button" className="squircle control-compact underline" onClick={() => setFailed(false)}>{t("重试")}</button>
@@ -350,6 +362,7 @@ export function MapCard({
   googleMapsKey = "",
   rows,
   live = [],
+  livePoints = [],
   liveCount = 0,
   onViewVisitors,
   onCountryClick,
@@ -358,6 +371,7 @@ export function MapCard({
   googleMapsKey?: string
   rows: Array<{ name: string, value: number, label?: string }>
   live?: Array<{ country: string }>
+  livePoints?: LivePoint[]
   liveCount?: number
   onViewVisitors?: () => void
   onCountryClick?: (code: string) => void
@@ -393,7 +407,8 @@ export function MapCard({
                 <span className="squircle map-flags-track" aria-hidden="true"><span className="squircle map-flags-thumb"/></span>
               </label>
           </div>
-          <VisitorMap key={googleMapsKey || mapboxToken} token={mapboxToken} googleKey={googleMapsKey} rows={rows} live={live} showFlags={showFlags} onCountryClick={onCountryClick} />
+          {/* Visitors placed by city get their own dots; the rest stay at their country. */}
+          <VisitorMap key={googleMapsKey || mapboxToken} token={mapboxToken} googleKey={googleMapsKey} rows={rows} live={unplacedLive(live, livePoints)} points={livePoints} showFlags={showFlags} onCountryClick={onCountryClick} />
 
         </Surface>
       </div>

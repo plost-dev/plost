@@ -55,9 +55,11 @@ type Report struct {
 	Screens   []Row    `json:"screens"`
 	Events    []Row    `json:"events"`
 	Readonly  bool     `json:"readonly"`
-	// Live counts the visitors online now (the last five minutes, like Overview.Online) by country, for the map.
-	Live    []Row          `json:"live"`
-	Details map[string]any `json:"details,omitempty"`
+	// Live counts the visitors online now (the last five minutes, like Overview.Online) by country, for the map, and
+	// LivePoints places them where a City GeoIP database could (livepoints.go).
+	Live       []Row          `json:"live"`
+	LivePoints []LivePoint    `json:"livePoints"`
+	Details    map[string]any `json:"details,omitempty"`
 }
 
 func parseRange(q url.Values, zone string) (Range, error) {
@@ -315,6 +317,7 @@ func (a *App) report(r *http.Request, site Site, readonly bool) (Report, error) 
 	if err != nil {
 		return result, err
 	}
+	result.LivePoints = a.live.points(site.ID, time.Now(), strings.ToUpper(q.Get("country")))
 	if q.Get("ui") == "1" {
 		result.Details, err = a.reportDetails(r.Context(), site, rng, q)
 		if err != nil {

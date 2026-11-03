@@ -3,6 +3,7 @@ package plost
 import (
 	"errors"
 	"log"
+	"math"
 	"net/http"
 	"net/netip"
 	"os"
@@ -100,6 +101,27 @@ type geoRecord struct {
 	Country struct {
 		ISOCode string `maxminddb:"iso_code"`
 	} `maxminddb:"country"`
+	// Only City databases have a location: the middle of the city or area the address belongs to.
+	Location struct {
+		Latitude  *float64 `maxminddb:"latitude"`
+		Longitude *float64 `maxminddb:"longitude"`
+	} `maxminddb:"location"`
+}
+
+// location returns the approximate coordinates of a public address, rounded to two decimals (about a kilometre),
+// or ok false when the database has none (a Country database, or an address it does not place).
+func (g *geoIP) location(ip netip.Addr, now time.Time) (lat, lon float64, ok bool) {
+	g.refresh(now)
+	ip = ip.Unmap()
+	if !ip.IsValid() || !ip.IsGlobalUnicast() || ip.IsPrivate() {
+		return 0, 0, false
+	}
+	var rec geoRecord
+	if err := g.db.Load().reader.Lookup(ip).Decode(&rec); err != nil || rec.Location.Latitude == nil || rec.Location.Longitude == nil {
+		return 0, 0, false
+	}
+	round := func(v float64) float64 { return math.Round(v*100) / 100 }
+	return round(*rec.Location.Latitude), round(*rec.Location.Longitude), true
 }
 
 // country returns the two-letter country code of a public address, or "" when the database does not know it.
@@ -120,18 +142,18 @@ func (g *geoIP) country(ip netip.Addr, now time.Time) string {
 	return code
 }
 
-// requestCountry names the visitor's country. A CDN's country header counts when a trusted proxy handed it over;
-// otherwise the address is looked up in the GeoIP database, if one was given with -geoip-db and the address is
-// really the visitor's.
+// requestCountry names the visitor's country: a CDN's country header when one counts (visitorCountryHeader),
+// otherwise the visitor's address looked up in the GeoIP database, if one was given with -geoip-db and the address
+// is really the visitor's.
 func (a *App) requestCountry(r *http.Request, now time.Time) string {
-	if code := a.headerCountry(r); code != "" {
+	if code := a.visitorCountryHeader(r); code != "" {
 		return code
 	}
-	if a.geo == nil || !a.addressKnown(r) {
+	if a.geo == nil || !a.visitorKnown(r) {
 		return ""
 	}
-	ip, err := netip.ParseAddr(a.clientIP(r))
-	if err != nil {
+	ip, _ := a.visitorAddr(r)
+	if !ip.IsValid() {
 		return ""
 	}
 	return a.geo.country(ip, now)

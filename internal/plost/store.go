@@ -42,22 +42,22 @@ type Config struct {
 }
 
 type App struct {
-	cfg       Config
-	db        *sql.DB
-	mu        sync.RWMutex // Quiesce all database access for an in-process restore.
-	secret    []byte
-	epoch     uint64
-	queue     chan *ingest
-	stop      chan struct{}
-	workers   sync.WaitGroup
-	limits    *limiter
-	closed    sync.Once
-	lockFile  *os.File
-	geo       *geoIP
-	recent    *recentEvents
-	ipSamples *ipSamples // How recent events' addresses were found, for the settings page.
+	cfg      Config
+	db       *sql.DB
+	mu       sync.RWMutex // Quiesce all database access for an in-process restore.
+	secret   []byte
+	epoch    uint64
+	queue    chan *ingest
+	stop     chan struct{}
+	workers  sync.WaitGroup
+	limits   *limiter
+	closed   sync.Once
+	lockFile *os.File
+	geo      *geoIP
+	recent   *recentEvents
 
 	googleMaps atomic.Bool // Google Maps is the visitor map; the page policy then allows its hosts.
+	live       *livePlaces // Where the visitors online now are, in memory only.
 
 	trendMu sync.Mutex // Guards trends, the 30-day site card trends, which the site list asks for on every refresh.
 	trends  map[int64]cachedTrend
@@ -155,7 +155,7 @@ func Open(cfg Config) (*App, error) {
 		db.Close()
 		return nil, errors.New("invalid visitor secret")
 	}
-	a := &App{cfg: cfg, db: db, secret: key, queue: make(chan *ingest, 1024), stop: make(chan struct{}), limits: newLimiter(), lockFile: lock, geo: geo, recent: newRecentEvents(), ipSamples: newIPSamples()}
+	a := &App{cfg: cfg, db: db, secret: key, queue: make(chan *ingest, 1024), stop: make(chan struct{}), limits: newLimiter(), lockFile: lock, geo: geo, recent: newRecentEvents(), live: newLivePlaces()}
 	a.jobCtx, a.cancelJobs = context.WithCancel(context.Background())
 	a.outboundAllow = cfg.OutboundAllow
 	a.siteProbe = newSiteChecker(cfg.OutboundAllow)

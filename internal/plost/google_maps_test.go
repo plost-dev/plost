@@ -42,7 +42,7 @@ func TestGoogleMapsSettings(t *testing.T) {
 	if !strings.Contains(csp(), "https://maps.googleapis.com") {
 		t.Fatal("page policy does not allow Google Maps")
 	}
-	x.call(t, "PUT", "/api/mapbox", map[string]any{"enabled": true}, 200)
+	x.call(t, "PUT", "/api/mapbox", map[string]any{"enabled": true}, 200) // The token saved above.
 	var google map[string]bool
 	json.Unmarshal(x.call(t, "GET", "/api/google-maps", nil, 200), &google)
 	if google["enabled"] || strings.Contains(csp(), "googleapis") {

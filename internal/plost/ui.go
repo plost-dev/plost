@@ -131,6 +131,9 @@ func (a *App) mapboxSettings(w http.ResponseWriter, r *http.Request) error {
 	}
 	if in.Enabled != nil {
 		enabled = *in.Enabled
+		if enabled && token == "" {
+			return failure(400, "请先填写 Mapbox Token")
+		}
 	}
 	tx, err := a.db.BeginTx(r.Context(), nil)
 	if err != nil {

@@ -1,5 +1,5 @@
 import { UIIcon } from "./UIIcon"
-import { useLiveArrivals } from "~/lib/live-arrivals"
+import { liveDot, pointKey, useLiveArrivals, usePointArrivals, type LivePoint } from "~/lib/live-arrivals"
 import { useEffect, useRef, useState } from "react"
 import type { GeoJSONSource, Map as MapboxMap, Marker } from "mapbox-gl"
 import { useT } from "~/lib/i18n"
@@ -10,8 +10,8 @@ import { numberShort } from "~/lib/format"
 import { DEFAULT_MAPBOX_STYLE, getMapboxStyle, mapboxStyleConfig, type MapboxStyleId } from "~/lib/mapbox-styles"
 import { createMapboxStyleLifecycle } from "~/lib/mapbox-style-lifecycle"
 
-export function MapboxVisitorMap({token, rows, live, showFlags = true, styleId = DEFAULT_MAPBOX_STYLE, onCountryClick, onFailure}: {
-  token: string; rows: MapRows; live: Array<{country: string}>;
+export function MapboxVisitorMap({token, rows, live, points = [], showFlags = true, styleId = DEFAULT_MAPBOX_STYLE, onCountryClick, onFailure}: {
+  token: string; rows: MapRows; live: Array<{country: string}>; points?: LivePoint[];
   showFlags?: boolean; styleId?: MapboxStyleId;
   onCountryClick?: (code: string) => void; onFailure: () => void
 }) {
@@ -21,8 +21,9 @@ export function MapboxVisitorMap({token, rows, live, showFlags = true, styleId =
   const styleLifecycle = useRef<ReturnType<typeof createMapboxStyleLifecycle> | null>(null)
   const update = useRef<(() => void) | null>(null)
   const arrivals = useLiveArrivals(live)
-  const props = useRef({rows, live, arrivals, styleId, onCountryClick, onFailure, t})
-  props.current = {rows, live, arrivals, styleId, onCountryClick, onFailure, t}
+  const pointArrivals = usePointArrivals(points)
+  const props = useRef({rows, live, arrivals, points, pointArrivals, styleId, onCountryClick, onFailure, t})
+  props.current = {rows, live, arrivals, points, pointArrivals, styleId, onCountryClick, onFailure, t}
   const [loaded, setLoaded] = useState(false)
   const [hovered, setHovered] = useState<{country: VisitorCountry; x: number; y: number} | null>(null)
 
@@ -96,6 +97,10 @@ export function MapboxVisitorMap({token, rows, live, showFlags = true, styleId =
             button.setAttribute("role", "button")
             markers.push(marker)
           }
+          for (const point of props.current.points) {
+            const dot = liveDot(point, props.current.pointArrivals.has(pointKey(point)), props.current.t)
+            markers.push(new gl.Marker({element: dot}).setLngLat([point.lon, point.lat]).addTo(map))
+          }
           setHovered(null)
         }
         // Interactions belong to the map, rather than to an individual basemap load.
@@ -158,7 +163,7 @@ export function MapboxVisitorMap({token, rows, live, showFlags = true, styleId =
       markers.forEach(marker => marker.remove()); map?.remove(); mapRef.current = null; update.current = null
     }
   }, [token])
-  useEffect(() => {update.current?.()}, [rows, live, arrivals, t])
+  useEffect(() => {update.current?.()}, [rows, live, arrivals, points, pointArrivals, t])
   useEffect(() => {styleLifecycle.current?.setStyle(styleId)}, [styleId])
 
   return <div className="relative">

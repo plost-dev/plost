@@ -11,7 +11,13 @@ import (
 	"strings"
 )
 
-// The visitor's address is only taken from forwarding headers that a trusted proxy handed over. A request whose
+// Two readings of the client's address. clientIP is strict and guards rate limits and the like: it takes forwarding
+// headers only from proxies declared with -trusted-proxies (or -trust-proxy). visitorAddr is for the statistics: with
+// proxies declared it is the same strict reading, and without any it finds the visitor on its own, as Umami does, so
+// that direct, reverse-proxied and CDN setups all count right with no configuration. A visitor can forge the headers
+// that reading believes, but that only changes how their own visits are counted, never what anyone may do.
+//
+// In the strict reading the visitor's address is only taken from forwarding headers that a trusted proxy handed over. A request whose
 // peer is not trusted is the visitor itself, whatever headers it carries, so nobody can claim another address by
 // connecting to the program directly. Behind trusted proxies the X-Forwarded-For chain (or RFC 7239 Forwarded, or
 // X-Real-IP) is read from the right: every proxy appends the address it saw, so the first entry that is not a
@@ -30,8 +36,6 @@ var proxyPresets = map[string][]string{
 		"2400:cb00::/32", "2606:4700::/32", "2803:f800::/32", "2405:b500::/32", "2405:8100::/32", "2a06:98c0::/29", "2c0f:f248::/32",
 	},
 }
-
-var cloudflareNets = mustPrefixes(proxyPresets["cloudflare"])
 
 func mustPrefixes(list []string) []netip.Prefix {
 	out := make([]netip.Prefix, len(list))
@@ -294,6 +298,67 @@ var countryHeaders = []string{"CF-IPCountry", "CloudFront-Viewer-Country"}
 func (a *App) headerCountry(r *http.Request) string {
 	if !(a.cfg.TrustProxy && peerAddr(r).IsLoopback()) && !a.fromTrustedEdge(r) {
 		return ""
+	}
+	for _, header := range countryHeaders {
+		if code := strings.ToUpper(strings.TrimSpace(r.Header.Get(header))); countryPattern.MatchString(code) {
+			return code
+		}
+	}
+	return ""
+}
+
+// singleAddressHeaders are set by CDNs and proxies to the visitor's address alone, in the order visitorAddr tries
+// them when no proxies are declared.
+var singleAddressHeaders = []string{"CF-Connecting-IP", "True-Client-IP", "Ali-CDN-Real-IP", "EO-Connecting-IP", "Fastly-Client-IP"}
+
+func (a *App) strictProxies() bool { return a.cfg.TrustProxy || len(a.cfg.TrustedProxies) > 0 }
+
+// publicAddr reports whether an address can be a visitor's own on the internet.
+func publicAddr(addr netip.Addr) bool {
+	return addr.IsValid() && addr.IsGlobalUnicast() && !addr.IsPrivate()
+}
+
+// visitorAddr finds the visitor's address for the statistics, and says how.
+func (a *App) visitorAddr(r *http.Request) (netip.Addr, string) {
+	if a.strictProxies() {
+		return a.clientAddr(r)
+	}
+	for _, header := range singleAddressHeaders {
+		if addr, ok := parseHostAddr(r.Header.Get(header)); ok {
+			return addr, viaHeader
+		}
+	}
+	// Each proxy appends what it saw, so the visitor is the first public address in the chain; later ones are
+	// CDN nodes and proxies.
+	if chain := forwardedChain(r); len(chain) > 0 {
+		for _, addr := range chain {
+			if publicAddr(addr) {
+				return addr, viaForwarded
+			}
+		}
+		return chain[0], viaForwarded
+	}
+	if addr, ok := parseHostAddr(r.Header.Get("X-Real-IP")); ok {
+		return addr, viaRealIP
+	}
+	return peerAddr(r), viaDirect
+}
+
+// visitorKnown reports whether visitorAddr is the visitor's own address. It is not when a proxy on this machine
+// passed the request on without saying whom it came from: hashing the proxy would merge every visitor into one.
+func (a *App) visitorKnown(r *http.Request) bool {
+	if a.strictProxies() {
+		return a.addressKnown(r)
+	}
+	addr, via := a.visitorAddr(r)
+	return addr.IsValid() && !(via == viaDirect && addr.IsLoopback())
+}
+
+// visitorCountryHeader is a CDN's country header for the statistics: from trusted proxies only in the strict reading,
+// otherwise whenever one is present.
+func (a *App) visitorCountryHeader(r *http.Request) string {
+	if a.strictProxies() {
+		return a.headerCountry(r)
 	}
 	for _, header := range countryHeaders {
 		if code := strings.ToUpper(strings.TrimSpace(r.Header.Get(header))); countryPattern.MatchString(code) {

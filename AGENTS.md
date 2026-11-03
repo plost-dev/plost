@@ -61,3 +61,5 @@
 - 2026-11-02 用户要求访问时长的单位之间加空格：显示为 `2m 00s`、`1h 05m`，不写成 `2m00s`（`lib/format.ts` 的 `formatDuration`）。
 
 - 2026-11-02 用户担心「页面没打开、广告没看就关掉」也被计数，以及爬虫没过滤：追踪脚本改成和 Umami 一样，等 `document.readyState` 变成 complete 才计第一次浏览（加载完之前的页内跳转并入这一次），`navigator.webdriver` 为真的自动化浏览器什么都不发（只留一个空的 `window.plost.track`）；服务端 `isBot` 在原清单上补了常见爬虫、AI 抓取、预览、监控和脚本客户端标识，空标识也丢弃，`CUBOT` 手机型号不算爬虫。新增规则时先在 `bot_test.go` 里加真实浏览器样本，避免误伤（例如 Pinterest、Instagram、Facebook 的内置浏览器）。
+
+- 2026-11-03 用户要求访客 IP 像 Umami 一样自动识别，不论直连、反代、Docker、Cloudflare 或其他 CDN 都不用配置，设置里也不要再显示「访客 IP 识别」页（已删除）。统计用 `visitorAddr`/`visitorKnown`/`visitorCountryHeader`（`clientip.go`）：没声明代理时依次读 CDN 单一地址头、`X-Forwarded-For` 第一个公网地址、`Forwarded`、`X-Real-IP`，再用连接方；声明了 `-trusted-proxies` 或 `-trust-proxy` 时走严格规则。频率限制等安全判断只用严格的 `clientIP`，不要改成自动读取，否则伪造头就能绕过限制。访客地图的 Mapbox 和 Google 地图开关点一下就保存，可以都关（用内置地图），最多开一个，打开一个会关掉另一个。
