@@ -1303,6 +1303,7 @@ html { scrollbar-gutter: stable; }
 
 html[data-theme="dark"] .site-footer { background:#000; }
 .trend-axis-label { font-family:var(--ui-font-body); font-size:10px; font-weight:400; font-variant-numeric:tabular-nums; letter-spacing:0; }
+.trend-value-label { paint-order:stroke; stroke:var(--surface); stroke-width:3px; stroke-linejoin:round; pointer-events:none; }
 
 
 .report-list-pagination { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding-top:16px; margin-top:16px; border-top:1px solid var(--color-gray-200); font-size:12px; color:var(--color-gray-500); }

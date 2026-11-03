@@ -1,0 +1,1 @@
+import{L as e}from"./index-tax9zE2R.js";var t=e;export{t as component};

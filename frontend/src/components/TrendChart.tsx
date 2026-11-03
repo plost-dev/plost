@@ -34,8 +34,7 @@ const POINT_RADIUS: Record<TrafficMetric, number> = {pageviews: 7, visitors: 5, 
 const HEIGHT = 264
 const MARGIN = { top: 16, bottom: 32 }
 const AXIS_FONT_SIZE = 10
-const TICK = 5 // length of the dash drawn at each value on the left axis
-const LABEL_GAP = 6
+const LABEL_LIFT = 4 // value labels sit just above their gridline, inside the plot
 const TOOLTIP_ACTION_CLASS = "squircle min-h-8 rounded-md border border-gray-600 bg-gray-700 px-3 text-xs font-medium text-gray-100 hover:bg-gray-600"
 
 /** A bar with rounded top corners that sits on the baseline. */
@@ -151,9 +150,7 @@ export function TrendChart({
     const scale = axisScale(Math.max(0, ...points.flatMap(point => visible.map(key => point.values[key]))))
     const yMax = scale.max
     const yTickVals = scale.ticks
-    // The value labels and their dashes sit left of the plot, partly in the card's own padding; only what does not fit
-    // there widens the left margin, and the right edge has none.
-    const gutter = Math.max(...yTickVals.map(v => formatAxisTick(v).length), 1) * 6 + LABEL_GAP + TICK
+    // Value labels sit inside the plot on their gridlines, so the plot spans the card's padding evenly on both sides.
     const left = 0
     const right = 0
     const innerW = Math.max(1, width - left - right)
@@ -180,7 +177,7 @@ export function TrendChart({
       const index = xTickCount === 1 ? 0 : Math.round((i * (points.length - 1)) / (xTickCount - 1))
       return { index, x: x(index), label: axisLabel(points[index].date, interval, withYear, locale) }
     }) : []
-    return { gutter, left, right, innerW, slot, bars, baseline, x, y, lines, areas, columns, xTicks, yTickVals }
+    return { left, right, innerW, slot, bars, baseline, x, y, lines, areas, columns, xTicks, yTickVals }
   }, [points, width, interval, withYear, locale, type, visible])
 
   function indexFromClientX(clientX: number) {
@@ -215,7 +212,7 @@ export function TrendChart({
       tabIndex={points.length ? 0 : undefined}
       role="group"
       aria-label={label}
-      style={{ height: HEIGHT, marginLeft: `max(0px, calc(${layout.gutter}px - var(--trend-inset, 22px)))` }}
+      style={{ height: HEIGHT }}
       onKeyDown={event => {
         if (event.target !== event.currentTarget || !points.length) return
         if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) {
@@ -268,8 +265,6 @@ export function TrendChart({
           {layout.yTickVals.map((value, i) => (
             <g key={value}>
               <line x1={layout.left} x2={width - layout.right} y1={layout.y(value)} y2={layout.y(value)} stroke={i === 0 ? "var(--color-gray-300)" : "var(--color-gray-150)"} />
-              <line x1={layout.left - TICK} x2={layout.left} y1={layout.y(value)} y2={layout.y(value)} stroke="var(--color-gray-300)" />
-              <text x={layout.left - TICK - LABEL_GAP} y={layout.y(value)} dominantBaseline="middle" textAnchor="end" className="trend-axis-label fill-gray-500" fontSize={AXIS_FONT_SIZE} fontWeight="400">{formatAxisTick(value)}</text>
             </g>
           ))}
           <line x1={layout.left} x2={width - layout.right} y1={HEIGHT - MARGIN.bottom} y2={HEIGHT - MARGIN.bottom} stroke="var(--color-gray-300)" />
@@ -286,6 +281,8 @@ export function TrendChart({
             <path data-metric={key} className="traffic-series-path" d={path} fill="none" stroke={`var(--traffic-${key})`} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
           </g>)}
           {layout.columns.map(({key, i, path}) => path ? <path key={`${i}-${key}`} data-metric={key} className="traffic-bar" d={path} /> : null)}
+          {/* Drawn over the series with a surface-coloured halo so a curve passing through never cuts a label. */}
+          {layout.yTickVals.slice(1).map(value => <text key={value} x={layout.left} y={layout.y(value) - LABEL_LIFT} textAnchor="start" className="trend-axis-label trend-value-label fill-gray-400" fontSize={AXIS_FONT_SIZE} fontWeight="400">{formatAxisTick(value)}</text>)}
           {!layout.bars && points.length === 1 ? POINT_ORDER.filter(key => visible.includes(key)).map(key => <circle key={key} data-metric={key} cx={layout.x(0)} cy={layout.y(points[0].values[key])} r={POINT_RADIUS[key]} fill={key === "pageviews" ? "var(--surface)" : "none"} stroke={`var(--traffic-${key})`} strokeWidth="2" />) : null}
           {hover && selected && !layout.bars ? <>
             <line x1={hover.x} x2={hover.x} y1={MARGIN.top - 4} y2={HEIGHT - MARGIN.bottom + 4} stroke="var(--analytics-guide)" strokeWidth="1" />
