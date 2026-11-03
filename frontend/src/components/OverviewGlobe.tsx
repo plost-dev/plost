@@ -148,7 +148,8 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
           if (xy) shown.push({ marker, x: xy[0], y: xy[1], r: 2 + 1.2 * Math.sqrt(marker.visitors / max), edge: d3.geoDistance(marker.lonLat, center) })
         }
       } else {
-        const projection = d3.geoEquirectangular().fitExtent([[12, 16], [width - 12, height - 12]], { type: "Sphere" } as d3.GeoPermissibleObjects)
+        // Fitted to the land the dots cover (56°S to 82°N), and kept below the corner buttons.
+        const projection = d3.geoEquirectangular().fitExtent([[12, 68], [width - 12, height - 16]], { type: "MultiPoint", coordinates: [[-180, 84], [180, -58]] } as d3.GeoPermissibleObjects)
         ctx.fillStyle = dotColor
         ctx.globalAlpha = 0.7
         const size = Math.max(1, width / 520)

@@ -72,6 +72,7 @@
 - 2026-11-03 用户要求 Key 存在 env 文件、不存数据库（用户反映保存过的 Key 丢了；核对线上库：库文件 11-01 起从未替换，但除 Google Key 外 Mapbox Token 和 R2 凭据都不在库里）。现在 `PLOST_MAPBOX_TOKEN`、`PLOST_GOOGLE_MAPS_KEY`、`PLOST_BACKUP_ACCESS_KEY`、`PLOST_BACKUP_SECRET_KEY`、`PLOST_BACKUP_PASSWORD` 只从环境变量读（`env_keys.go`，启动时校验格式），服务单元用 `EnvironmentFile=-/etc/plost/plost.env`；设置页只显示是否已设置（`EnvKeyStatus`），接口拒绝带 Key 的请求，保存备份设置时清空旧的凭据列。原来的 `secrets.key` 封存机制已删除。地图开关、样式和备份去向仍存数据库。
 
 - 2026-11-04 用户要求站点首页头部（`OverviewHero.tsx`）左侧不再只放一个总数：五种图表都保留，可在头部「图表样式」菜单里切换（24 小时柱形图默认、30 天柱形图、时段热力图、站点占比、关键数字），选择按浏览器保存在 `litestats:overview-chart`；数据来自 `GET /api/overview/charts?view=…`（全部站点相加，只算所选样式需要的部分）。「站点占比」只单独列出访客最多的 3 个站点，其余合并为「其他 N 个站点」。「添加网站」「卡片/紧凑」「刷新」收成标题右侧 32px 图标按钮，更新时间写在副标题里；右侧地球不变。
+- 2026-11-04 用户要求站点首页头部的地球放左边、标题和按钮放右边，按钮一排在卡片右上角；地球的「地球/平面」和全屏按钮随之放在地球左上角（窄屏仍是内容在上、地球在下）。卡片在宽屏下固定 352px 高，五种图表都不能出现滚动条或大块空白：上方数字区统一至少 58px，下面的柱形图、热力图、数字卡片拉伸填满，所以 24 小时和 30 天柱形图大小一致。平面地图按陆地范围（南纬 56° 到北纬 82°）适配，顶部留在按钮下方（`fitExtent` 上边距 68px）。
 
 - 2026-11-04 用户要求设置页地址全部用静态路径，不用 `?tab=` 查询参数，也不用动态分页参数（`{-$tab}`），账户设置不再叫 `/account`。账户与系统设置：`/settings`（个人资料）、`/settings/security`、`/settings/api`、`/settings/appearance`、`/settings/sparkline`、`/settings/map`、`/settings/geoip`、`/settings/backup`，布局和导航在 `routes/settings.tsx`，每页一个 `settings.<页>.tsx`；服务端 `http.go` 的页面白名单要同步加上新页面。站点设置：`/sites/<域名>/settings`（常规）、`/settings/visibility`、`/settings/installation`、`/settings/danger-zone`，布局在 `$domain.settings.tsx`，每页一个文件。用户明确旧链接（`/account?tab=…`、`/backup`、站点设置的 `?tab=…`、`/settings/general`）不需要跳转，已删除这些兼容路由。新增页面照此加静态路由文件，不要再用查询参数或动态分页参数。
 

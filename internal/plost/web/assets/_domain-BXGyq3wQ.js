@@ -1,1 +1,0 @@
-import{Ot as e}from"./index-ChJ5wglR.js";var t=e;export{t as component};
