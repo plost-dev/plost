@@ -1,3 +1,4 @@
+import { UIIcon } from "./UIIcon"
 import { useT } from "~/lib/i18n"
 import { useState, type CSSProperties, type KeyboardEvent } from "react"
 import { axisScale, formatAxisTick } from "~/lib/axis"
@@ -37,7 +38,7 @@ export function TrafficHeatmap({ cells }: { cells: HeatCell[] }) {
   }
   return (
     <div className="traffic-panel">
-      <div className="analytics-heading"><h3 title={t("颜色越深，代表这个时段的访客越多。")}>{t("访问时段")}</h3><span>{t("星期 × 小时")}</span></div>
+      <div className="analytics-heading"><h3 title={t("颜色越深，代表这个时段的访客越多。")}><UIIcon name="clock" className="analytics-heading-icon" />{t("访问时段")}</h3><span>{t("星期 × 小时")}</span></div>
       <div className="traffic-scroll"><div className="traffic-grid">
         <span />
         {Array.from({length: 24}, (_, hour) => <span className="traffic-hour" key={hour}>{hour % 6 === 0 ? `${String(hour).padStart(2, "0")}` : ""}</span>)}

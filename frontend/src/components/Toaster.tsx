@@ -2,7 +2,7 @@ import { UIIcon } from "./UIIcon"
 import { useT } from "~/lib/i18n"
 import { useToast } from "~/lib/toast"
 
-/** Draws the message from showToast() in the middle of the window; it never takes clicks. */
+/** Draws the message from showToast() just below the top bar; it never takes clicks. */
 export function Toaster() {
   const { t } = useT()
   const toast = useToast()

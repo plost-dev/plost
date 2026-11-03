@@ -1,7 +1,7 @@
 import { UIIcon } from "~/components/UIIcon"
 import { SiteSparkline } from "~/components/SiteSparkline"
 import { Surface } from "~/components/Surface"
-import { ActionButton } from "~/components/ActionButton"
+import { ActionLink } from "~/components/ActionButton"
 import { SiteFavicon } from "~/components/SiteFavicon"
 import { redirect, Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
@@ -27,35 +27,13 @@ function DashboardPage() {
   const { me, sites } = Route.useLoaderData()
   const { t } = useT()
   const [q, setQ] = useState("")
-  const [menu, setMenu] = useState<string | null>(null)
   const layout = useSyncExternalStore(subscribeSiteLayout, readSiteLayout, (): SiteLayout => "compact")
   const [layoutSaveFailed, setLayoutSaveFailed] = useState(false)
   useRouterAutoRefresh()
   const now = new Date().toISOString()
   function changeLayout(value: SiteLayout) {
-    setMenu(null)
     setLayoutSaveFailed(!setSiteLayout(value))
   }
-  const menuRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!menu) return
-    const closeOutside = (event: Event) => {
-      if (event.target instanceof Node && !menuRef.current?.contains(event.target)) setMenu(null)
-    }
-    const onEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return
-      menuRef.current?.querySelector<HTMLButtonElement>("button")?.focus()
-      setMenu(null)
-    }
-    document.addEventListener("pointerdown", closeOutside, true)
-    document.addEventListener("focusin", closeOutside)
-    document.addEventListener("keydown", onEscape)
-    return () => {
-      document.removeEventListener("pointerdown", closeOutside, true)
-      document.removeEventListener("focusin", closeOutside)
-      document.removeEventListener("keydown", onEscape)
-    }
-  }, [menu])
   const [searching, setSearching] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
 
@@ -152,23 +130,11 @@ function DashboardPage() {
                     </div>
                   </Surface>
                 </Link>
-                <div ref={menu === site.domain ? menuRef : undefined} className="absolute top-2 right-2">
-                  <ActionButton
-                    type="button"
-                    className="btn-ghost site-card-menu-trigger"
-                    aria-label={`${t("设置")} ${site.domain}`}
-                    aria-expanded={menu === site.domain}
-                    aria-controls={menu === site.domain ? `site-menu-${site.id}` : undefined}
-                    onClick={(e) => { e.preventDefault(); setMenu(menu === site.domain ? null : site.domain) }}
-                  >
-                    <UIIcon name="ellipsis-vertical" className="size-5" />
-                  </ActionButton>
-                  {menu === site.domain ? (
-                    <div id={`site-menu-${site.id}`} className="squircle absolute right-0 z-20 mt-1 w-44 rounded-md bg-white p-1 font-medium text-gray-800 shadow-lg ring-1 ring-black/5">
-                      <Link to="/sites/$domain/settings" params={{ domain: site.domain }} search={{ tab: "general" }} className="squircle control-menu-item flex items-center gap-2 rounded-md px-4 py-2.5 text-sm hover:bg-gray-100" onClick={() => setMenu(null)}>
-                        {t("设置")}</Link>
-                    </div>
-                  ) : null}
+                <div className="absolute top-2 right-2">
+                  <ActionLink to="/sites/$domain/settings" params={{ domain: site.domain }} search={{ tab: "general" }}
+                    className="btn-ghost site-card-menu-trigger" aria-label={`${t("设置")} ${site.domain}`} title={t("设置")}>
+                    <UIIcon name="settings" className="size-[18px]" />
+                  </ActionLink>
                 </div>
               </li>
             ))}

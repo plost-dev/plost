@@ -898,7 +898,9 @@ html[data-theme="dark"] { --map-ocean: #242630; --map-empty: #3d4151; --map-bord
 }
 .analytics-panel { background: var(--surface); border: 1px solid var(--color-gray-200); --sq-r:20px; padding: var(--ui-card-padding); min-width: 0; }
 .analytics-heading { display: flex; min-height:32px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
-.analytics-heading h3 { font-size: var(--ui-text-card); line-height:24px; font-weight: 600; color: var(--color-gray-900); }
+.analytics-heading h3 { display: inline-flex; align-items: center; gap: 8px; font-size: var(--ui-text-card); line-height:24px; font-weight: 600; color: var(--color-gray-900); }
+/* The same quiet line icon as the settings card titles. */
+.analytics-heading-icon { flex: none; display: inline-grid; place-items: center; width: 18px; font-size: 16px; line-height: 1; color: var(--color-gray-500); }
 .analytics-heading > span { font-size: var(--ui-text-caption); color: var(--color-gray-500); }
 .visitor-graph { padding: 8px 0 0; overflow: hidden; }
 .metric-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 4px 12px 16px; gap: 6px; }
@@ -1479,12 +1481,13 @@ select:disabled { opacity:.65; cursor:not-allowed; }
 .password-toggle:focus-visible { outline: 2px solid var(--analytics-accent); outline-offset: -4px; }
 
 /* A short confirmation in the middle of the window. It ignores clicks, so nothing under it is blocked. */
-.toast-region { position: fixed; inset: 0; z-index: 200; display: grid; place-items: center; padding: 16px; pointer-events: none; }
+/* Just below the top bar (4.25rem), centred across the page. */
+.toast-region { position: fixed; inset: 0 0 auto; z-index: 200; display: flex; justify-content: center; padding: calc(4.25rem + 12px) 16px 0; pointer-events: none; }
 .toast { --sq-r: 18px; display: flex; align-items: center; gap: 12px; max-width: min(28rem, 100%); padding: 14px 22px 14px 16px; background: var(--color-gray-900); color: var(--surface); box-shadow: 0 12px 40px rgb(0 0 0 / .22), 0 2px 8px rgb(0 0 0 / .12); font-size: 15px; font-weight: 500; line-height: 22px; animation: toast-life both ease; }
 .toast-icon { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--color-green-500); color: #fff; font-size: 12px; }
 .toast.is-error .toast-icon { background: var(--color-red-500); }
 .toast-text { min-width: 0; overflow-wrap: anywhere; }
-@keyframes toast-life { 0% { opacity: 0; transform: scale(.92); } 8% { opacity: 1; transform: scale(1); } 88% { opacity: 1; transform: scale(1); } 100% { opacity: 0; transform: scale(.98); } }
+@keyframes toast-life { 0% { opacity: 0; transform: translateY(-10px); } 8% { opacity: 1; transform: none; } 88% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
 @keyframes toast-fade { 0% { opacity: 0; } 8% { opacity: 1; } 88% { opacity: 1; } 100% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .toast { animation-name: toast-fade; } }
 

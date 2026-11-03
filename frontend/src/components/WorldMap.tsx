@@ -383,7 +383,7 @@ export function MapCard({
         <Surface className="geography-map analytics-panel">
           <div className="analytics-heading geography-map-heading">
             <div className="map-heading-title">
-              <h3>{t("访客分布")}</h3>
+              <h3><UIIcon name="globe" className="analytics-heading-icon" />{t("访客分布")}</h3>
               <HelpHint>
                 <p>{t("查看访客来自哪里，点击国家可筛选报表。")}</p>
                 <p>{t("按国家/地区汇总，标记不是访客的精确位置。占比按已记录的地区访客数计算。")}</p>

@@ -77,7 +77,7 @@ export function VisitorGraph({
       </dl>
       <div className="trend-section">
         <div className="analytics-heading">
-          <h3>{t("访问趋势")}</h3>
+          <h3><UIIcon name="activity" className="analytics-heading-icon" />{t("访问趋势")}</h3>
           <ul className="traffic-legend">{TRAFFIC_METRICS.map(({key, label}) => {
             const off = hiddenSeries.includes(key)
             // One series always stays on, otherwise the chart would be empty.

@@ -13,7 +13,7 @@ const emit = () => listeners.forEach(listener => listener())
 const subscribe = (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } }
 
 /**
- * Shows a short message in the middle of the page; a newer one replaces the one on screen.
+ * Shows a short message just below the top bar; a newer one replaces the one on screen.
  * The text is a translation key, translated when it is drawn, so a language switched at the
  * same moment as the save is reflected in the message.
  */
