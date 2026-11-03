@@ -18,11 +18,12 @@ func TestSparklineSettings(t *testing.T) {
 	}
 	x.call(t, "PUT", "/api/sparkline", map[string]any{"style": "rainbow", "range": "30d"}, 400)
 	x.call(t, "PUT", "/api/sparkline", map[string]any{"style": "bars", "range": "7d"}, 400)
-	x.call(t, "PUT", "/api/sparkline", map[string]any{"style": "bars-recent", "range": "30d"}, 200)
+	x.call(t, "PUT", "/api/sparkline", map[string]any{"style": "bars-today", "range": "24h"}, 400)
+	x.call(t, "PUT", "/api/sparkline", map[string]any{"style": "mirror", "range": "30d"}, 200)
 	if err := json.Unmarshal(x.call(t, "GET", "/api/preferences", nil, 200), &prefs); err != nil {
 		t.Fatal(err)
 	}
-	if prefs["sparklineStyle"] != "bars-recent" || prefs["sparklineRange"] != "30d" {
+	if prefs["sparklineStyle"] != "mirror" || prefs["sparklineRange"] != "30d" {
 		t.Fatalf("saved: %v", prefs)
 	}
 	var sites []struct {
@@ -33,6 +34,16 @@ func TestSparklineSettings(t *testing.T) {
 	}
 	if len(sites) != 1 || len(sites[0].Series) != 30 {
 		t.Fatalf("30-day trend: %d sites, %d points", len(sites), len(sites[0].Series))
+	}
+	// A style saved before the 2026-11-03 cut shows as its nearest remaining one.
+	if _, err := x.app.db.Exec("UPDATE settings SET value='barcode' WHERE key='sparkline_style'"); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(x.call(t, "GET", "/api/preferences", nil, 200), &prefs); err != nil {
+		t.Fatal(err)
+	}
+	if prefs["sparklineStyle"] != "lollipop" {
+		t.Fatalf("retired style: %v", prefs)
 	}
 }
 
