@@ -194,18 +194,35 @@ func umamiPrefix(websiteID string) (from, to string) {
 	return "umami:" + websiteID + ":", "umami:" + websiteID + ";" // ';' follows ':' so the range covers exactly this site
 }
 
-// Plost groups by its own small vocabulary, so Umami's labels are folded into it. Samsung, Yandex and
-// other Chromium builds are Chrome here because that is how live collection classifies them.
+// Umami's labels are folded into the names live collection gives (parseUA), so imported and new visits group together.
 func umamiBrowser(raw string) string {
 	v := strings.ToLower(strings.TrimSpace(raw))
 	switch {
+	case strings.Contains(v, "samsung"):
+		return "Samsung Internet"
+	case strings.Contains(v, "yandex"):
+		return "Yandex Browser"
+	case v == "miui":
+		return "MIUI Browser"
+	case v == "silk":
+		return "Amazon Silk"
+	case v == "instagram":
+		return "Instagram"
+	case v == "facebook":
+		return "Facebook"
+	case v == "ie":
+		return "Internet Explorer"
+	case v == "ios-webview":
+		return "iOS WebView"
+	case v == "chromium-webview":
+		return "Chromium WebView"
 	case strings.Contains(v, "edge"):
 		return "Edge"
 	case strings.Contains(v, "opera") || v == "opr":
 		return "Opera"
 	case strings.Contains(v, "firefox") || v == "fxios":
 		return "Firefox"
-	case strings.Contains(v, "chrome") || strings.Contains(v, "chromium") || strings.Contains(v, "crios") || strings.Contains(v, "samsung") || strings.Contains(v, "yandex"):
+	case strings.Contains(v, "chrome") || strings.Contains(v, "chromium") || strings.Contains(v, "crios"):
 		return "Chrome"
 	case v == "safari" || v == "ios":
 		return "Safari"

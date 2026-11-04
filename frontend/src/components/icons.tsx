@@ -50,6 +50,13 @@ const BROWSER_ICONS: Record<string, string> = {
   "Huawei Browser Mobile": "/images/icon/browser/huawei.png",
   "Huawei Browser": "/images/icon/browser/huawei.png",
   "vivo Browser": "/images/icon/browser/vivo.png",
+  "iOS WebView": platform("safari"),
+  WeChat: "/brands/sources/wechat.svg",
+  QQ: "/brands/sources/qq.svg",
+  Weibo: "/brands/sources/sina-weibo.svg",
+  Douyin: "/brands/sources/tiktok.svg",
+  Baidu: "/brands/sources/baidu.svg",
+  "Sogou Browser": "/brands/sources/sogou.svg",
 }
 
 const OS_ICONS: Record<string, string> = {

@@ -52,6 +52,33 @@ const DEVICE_NAMES: Record<string, string> = {
   "Ultra-wide": "超宽屏",
 }
 
+// Chinese names for the browsers parseUA recognises, shown in the Chinese interface; the stored key stays English.
+const BROWSER_NAMES_ZH: Record<string, string> = {
+  WeChat: "微信",
+  WeCom: "企业微信",
+  QQ: "QQ",
+  DingTalk: "钉钉",
+  Feishu: "飞书",
+  Alipay: "支付宝",
+  Douyin: "抖音",
+  Weibo: "微博",
+  Quark: "夸克",
+  "UC Browser": "UC 浏览器",
+  "QQ Browser": "QQ 浏览器",
+  Baidu: "百度",
+  "Sogou Browser": "搜狗浏览器",
+  "360 Browser": "360 浏览器",
+  "2345 Browser": "2345 浏览器",
+  "Huawei Browser": "华为浏览器",
+  "MIUI Browser": "小米浏览器",
+  "vivo Browser": "vivo 浏览器",
+  "OPPO Browser": "OPPO 浏览器",
+  "Samsung Internet": "三星浏览器",
+  "Yandex Browser": "Yandex 浏览器",
+  "Chromium WebView": "安卓内置网页",
+  "iOS WebView": "iOS 内置网页",
+}
+
 export function browserDisplayName(name: string): string {
   const value = name.trim()
   return BROWSER_NAMES[value.toLowerCase()] || value
@@ -71,7 +98,11 @@ export function reportValueLabel(kind: string | undefined, name: string, locale:
   if ((kind === "browser" || kind === "os") && (!name.trim() || name.trim().toLowerCase() === "(none)")) {
     return translate(locale, "未知")
   }
-  return kind === "browser" ? browserDisplayName(label || name) : label || name
+  if (kind === "browser") {
+    const shown = browserDisplayName(label || name)
+    return locale === "en" ? shown : BROWSER_NAMES_ZH[shown] || shown
+  }
+  return label || name
 }
 
 /** Retain the stored key for search while exposing the current localized display value. */

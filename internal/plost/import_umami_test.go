@@ -280,8 +280,8 @@ func TestUmamiConversionRules(t *testing.T) {
 			t.Errorf("want skip %s, got %q", reason, skip)
 		}
 	}
-	for raw, want := range map[string]string{"chrome": "Chrome", "crios": "Chrome", "samsung": "Chrome", "firefox": "Firefox", "fxios": "Firefox", "safari": "Safari", "ios": "Safari",
-		"ios-webview": "Other", "edge-chromium": "Edge", "edge-ios": "Edge", "opera": "Opera", "facebook": "Other", "": "Other"} {
+	for raw, want := range map[string]string{"chrome": "Chrome", "crios": "Chrome", "samsung": "Samsung Internet", "yandexbrowser": "Yandex Browser", "miui": "MIUI Browser", "firefox": "Firefox", "fxios": "Firefox", "safari": "Safari", "ios": "Safari",
+		"ios-webview": "iOS WebView", "chromium-webview": "Chromium WebView", "edge-chromium": "Edge", "edge-ios": "Edge", "opera": "Opera", "facebook": "Facebook", "beaker": "Other", "": "Other"} {
 		if got := umamiBrowser(raw); got != want {
 			t.Errorf("browser %q: %s, want %s", raw, got, want)
 		}
@@ -409,8 +409,12 @@ func TestUmamiImportAppliesAndReconciles(t *testing.T) {
 		}
 	}
 	site, _ := readSite(context.Background(), app.db, "example.com")
+	browsers := []string{"Chrome", "Chromium WebView", "iOS WebView", "Safari", "Other"}
+	for _, rule := range browserRules {
+		browsers = append(browsers, rule.name)
+	}
 	for column, allowed := range map[string][]string{
-		"browser": {"Chrome", "Edge", "Firefox", "Safari", "Opera", "Other"},
+		"browser": browsers,
 		"os":      {"Android", "iOS", "Windows", "Chrome OS", "macOS", "Linux", "Other"},
 		"device":  {"Desktop", "Mobile", "Tablet"},
 	} {
