@@ -9,7 +9,6 @@ import { CountryFlag } from "~/components/icons"
 import { countryName } from "~/lib/countries"
 import { numberShort } from "~/lib/format"
 import { MapboxVisitorMap } from "./MapboxVisitorMap"
-import { HelpHint } from "./HelpHint"
 import { readMapFlags, saveMapFlags, useGoogleMapStyle, useMapStyle } from "~/lib/map-preferences"
 import { loadCountryMap, loadRegionMap, mainland, type CountryShape, type RegionFeature, type RegionMap } from "~/lib/world-regions"
 import { regionName } from "~/lib/geography"
@@ -580,10 +579,6 @@ export function MapCard({
           <div className="analytics-heading geography-map-heading">
             <div className="map-heading-title">
               <h3>{t("访客分布")}</h3>
-              <HelpHint>
-                <p>{t("查看访客来自哪里，点击国家可筛选报表，并按省/州查看分布。")}</p>
-                <p>{t("按国家/地区和省/州汇总，标记不是访客的精确位置。省/州来自 GeoIP 城市库，按 IP 推算，可能有偏差。")}</p>
-              </HelpHint>
             </div>
             {onViewVisitors ? <button type="button" className="map-live-count" aria-label={t("查看最近访客")} title={t("近 5 分钟活跃访客")} onClick={onViewVisitors}>{liveStatus}</button>
               : <div className="map-live-count" title={t("近 5 分钟活跃访客")}>{liveStatus}</div>}
