@@ -89,7 +89,7 @@ function MapUsagePanel({ initial, service, onSaved }: { initial: MapUsage; servi
     } catch (error) { showToast(error instanceof Error ? error.message : "保存失败", "error") }
   }
   return <Tile icon="map" title={t("使用范围")} subtitle={service ? t("{s} 用在哪些页面；没勾选的地方使用内置地图。").replace("{s}", t(service)) : t("先打开上面的 Mapbox 或 Google 地图，再选择用在哪些页面。")}>
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-wrap items-center gap-x-8 gap-y-3">
       <Toggle checked={usage.detail} disabled={!service} onChange={detail => void change({ detail })}>{t("站点详情页的访客地图")}</Toggle>
       <Toggle checked={usage.overview} disabled={!service} onChange={overview => void change({ overview })}>{t("站点首页的地球")}</Toggle>
     </div>
