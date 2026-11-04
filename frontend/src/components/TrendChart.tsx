@@ -35,7 +35,8 @@ const HEIGHT = 264
 const MARGIN = { top: 16, bottom: 32 }
 const AXIS_FONT_SIZE = 10
 const LABEL_LIFT = 4 // line chart: value labels sit just above their gridline, inside the plot
-const LABEL_GAP = 8 // bar chart: room between the right-aligned value labels and the plot
+const LABEL_GAP = 4 // bar chart: room between the right-aligned value labels and the plot; the first bar adds its own half-slot margin
+const EDGE_ROOM = 4 // bar chart: the value labels may reach into the card padding up to this far from the card edge
 const LABEL_CHAR_WIDTH = 6.2 // tabular digits at AXIS_FONT_SIZE, enough to size the gutter and label backings
 const TOOLTIP_ACTION_CLASS = "squircle min-h-8 rounded-md border border-gray-600 bg-gray-700 px-3 text-xs font-medium text-gray-100 hover:bg-gray-600"
 
@@ -115,6 +116,8 @@ export function TrendChart({
   const gradientId = useId()
   const box = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(320)
+  // How far the bar chart's value labels may hang into the card padding, so the bars sit as far from the left edge as from the right.
+  const [reach, setReach] = useState(24 - EDGE_ROOM)
   const [hover, setHover] = useState<HoverPoint | null>(null)
   const hoverRef = useRef<HoverPoint | null>(null)
   hoverRef.current = hover
@@ -143,7 +146,10 @@ export function TrendChart({
   useEffect(() => {
     const el = box.current
     if (!el) return
-    const measure = () => setWidth(el.clientWidth || 320)
+    const measure = () => {
+      setWidth(el.clientWidth || 320)
+      setReach(Math.max(0, (parseFloat(getComputedStyle(el).getPropertyValue("--ui-card-padding")) || 24) - EDGE_ROOM))
+    }
     measure()
     if (typeof ResizeObserver === "undefined") {
       window.addEventListener("resize", measure)
@@ -181,10 +187,11 @@ export function TrendChart({
     const yMax = scale.max
     const yTickVals = scale.ticks
     const bars = type === "bar"
-    // Bars keep their value labels in a gutter left of the plot, beside each gridline (2026-11-04). A line chart keeps
+    // Bars keep their value labels in a gutter left of the plot, beside each gridline (2026-11-04); the gutter uses the
+    // card padding first, so the bars keep the same room on both sides unless the labels are long. A line chart keeps
     // them inside the plot just above their gridlines, so it spans the card's padding evenly on both sides.
     const labelWidth = Math.ceil(Math.max(...yTickVals.map(value => formatAxisTick(value).length)) * LABEL_CHAR_WIDTH)
-    const left = bars ? labelWidth + LABEL_GAP : 0
+    const left = bars ? Math.max(0, labelWidth + LABEL_GAP - reach) : 0
     const right = 0
     const innerW = Math.max(1, width - left - right)
     const innerH = HEIGHT - MARGIN.top - MARGIN.bottom
@@ -208,7 +215,7 @@ export function TrendChart({
     const xTicks = tickIndices(points.map(point => point.date), interval, maxTicks)
       .map(index => ({ index, x: x(index), label: axisLabel(points[index].date, interval, withYear, locale) }))
     return { left, right, innerW, slot, bars, baseline, x, y, lines, areas, columns, xTicks, yTickVals }
-  }, [points, width, interval, withYear, locale, type, visible])
+  }, [points, width, reach, interval, withYear, locale, type, visible])
 
   function indexFromClientX(clientX: number) {
     const rect = box.current?.getBoundingClientRect()
