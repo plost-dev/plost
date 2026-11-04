@@ -63,8 +63,9 @@ function DashboardContent({ domain }: { domain: string }) {
   useRouterAutoRefresh({ intervalMs: 10_000, skip: () => loading.current })
   const onSearch = (next: DashSearch) => { void router.navigate({to: "/sites/$domain", params: {domain}, search: next}) }
   const result = cached ? { ok: true as const, value: cached } : view.result
+  // Signed out, a private site's report fails (401): that means signing in, not an error page.
+  if (result && !me && (!result.ok || !result.value.site.public)) return <Navigate to="/login" />
   if (result && !result.ok) return <PageState title="页面出错" description={result.message} />
-  if (result?.ok && !me && !result.value.site.public) return <Navigate to="/login" />
   return <Shell user={me} layout="analytics">
     {result?.ok
       ? <AnalyticsDashboard data={result.value} domain={domain} search={search} loading={view.switching && !cached}
