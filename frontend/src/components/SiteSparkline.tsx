@@ -49,22 +49,22 @@ export function SiteSparkline({ values, style, className = "h-12 w-full" }: { va
         <path d={areaUnder(d)} fill={`url(#${CSS.escape(fade)})`} /><path d={d} {...stroke} strokeWidth={1.8} /></>
       break
     }
-    // Bars grown both ways from the middle, like an audio waveform.
-    case "mirror": body = pts.map((v, i) => {
-      const w = Math.max(1, slot * 0.5), h = Math.max(1.5, (v / max) * (H - 4))
-      return <rect key={i} x={cx(i) - w / 2} y={(H - h) / 2} width={w} height={h} rx={w / 2} fill="currentColor" opacity={0.85} />
-    }); break
     case "lollipop": body = pts.map((v, i) => <g key={i}>
       <line x1={cx(i)} x2={cx(i)} y1={H} y2={top(v) + 3} stroke="currentColor" strokeWidth={1} opacity={0.35} vectorEffect="non-scaling-stroke" />
       <circle cx={cx(i)} cy={top(v) + 3} r={2.3} fill="currentColor" />
     </g>); break
-    // Each bar as a stack of up to six cells, the top one full strength.
-    case "blocks": body = pts.flatMap((v, i) => {
-      const cells = v > 0 ? Math.max(1, Math.round((v / max) * 6)) : 0, ch = (H - 2) / 6, w = Math.max(1, slot - 2)
-      return Array.from({ length: cells }, (_, k) => <rect key={`${i}-${k}`} x={i * slot + 1} y={H - (k + 1) * ch} width={w} height={ch - 1.5} rx={1} fill="currentColor" opacity={k === cells - 1 ? 1 : 0.4} />)
-    }); break
-    case "step": body = <path d={pts.map((v, i) => `${i ? `H${(i * slot).toFixed(1)}V` : "M0,"}${ly(v).toFixed(1)}`).join("") + `H${W}`} {...stroke} strokeWidth={1.6} strokeLinejoin="miter" />; break
-    case "dots": body = pts.map((v, i) => <circle key={i} cx={cx(i)} cy={ly(v)} r={2.2} fill="currentColor" opacity={i === n - 1 ? 1 : 0.55} />); break
+    // A smooth line that marks its highest point and the latest one, so the peak and "now" read at a glance.
+    case "peak": {
+      const d = line<number>().x((_, i) => lineX(i)).y(ly).curve(curveMonotoneX)(pts) || ""
+      const high = pts.indexOf(Math.max(...pts))
+      body = <><path d={areaUnder(d)} fill="currentColor" opacity={0.08} /><path d={d} {...stroke} strokeWidth={1.6} opacity={0.85} />
+        <circle cx={lineX(high)} cy={ly(pts[high])} r={7} fill="currentColor" opacity={0.18} />
+        <circle cx={lineX(high)} cy={ly(pts[high])} r={3.6} fill="currentColor" />
+        {high !== n - 1 ? <circle cx={lineX(n - 1)} cy={ly(pts[n - 1])} r={3.2} fill="var(--surface, #fff)" stroke="currentColor" strokeWidth={1.8} vectorEffect="non-scaling-stroke" /> : null}</>
+      break
+    }
+    // Bars that rose since the slot before are full strength, those that fell are faint: the direction shows.
+    case "change": body = bars(i => i > 0 && pts[i] < pts[i - 1] ? 0.3 : 0.9); break
     case "heat": body = pts.map((v, i) => <rect key={i} x={i * slot + 1} y={14} width={Math.max(1, slot - 2)} height={20} rx={2.5} fill="currentColor" opacity={0.12 + 0.88 * (max === min ? 0 : (v - min) / (max - min))} />); break
     default: {
       // The original look: scaled from zero, like the bars.

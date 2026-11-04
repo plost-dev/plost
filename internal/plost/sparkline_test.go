@@ -19,11 +19,12 @@ func TestSparklineSettings(t *testing.T) {
 	x.call(t, "PUT", "/api/sparkline", map[string]any{"style": "rainbow", "range": "30d"}, 400)
 	x.call(t, "PUT", "/api/sparkline", map[string]any{"style": "bars", "range": "7d"}, 400)
 	x.call(t, "PUT", "/api/sparkline", map[string]any{"style": "bars-today", "range": "24h"}, 400)
-	x.call(t, "PUT", "/api/sparkline", map[string]any{"style": "mirror", "range": "30d"}, 200)
+	x.call(t, "PUT", "/api/sparkline", map[string]any{"style": "mirror", "range": "30d"}, 400) // retired 2026-11-04
+	x.call(t, "PUT", "/api/sparkline", map[string]any{"style": "peak", "range": "30d"}, 200)
 	if err := json.Unmarshal(x.call(t, "GET", "/api/preferences", nil, 200), &prefs); err != nil {
 		t.Fatal(err)
 	}
-	if prefs["sparklineStyle"] != "mirror" || prefs["sparklineRange"] != "30d" {
+	if prefs["sparklineStyle"] != "peak" || prefs["sparklineRange"] != "30d" {
 		t.Fatalf("saved: %v", prefs)
 	}
 	var sites []struct {
@@ -44,6 +45,16 @@ func TestSparklineSettings(t *testing.T) {
 	}
 	if prefs["sparklineStyle"] != "lollipop" {
 		t.Fatalf("retired style: %v", prefs)
+	}
+	// And so do the four dropped on 2026-11-04.
+	for old, want := range map[string]string{"mirror": "bars", "blocks": "bars", "step": "area-line", "dots": "lollipop"} {
+		if _, err := x.app.db.Exec("UPDATE settings SET value=? WHERE key='sparkline_style'", old); err != nil {
+			t.Fatal(err)
+		}
+		json.Unmarshal(x.call(t, "GET", "/api/preferences", nil, 200), &prefs)
+		if prefs["sparklineStyle"] != want {
+			t.Fatalf("%s shows as %q, want %q", old, prefs["sparklineStyle"], want)
+		}
 	}
 }
 

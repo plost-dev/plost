@@ -3,14 +3,12 @@ import { rpc } from "./rpc"
 // The small trend on each site card. Saved for the account; the server keeps the same list (ui.go).
 export const SPARKLINE_STYLES = [
   { id: "area-line", label: "折线 + 面积" },
-  { id: "bars", label: "柱形" },
   { id: "smooth", label: "平滑曲线 + 渐变" },
+  { id: "peak", label: "峰值标注" },
+  { id: "bars", label: "柱形" },
   { id: "bars-average", label: "柱形 + 均线" },
-  { id: "mirror", label: "对称波形" },
+  { id: "change", label: "涨跌柱" },
   { id: "lollipop", label: "棒棒糖" },
-  { id: "blocks", label: "方块堆叠" },
-  { id: "step", label: "阶梯线" },
-  { id: "dots", label: "圆点" },
   { id: "heat", label: "热力格" },
 ] as const
 export const SPARKLINE_RANGES = [
