@@ -9,30 +9,7 @@ import { delta } from "~/lib/range"
 import { ReportValue } from "./ReportValue"
 import { reportSearchText } from "~/lib/report-values"
 
-const BAR: Record<string, string> = {
-  source: "bg-blue-50 group-hover/row:bg-blue-100",
-  channel: "bg-blue-50 group-hover/row:bg-blue-100",
-  campaign: "bg-blue-50 group-hover/row:bg-blue-100",
-  page: "bg-orange-50 group-hover/row:bg-orange-100",
-  country: "bg-orange-50 group-hover/row:bg-orange-100",
-  region: "bg-orange-50 group-hover/row:bg-orange-100",
-  city: "bg-orange-50 group-hover/row:bg-orange-100",
-  browser: "bg-green-50 group-hover/row:bg-green-100",
-  os: "bg-green-50 group-hover/row:bg-green-100",
-  device: "bg-green-50 group-hover/row:bg-green-100",
-  language: "bg-green-50 group-hover/row:bg-green-100",
-  screen: "bg-green-50 group-hover/row:bg-green-100",
-  title: "bg-orange-50 group-hover/row:bg-orange-100",
-  query: "bg-orange-50 group-hover/row:bg-orange-100",
-  keyword: "bg-blue-50 group-hover/row:bg-blue-100",
-  goal: "bg-red-50 group-hover/row:bg-red-100",
-  event: "bg-orange-50 group-hover/row:bg-orange-100",
-  property: "bg-orange-50 group-hover/row:bg-orange-100",
-  download: "bg-orange-50 group-hover/row:bg-orange-100",
-  outbound: "bg-orange-50 group-hover/row:bg-orange-100",
-  notfound: "bg-orange-50 group-hover/row:bg-orange-100",
-  ai: "bg-blue-50 group-hover/row:bg-blue-100",
-}
+// Every report list uses the chosen accent's soft tint for its bars, so the cards read as one set.
 
 export { formatDuration } from "~/lib/format"
 
@@ -188,7 +165,7 @@ export function List({
   const shown = paginate ? rows.slice((currentPage - 1) * 10, currentPage * 10) : maxItems > 0 ? rows.slice(0, maxItems) : rows
   const max = Math.max(1, ...(referenceRows || (paginate ? rows : shown)).map((r) => r.value))
   const total = percentageTotal ?? (referenceRows || rows).reduce((n, r) => n + r.value, 0)
-  const bar = BAR[kind || ""] || "bg-indigo-50 group-hover/row:bg-indigo-100"
+  const bar = "report-bar"
   const flagKind = kind === "region" || kind === "city"
   const extraCols = columns || []
   const bundlePct = extraCols.length === 0
@@ -276,7 +253,7 @@ export function List({
   const content = extraCols.length && !expanded ? <div className="report-list-scroll">{body}</div> : body
   if (plain) return <>{content}{paginate && rows.length > 10 ? <nav className="report-list-pagination" aria-label={t("分页")}><span>{t("每页 10 条")} · {rows.length}</span><div><button className="squircle" type="button" disabled={currentPage <= 1} onClick={()=>setPage(currentPage-1)}>{t("上一页")}</button><span>{currentPage} / {pages}</span><button className="squircle" type="button" disabled={currentPage >= pages} onClick={()=>setPage(currentPage+1)}>{t("下一页")}</button></div></nav> : null}</>
   return (
-    <Surface as="section" className="report-card relative flex w-full flex-col overflow-x-hidden bg-white shadow-sm">
+    <Surface as="section" className="report-card relative flex w-full flex-col overflow-x-hidden bg-white">
       {title ? <h2 className="mb-3 text-xs font-bold uppercase tracking-[-.01em] text-gray-900">{t(title || "")}</h2> : null}
       {content}
     </Surface>
@@ -422,7 +399,7 @@ export function ReportCard({
   }, [])
 
   return (
-    <Surface as="section" className={`report-card relative flex min-w-0 w-full flex-col bg-white shadow-sm ${className}`}>
+    <Surface as="section" className={`report-card relative flex min-w-0 w-full flex-col bg-white ${className}`}>
       <div className="report-heading flex w-full justify-between border-b border-gray-200">
         {title ? <h3 className="pb-3 text-sm font-bold text-gray-900">{t(title || "")}</h3> : null}
         {tabs.length ? (
@@ -593,7 +570,7 @@ export function Tile({
 }) {
   const { t } = useT()
   return (
-    <Surface id={id} className="settings-card scroll-mt-24 bg-white shadow-sm">
+    <Surface id={id} className="settings-card scroll-mt-24 bg-white">
       <header className="settings-card-heading">
         {logo ? null : <span className="squircle settings-card-icon">{brand ? <BrandIcon name={brand}/> : <UIIcon name={icon}/>}</span>}
         <div className="settings-heading-copy min-w-0">{(() => {

@@ -820,7 +820,7 @@ html { --control-height: var(--ui-control-height); --map-ocean: #f7f8fc; --map-e
 html[data-theme="dark"] { --map-ocean: #242630; --map-empty: #3d4151; --map-border: #242630; }
 .dash-toolbar { padding-block: 16px 2px; gap: 8px; }
 .dash-identity { display:flex; align-items:center; gap:10px; flex:1 1 240px; min-width:0; }
-.dashboard-health-inline { display:flex; align-items:center; flex:none; gap:12px; height:var(--ui-control-height); box-sizing:border-box; margin-left:auto; min-width:0; overflow-x:auto; white-space:nowrap; padding:0 12px; border:1px solid var(--color-gray-200); --sq-r:12px; background:var(--surface); color:var(--color-gray-500); font-size:12px; font-variant-numeric:tabular-nums; scrollbar-width:none; transition:background 140ms,border-color 140ms; }
+.dashboard-health-inline { display:flex; align-items:center; flex:none; gap:12px; height:var(--ui-control-height); box-sizing:border-box; margin-left:auto; min-width:0; overflow-x:auto; white-space:nowrap; padding:0 12px; border:1px solid var(--color-gray-200); --sq-r:calc(var(--ui-control-height) * .46); background:var(--surface); color:var(--color-gray-500); font-size:12px; font-variant-numeric:tabular-nums; scrollbar-width:none; transition:background 140ms,border-color 140ms; }
 .dashboard-health-inline:hover { background:var(--color-gray-50); border-color:var(--color-gray-300); }
 .dashboard-health-inline::-webkit-scrollbar { display:none; }
 .health-inline-state { display:inline-flex; align-items:center; gap:6px; color:var(--color-gray-700); font-weight:500; }
@@ -864,7 +864,10 @@ html[data-theme="dark"] { --map-ocean: #242630; --map-empty: #3d4151; --map-bord
 .report-tab-trigger:hover { background:var(--color-gray-100); }
 .report-tab-trigger > span { color:inherit; font-size:inherit; font-weight:inherit; letter-spacing:normal; text-transform:none; }
 /* A transparent 1px border, like the bordered analytics panels, so content sits the same distance from every card's edge. */
-.report-card { min-width:0; min-height:460px; padding:var(--ui-card-padding); border:1px solid transparent; }
+.report-card { min-width:0; min-height:460px; padding:var(--ui-card-padding); border:1px solid var(--color-gray-200); }
+/* One tint for every report list, taken from the chosen accent (light and dark are set in accent-colors.css). */
+.report-bar { background:var(--analytics-tint); }
+.group\/row:hover .report-bar { background:color-mix(in srgb, var(--analytics-accent) 16%, var(--analytics-tint)); }
 /* The heading's icon buttons are wider than their 16px glyph: pull them right so the glyph lines up with the
    numbers below instead of sitting 8px further in. */
 .report-heading > :last-child { margin-right:-8px; }
@@ -1094,7 +1097,7 @@ html[data-theme="dark"] .settings-brand-logo-color.is-dark { display:block; }
 .settings-form input[type="checkbox"], .settings-form input[type="radio"] { width: 16px; height: 16px; accent-color: var(--color-indigo-600); flex-shrink: 0; }
 .settings-label { font-size: var(--ui-text-body); font-weight: 500; color: var(--color-gray-700); }
 .settings-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--color-gray-200); }
-.ui-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; --sq-r:8px; border: 1px solid var(--color-gray-300); background: var(--surface); color: var(--color-gray-700); font-size: 13px; font-weight: 550; line-height: 20px; cursor: pointer; transition: background 140ms, border-color 140ms, box-shadow 140ms; }
+.ui-action { display: inline-flex; align-items: center; justify-content: center; gap: 8px; --sq-r:8px; border: 1px solid var(--color-gray-200); background: var(--surface); color: var(--color-gray-700); font-size: 13px; font-weight: 550; line-height: 20px; cursor: pointer; transition: background 140ms, border-color 140ms, box-shadow 140ms; }
 .ui-action[data-variant="primary"] { color: var(--accent-on-solid); background: var(--accent-color); border-color: var(--accent-color); }
 .ui-action[data-variant="danger"] { color: var(--color-red-600); background: var(--color-red-50); border-color: color-mix(in srgb, var(--color-red-600) 22%, transparent); }
 .ui-action[data-variant="ghost"] { background: transparent; border-color: transparent; }

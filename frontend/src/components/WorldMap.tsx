@@ -465,7 +465,7 @@ function WorldMap({
             <CountryFlag code={focusCode}/><strong>{countryName(focusCode, locale)}</strong>
           </button>
         ) : null}
-        <div className="squircle map-controls absolute top-2.5 right-2.5 z-10 flex overflow-hidden rounded-sm border border-white/70 bg-white/90 shadow-sm backdrop-blur-sm">
+        <div className="squircle map-controls absolute top-2.5 right-2.5 z-10 flex overflow-hidden border border-gray-200 bg-white/90 shadow-sm backdrop-blur-sm">
           <button type="button" disabled={!map} className="squircle px-2.5 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40" onClick={() => zoomBy(1.35)} aria-label={t("放大")}><UIIcon name="plus" className="size-3"/></button>
           <button type="button" disabled={!map} className="squircle border-l border-gray-200 px-2.5 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40" onClick={() => zoomBy(1 / 1.35)} aria-label={t("缩小")}><UIIcon name="minus" className="size-3"/></button>
           <button type="button" disabled={!map} className="squircle border-l border-gray-200 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-40" onClick={resetZoom}>{t("重置")}</button>

@@ -18,7 +18,7 @@ function SkeletonRows({ count = ROWS, more = false }: { count?: number; more?: b
 }
 
 function SkeletonReport({ className = "", tabs = 3, rows, more }: { className?: string; tabs?: number; rows?: number; more?: boolean }) {
-  return <Surface as="section" aria-hidden="true" className={`report-card relative flex min-w-0 w-full flex-col bg-white shadow-sm ${className}`}>
+  return <Surface as="section" aria-hidden="true" className={`report-card relative flex min-w-0 w-full flex-col bg-white ${className}`}>
     <div className="report-heading flex w-full justify-between border-b border-gray-200">
       <div className="skeleton-tabs">{Array.from({ length: tabs }, (_, index) => <span key={index} className="skeleton skeleton-line skeleton-tab" />)}</div>
     </div>
