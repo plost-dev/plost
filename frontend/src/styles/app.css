@@ -993,6 +993,7 @@ html[data-theme="dark"] .map-empty-note { background:var(--surface); }
 .toggle input:checked + .toggle-track { background:var(--ui-selection-bg); }
 .toggle input:checked + .toggle-track .toggle-thumb { transform:translateX(20px); background:var(--ui-selection-text); }
 .toggle input:focus-visible + .toggle-track { outline:2px solid var(--accent-text); outline-offset:3px; }
+.toggle.is-label-first .toggle-text { order:-1; color:var(--color-gray-500); }
 .toggle:has(input:disabled) { opacity:.5; cursor:not-allowed; }
 @media(prefers-reduced-motion:reduce) { .toggle-track, .toggle-thumb { transition:none; } }
 /* QR quiet zones must stay white in both themes. */

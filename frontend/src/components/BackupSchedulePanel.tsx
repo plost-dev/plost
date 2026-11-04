@@ -112,8 +112,8 @@ export function BackupSchedulePanel() {
   return <>
     <SettingsForm onSubmit={save}>
       <fieldset disabled={!!busy} className="backup-form-fields">
-        <Tile icon="cloud" brand={form.provider === "r2" ? "cloudflare" : undefined} id="storage" title={t("对象存储")}>
-          <div className="mb-6"><Toggle checked={form.cloudEnabled} onChange={next => set("cloudEnabled", next)}>{t("每次备份后上传到云存储")}</Toggle></div>
+        <Tile icon="cloud" brand={form.provider === "r2" ? "cloudflare" : undefined} id="storage" title={t("对象存储")}
+          actions={<Toggle checked={form.cloudEnabled} onChange={next => set("cloudEnabled", next)} labelFirst>{t("每次备份后上传到云存储")}</Toggle>}>
           <div className="backup-fields">
             <Field label={t("存储服务")}>
               <select className="squircle input" value={form.provider} onChange={e => set("provider", e.target.value as Settings["provider"])}>
