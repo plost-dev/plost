@@ -19,10 +19,7 @@
 .health-card-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; padding-top:20px; margin-top:20px; border-top:1px solid var(--color-gray-100); font-size:12px; font-variant-numeric:tabular-nums; color:var(--color-gray-600); }
 .health-card .health-note { color:var(--health-tone); font-size:var(--ui-text-caption); }
 .health-uptime { margin-bottom:calc(var(--ui-grid-gap) - 1rem); /* the grid gap sits above it; with the page's 1rem bottom padding the footer is one gap away too */ padding:var(--ui-card-padding); background:var(--surface); border:1px solid var(--color-gray-200); --health-accent:#0d9488; }
-.health-uptime-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
-.health-uptime h2 { font-size:var(--ui-text-card); line-height:24px; font-weight:600; color:var(--color-gray-900); }
-.health-uptime-heading p { font-size:12px; margin-top:4px; color:var(--color-gray-500); }
-.health-uptime-heading strong { font-size:20px; font-weight:500; color:var(--color-gray-900); font-variant-numeric:tabular-nums; letter-spacing:-.025em; }
+.health-uptime-heading strong { font-size:var(--ui-text-card); line-height:24px; font-weight:500; color:var(--color-gray-900); font-variant-numeric:tabular-nums; letter-spacing:-.025em; }
 .health-uptime-days { display:grid; grid-template-columns:repeat(90,minmax(0,1fr)); gap:3px; margin-top:18px; }
 .health-uptime-days span { height:28px; background:var(--health-tone); --sq-r:3px; }
 .health-uptime-days .health-tone-unknown { opacity:.22; }

@@ -897,7 +897,6 @@ html[data-theme="dark"] { --map-ocean: #242630; --map-empty: #3d4151; --map-bord
 .analytics-heading { display: flex; min-height:32px; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
 .analytics-heading h3 { display: inline-flex; align-items: center; gap: 8px; font-size: var(--ui-text-card); line-height:24px; font-weight: 600; color: var(--color-gray-900); }
 /* The same quiet line icon as the settings card titles. */
-.analytics-heading-icon { flex: none; display: inline-grid; place-items: center; width: 18px; font-size: 16px; line-height: 1; color: var(--color-gray-500); }
 .analytics-heading > span { font-size: var(--ui-text-caption); color: var(--color-gray-500); }
 .visitor-graph { padding: 8px 0 0; overflow: hidden; }
 .metric-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }

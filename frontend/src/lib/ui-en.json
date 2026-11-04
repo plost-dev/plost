@@ -565,7 +565,6 @@
   "异常": "Failed",
   "共 {0} 次检查": "{0} checks",
   "近 90 天在线": "Uptime, last 90 days",
-  "每 5 分钟检查一次 HTTP 状态，按天汇总": "HTTP status checked every 5 minutes, summed up per day",
   "部分异常": "Partly down",
   "站点信息": "Site information",
   "网站可用性": "Availability",

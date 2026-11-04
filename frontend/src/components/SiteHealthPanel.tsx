@@ -49,8 +49,8 @@ export function SiteUptimeStrip({report}: {report: SiteCheckReport}) {
   const overall = total ? (total - failed) / total * 100 : null
   const percent = (value: number) => `${value >= 99.995 ? "100" : value.toFixed(2)}%`
   return <Surface className="health-uptime col-span-full">
-    <div className="health-uptime-heading">
-      <div><h2>{t("近 90 天在线")}</h2><p>{t("每 5 分钟检查一次 HTTP 状态，按天汇总")}</p></div>
+    <div className="analytics-heading health-uptime-heading">
+      <h3>{t("近 90 天在线")}</h3>
       <strong>{overall === null ? "—" : percent(overall)}</strong>
     </div>
     <div className="health-uptime-days" role="list" aria-label={t("近 90 天在线")}>
