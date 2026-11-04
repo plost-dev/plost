@@ -43,11 +43,11 @@ func TestSparklineSettings(t *testing.T) {
 	if err := json.Unmarshal(x.call(t, "GET", "/api/preferences", nil, 200), &prefs); err != nil {
 		t.Fatal(err)
 	}
-	if prefs["sparklineStyle"] != "lollipop" {
+	if prefs["sparklineStyle"] != "bars" {
 		t.Fatalf("retired style: %v", prefs)
 	}
-	// And so do the four dropped on 2026-11-04.
-	for old, want := range map[string]string{"mirror": "bars", "blocks": "bars", "step": "area-line", "dots": "lollipop"} {
+	// And so do the six dropped on 2026-11-04.
+	for old, want := range map[string]string{"mirror": "bars", "blocks": "bars", "step": "area-line", "dots": "bars", "bars-average": "bars", "lollipop": "bars"} {
 		if _, err := x.app.db.Exec("UPDATE settings SET value=? WHERE key='sparkline_style'", old); err != nil {
 			t.Fatal(err)
 		}

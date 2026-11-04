@@ -6,9 +6,7 @@ export const SPARKLINE_STYLES = [
   { id: "smooth", label: "平滑曲线 + 渐变" },
   { id: "peak", label: "峰值标注" },
   { id: "bars", label: "柱形" },
-  { id: "bars-average", label: "柱形 + 均线" },
   { id: "change", label: "涨跌柱" },
-  { id: "lollipop", label: "棒棒糖" },
   { id: "heat", label: "热力格" },
 ] as const
 export const SPARKLINE_RANGES = [

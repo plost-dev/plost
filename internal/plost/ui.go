@@ -80,16 +80,15 @@ func (a *App) preferences(w http.ResponseWriter, r *http.Request) error {
 // The small trend on each site card in the site list: one of these styles, over the last 24 hours (hourly) or the
 // last 30 days (daily). The frontend draws them (SiteSparkline); "area-line" is the original look.
 var sparklineStyles = map[string]bool{
-	"area-line": true, "smooth": true, "peak": true, "bars": true, "bars-average": true,
-	"change": true, "lollipop": true, "heat": true,
+	"area-line": true, "smooth": true, "peak": true, "bars": true, "change": true, "heat": true,
 }
 
-// retiredSparklineStyles were dropped as too alike or hard to read (2026-11-03, and mirror, blocks, step and dots
-// on 2026-11-04); an account that saved one keeps the nearest look.
+// retiredSparklineStyles were dropped as too alike or hard to read (2026-11-03, and mirror, blocks, step, dots,
+// bars-average and lollipop on 2026-11-04); an account that saved one keeps the nearest look.
 var retiredSparklineStyles = map[string]string{
-	"bars-today": "bars", "bars-recent": "bars", "bars-cap": "bars", "barcode": "lollipop",
+	"bars-today": "bars", "bars-recent": "bars", "bars-cap": "bars", "barcode": "bars",
 	"line": "area-line", "line-faint": "area-line", "area": "smooth",
-	"mirror": "bars", "blocks": "bars", "step": "area-line", "dots": "lollipop",
+	"mirror": "bars", "blocks": "bars", "step": "area-line", "dots": "bars", "bars-average": "bars", "lollipop": "bars",
 }
 
 func (a *App) sparklineSettings(ctx context.Context) (style, span string) {

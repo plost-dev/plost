@@ -36,23 +36,16 @@ export function SiteSparkline({ values, style, className = "h-12 w-full" }: { va
     const w = Math.max(1, slot * width)
     return v > 0 ? <rect key={i} x={cx(i) - w / 2} y={top(v)} width={w} height={H - top(v)} rx={1.5} fill="currentColor" opacity={opacity(i)} /> : null
   })
-  const window = n > 24 ? 7 : 4
-  const average = pts.map((_, i) => { const s = pts.slice(Math.max(0, i - window + 1), i + 1); return s.reduce((a, b) => a + b, 0) / s.length })
 
   let body: ReactNode
   switch (chosen) {
     case "bars": body = bars(() => 0.85); break
-    case "bars-average": body = <>{bars(() => 0.28)}<path d={average.map((v, i) => `${i ? "L" : "M"}${cx(i).toFixed(1)},${top(v).toFixed(1)}`).join("")} {...stroke} strokeWidth={1.8} /></>; break
     case "smooth": {
       const d = line<number>().x((_, i) => lineX(i)).y(ly).curve(curveMonotoneX)(pts) || ""
       body = <><defs><linearGradient id={fade} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="currentColor" stopOpacity={0.32} /><stop offset="1" stopColor="currentColor" stopOpacity={0} /></linearGradient></defs>
         <path d={areaUnder(d)} fill={`url(#${CSS.escape(fade)})`} /><path d={d} {...stroke} strokeWidth={1.8} /></>
       break
     }
-    case "lollipop": body = pts.map((v, i) => <g key={i}>
-      <line x1={cx(i)} x2={cx(i)} y1={H} y2={top(v) + 3} stroke="currentColor" strokeWidth={1} opacity={0.35} vectorEffect="non-scaling-stroke" />
-      <circle cx={cx(i)} cy={top(v) + 3} r={2.3} fill="currentColor" />
-    </g>); break
     // A smooth line that marks its highest point and the latest one, so the peak and "now" read at a glance.
     case "peak": {
       const d = line<number>().x((_, i) => lineX(i)).y(ly).curve(curveMonotoneX)(pts) || ""
