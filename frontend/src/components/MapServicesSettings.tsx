@@ -8,7 +8,6 @@ import { Toggle } from "./Toggle"
 import { Tile } from "./ui"
 import { GoogleMapsSettingsPanel } from "./GoogleMapsSettingsPanel"
 import { MapboxSettingsPanel } from "./MapboxSettingsPanel"
-import { MapServiceTips } from "./MapServiceTips"
 
 type MapServices = { mapbox: MapboxSettings; google: GoogleMapsSettings; usage: MapUsage }
 let loading: Promise<MapServices> | null = null
@@ -74,7 +73,6 @@ function MapServicesSettings({ mapbox: initialMapbox, google: initialGoogle, usa
     <GoogleMapsSettingsPanel settings={google} enabled={googleOn} onToggle={toggleGoogle} onKeySaved={next => { setGoogle(next); onSaved() }} />
     <MapUsagePanel initial={usage} service={mapboxOn ? "Mapbox" : googleOn ? "Google 地图" : ""} onSaved={onSaved} />
     <MapOutlinePanel initial={usage.outline} onSaved={onSaved} />
-    <MapServiceTips />
   </>
 }
 

@@ -650,16 +650,16 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
 }
 
 .squircle.settings-avatar-preview {
-  --sq-r: 29px;
-  width: 4rem;
-  height: 4rem;
+  --sq-r: 21px;
+  width: 3rem;
+  height: 3rem;
   object-fit: cover;
   background: var(--accent-color);
   color: var(--accent-on-solid);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.25rem;
+  font-size: 1.0625rem;
   font-weight: 600;
 }
 
@@ -1083,9 +1083,6 @@ html[data-theme="dark"] .mapboxgl-ctrl-attrib-button { filter:invert(1); }
 .settings-brand-logo-color { display:block; height:24px; object-fit:contain; object-position:left center; }
 .settings-brand-logo-color.is-dark, html[data-theme="dark"] .settings-brand-logo-color:not(.is-dark) { display:none; }
 html[data-theme="dark"] .settings-brand-logo-color.is-dark { display:block; }
-.settings-tips { display:grid; gap:12px; margin:0; padding:0; list-style:none; font-size:12px; line-height:1.7; color:var(--color-gray-600); }
-.settings-tips li { display:flex; gap:10px; align-items:flex-start; }
-.settings-tip-number { display:inline-flex; flex:none; align-items:center; justify-content:center; width:20px; height:20px; margin-top:0; --sq-r:7px; background:var(--accent-soft); color:var(--accent-text); font-size:11px; font-weight:600; font-variant-numeric:tabular-nums; }
 .settings-heading-link { font-size:13px; line-height:24px; font-weight:500; }
 .settings-heading-actions { display:flex; align-items:center; flex:none; margin-left:auto; align-self:center; }
 @media(max-width:639px) { .settings-card-heading:has(.settings-heading-actions) { flex-wrap:wrap; } .settings-heading-actions { margin-left:36px; } }

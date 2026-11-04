@@ -6,7 +6,6 @@ import { useT } from "~/lib/i18n"
 import { showToast } from "~/lib/toast"
 import { ActionButton } from "./ActionButton"
 import { Field, FormActions, SettingsForm } from "./SettingsForm"
-import { SettingsTips } from "./SettingsTips"
 import { Tile } from "./ui"
 import { Toggle } from "./Toggle"
 
@@ -76,13 +75,6 @@ export function GeoIPSettingsPage() {
       </dl>
     </Tile>}
     <ChinaCityTile data={data} onChange={setData} />
-    <SettingsTips tips={[
-      "IP 数据库用来判断访客所在的国家；GeoLite2-City 还能让实时访客地图显示到城市。经过 Cloudflare 时优先使用它给出的国家。",
-      "Plost 每天对照数据来源的版本号检查一次，版本不同才下载；下载后先核对 SHA-256、再校验整个数据库，通过后才替换正在使用的库，并删除旧版本和未完成的下载。",
-      "想直接从 MaxMind 下载：在 MaxMind 官网注册免费账号，在「Manage License Keys」里生成 Key，填进上面的 MaxMind 卡片。保存后会自动改用 MaxMind，并立即检测、下载、校验和替换，之后每天自动检测新版本。账号 ID 和 License Key 只写入 env 文件，不存数据库。",
-      "除「在线查询」和 cnip.io 外，查询都在本机完成，访客 IP 不会发给任何人；选「在线查询」时，访客 IP 会发送到 Plost 的 geo.plost.io 服务查询（该服务不记录、不保存查询的 IP）。",
-      "开启「中国访客的省份和城市」后，国家为中国的访客 IP 会发送到 api.cnip.io 查询省份和城市，其他国家仍用 IP 数据库；同一个 IP 的结果在内存里保留一天，查询超过 1.5 秒或失败时改用 IP 数据库。城市从开启之后开始记录。",
-    ]} />
   </>
 }
 

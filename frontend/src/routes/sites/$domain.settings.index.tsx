@@ -1,4 +1,3 @@
-import { SettingsTips } from "~/components/SettingsTips"
 import { ActionButton, ActionUpload } from "~/components/ActionButton"
 import { SiteFavicon } from "~/components/SiteFavicon"
 import { SettingsForm, Field, FormActions } from "~/components/SettingsForm"
@@ -53,12 +52,6 @@ function GeneralPage() {
       </SettingsForm>
     </Tile>
     <SiteIconTile domain={domain} initial={data.iconVersion || 0} />
-    <SettingsTips tips={[
-      "站点域名改动后，埋点脚本里的 data-domain 也要一起改成新域名，否则新的访问不会记到这个站点。",
-      "时区决定「今天」「昨天」从几点开始算，也决定按天、按小时统计的分界。",
-      "站点图标默认取自 favicon.la，也可以上传自己的图标（PNG、JPG、GIF、WebP 或 ICO，不超过 256 KB），恢复默认即可删掉。",
-      "站点检查每 5 分钟访问一次检查路径，跟随跳转后返回 HTTP 200 视为正常，并检查证书和域名到期时间。无需安装探针或统计脚本。",
-    ]} />
   </>
 }
 

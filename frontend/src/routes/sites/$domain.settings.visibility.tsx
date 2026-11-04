@@ -1,4 +1,3 @@
-import { SettingsTips } from "~/components/SettingsTips"
 import { ActionButton } from "~/components/ActionButton"
 import { SettingsForm, Field, FormActions } from "~/components/SettingsForm"
 import { Link, createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router"
@@ -59,11 +58,6 @@ function VisibilityPage() {
           ))}
         </ul>
       </Tile>
-      <SettingsTips tips={[
-        "公开仪表盘打开后，任何人都能用站点地址查看这个站点的统计，不需要登录。",
-        "共享链接生成不需登录就能打开的只读报表，可以随时删除；删除后链接立即失效。",
-        "两者都只开放报表，不包括活动日志、账号、系统设置和备份。",
-      ]} />
     </div>
   )
 }

@@ -1,0 +1,1 @@
+import{c as e}from"./index-CO-yBQGP.js";import{t}from"./jsx-runtime-C-7WyuLU.js";var n=t(),r=()=>(0,n.jsx)(n.Fragment,{children:(0,n.jsx)(e,{})});export{r as component};

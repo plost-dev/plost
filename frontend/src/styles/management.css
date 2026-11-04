@@ -177,7 +177,7 @@ html[data-theme="dark"] .management-shell .settings-content :is(.ui-action[data-
 .management-shell .preferences-form { gap:24px; }
 .management-shell .preferences-form .settings-field,
 .management-shell .preferences-form .settings-actions { margin-top:0; }
-.management-shell .preferences-form .settings-avatar-preview { flex:0 0 64px; }
+.management-shell .preferences-form .settings-avatar-preview { flex:0 0 48px; }
 .management-shell .preferences-form .settings-avatar-row > div { display:flex; flex-wrap:wrap; gap:12px; min-width:0; }
 
 /* Navigation and settings share a single card and a full-height divider. */
