@@ -50,6 +50,9 @@ function loadDots() {
   })
 }
 
+// How long the label card takes to slide from one place to the next.
+const GLIDE_MS = 700
+
 function cssColor(el: Element, name: string, fallback: string) {
   return getComputedStyle(el).getPropertyValue(name).trim() || fallback
 }
@@ -65,6 +68,8 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
   const [tip, setTip] = useState<Marker | null>(null)
   const tipRef = useRef<HTMLDivElement>(null)
   const tipAt = useRef<[number, number]>([0, 0])
+  // While the card moves from one place to the next: where it set off and when.
+  const glide = useRef<{ from: [number, number], at: number } | null>(null)
   const labelRef = useRef<{ key: string, right: boolean }>({ key: "", right: false })
   const frameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -206,6 +211,8 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
         // The side is chosen once per place, so the card never flips while it follows the dot.
         const tipWidth = tipRef.current?.offsetWidth || 160
         labelRef.current = { key: label.marker.key, right: label.x - tipWidth - label.r - 10 < 8 }
+        // A card already showing slides over to the new place instead of jumping there.
+        glide.current = tipRef.current && !reduced ? { from: [...tipAt.current], at: performance.now() } : null
       }
       // Position is written straight to the element so rotation never re-renders React.
       if (label) {
@@ -214,7 +221,17 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
         const x = labelRef.current.right ? label.x + gap : label.x - tipWidth - gap
         // Stay below the buttons in the top corner.
         const y = Math.max(60, Math.min(height - tipHeight - 8, label.y - tipHeight / 2))
-        tipAt.current = [Math.max(8, Math.min(width - tipWidth - 8, x)), y]
+        const to: [number, number] = [Math.max(8, Math.min(width - tipWidth - 8, x)), y]
+        const moving = glide.current
+        if (moving) {
+          // Eased in and out over GLIDE_MS, aiming at where the dot is now, so it lands on a moving dot smoothly.
+          const p = Math.min(1, (performance.now() - moving.at) / GLIDE_MS)
+          const e = p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2
+          tipAt.current = [moving.from[0] + (to[0] - moving.from[0]) * e, moving.from[1] + (to[1] - moving.from[1]) * e]
+          if (p >= 1) glide.current = null
+        } else {
+          tipAt.current = to
+        }
         if (tipRef.current) tipRef.current.style.transform = `translate(${Math.round(tipAt.current[0])}px, ${Math.round(tipAt.current[1])}px)`
       }
       setTip(label?.marker || null)
@@ -295,9 +312,12 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
       <canvas ref={canvasRef} className="overview-globe-canvas" role="img" aria-label={t("当前在线访客位置")} />
       {failed ? <p className="overview-globe-state" role="status">{t("地图加载失败")}</p> : null}
       {tip && top ? (
-        <div ref={tipRef} key={tip.key} className="squircle overview-globe-tip" style={{ transform: `translate(${Math.round(tipAt.current[0])}px, ${Math.round(tipAt.current[1])}px)` }}>
-          <strong><CountryFlag code={tip.country} shape="rect" className="overview-globe-flag" />{countryName(tip.country, locale)}</strong>
-          <span><i aria-hidden="true" />{(tip.sites.length > 1 ? t("{n} 人在线 · {k} 个站点").replace("{k}", String(tip.sites.length)) : t("{n} 人在线 · {site}").replace("{site}", top.name)).replace("{n}", numberShort(tip.visitors))}</span>
+        <div ref={tipRef} className="squircle overview-globe-tip" style={{ transform: `translate(${Math.round(tipAt.current[0])}px, ${Math.round(tipAt.current[1])}px)` }}>
+          {/* The card stays and slides; only what it says fades over to the new place. */}
+          <div key={tip.key} className="overview-globe-tip-body">
+            <strong><CountryFlag code={tip.country} shape="rect" className="overview-globe-flag" />{countryName(tip.country, locale)}</strong>
+            <span><i aria-hidden="true" />{(tip.sites.length > 1 ? t("{n} 人在线 · {k} 个站点").replace("{k}", String(tip.sites.length)) : t("{n} 人在线 · {site}").replace("{site}", top.name)).replace("{n}", numberShort(tip.visitors))}</span>
+          </div>
         </div>
       ) : null}
       {menu ? (

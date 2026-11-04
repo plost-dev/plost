@@ -1,1 +1,0 @@
-import{Ot as e}from"./index-DOZbi7VB.js";var t=e;export{t as component};
