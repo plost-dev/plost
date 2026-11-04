@@ -309,7 +309,7 @@ func (a *App) page(w http.ResponseWriter, r *http.Request) {
 			redirect = "/dashboard"
 		}
 	case "/dashboard", "/sites/new", "/settings", "/settings/security", "/settings/api", "/settings/appearance",
-		"/settings/sparkline", "/settings/map", "/settings/geoip", "/settings/backup":
+		"/settings/map", "/settings/geoip", "/settings/backup":
 		if count == 0 {
 			redirect = "/setup"
 		} else if u == nil {

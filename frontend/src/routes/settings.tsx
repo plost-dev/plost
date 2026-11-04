@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, redirect, useLocation } from "@tanstack/react-router"
+import { createFileRoute, Link, Outlet, redirect, useLocation, useRouter } from "@tanstack/react-router"
 import { useEffect } from "react"
 import { ActionLink } from "~/components/ActionButton"
 import { loadMapServices } from "~/components/MapServicesSettings"
@@ -8,6 +8,9 @@ import { Shell } from "~/components/Shell"
 import { UIIcon as TabIcon } from "~/components/UIIcon"
 import { accountSettingsFn } from "~/lib/actions"
 import { useT } from "~/lib/i18n"
+import { prefetchSettings } from "~/lib/settings-cache"
+// In the layout's chunk, so no page waits for its stylesheet.
+import "~/styles/backup-settings.css"
 
 // Each page has its own static address; the profile page is /settings itself.
 const ACCOUNT_PAGES = [
@@ -17,7 +20,6 @@ const ACCOUNT_PAGES = [
 ] as const
 const SYSTEM_PAGES = [
   { to: "/settings/appearance", label: "界面外观" },
-  { to: "/settings/sparkline", label: "站点走势图" },
   { to: "/settings/map", label: "访客地图" },
   { to: "/settings/geoip", label: "IP 数据库" },
   { to: "/settings/backup", label: "备份与恢复" },
@@ -25,7 +27,9 @@ const SYSTEM_PAGES = [
 
 export const Route = createFileRoute("/settings")({
   // The pages share this loader, so switching between them neither waits for the server nor remounts the layout; each
-  // page loads its own data.
+  // page loads its own data. Switching pages keeps the account for a minute; saving calls router.invalidate().
+  staleTime: 60_000,
+  preloadStaleTime: 60_000,
   loader: async () => {
     try {
       return { data: await accountSettingsFn() }
@@ -40,7 +44,13 @@ function SettingsPage() {
   const { data } = Route.useLoaderData()
   const pathname = useLocation({ select: location => location.pathname.replace(/\/+$/, "") || "/" })
   const { t } = useT()
-  useEffect(() => { void loadMapServices().catch(() => {}) }, [])
+  const router = useRouter()
+  // Every page's code and data are fetched once the layout is up, so switching only swaps the content.
+  useEffect(() => {
+    void loadMapServices().catch(() => {})
+    prefetchSettings()
+    for (const route of Object.values(router.routesById)) if (route.id.startsWith("/settings/")) void router.loadRouteChunk(route)?.catch(() => {})
+  }, [router])
   const navLink = (item: { to: typeof ACCOUNT_PAGES[number]["to"] | typeof SYSTEM_PAGES[number]["to"]; label: string }) => {
     const active = pathname === item.to
     return <Link key={item.to} to={item.to} aria-current={active ? "page" : undefined} className={`squircle settings-nav-link${active ? " is-active" : ""}`}>{t(item.label)}</Link>
