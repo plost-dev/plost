@@ -65,6 +65,9 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
   const [failed, setFailed] = useState(false)
   const frameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  // The turn survives new data: every push of fresh places redraws, but the globe keeps spinning from where it is.
+  const rotationRef = useRef<[number, number] | null>(null)
+  const aimedRef = useRef(false)
 
   useEffect(() => {
     if (!menu) return
@@ -114,9 +117,13 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
     const max = Math.max(1, ...markers.map((m) => m.visitors))
     const newest = markers.reduce<Marker | null>((best, m) => !best || m.last > best.last ? m : best, null)?.key
     let width = 0, height = 0, raf = 0, visible = true
-    // Start facing the busiest country so the first frame already shows a visitor.
-    // Tilted towards the viewer, so the globe is seen a little from above, with the north half in front.
-    let rotation: [number, number] = [markers[0] ? -markers[0].lonLat[0] : -20, -25]
+    // Tilted towards the viewer, so the globe is seen a little from above, with the north half in front. It turns to
+    // the busiest place once, when the first visitors arrive; after that it only ever keeps turning.
+    if (!aimedRef.current && markers[0]) {
+      rotationRef.current = [-markers[0].lonLat[0], -25]
+      aimedRef.current = true
+    }
+    let rotation: [number, number] = rotationRef.current ?? [-20, -25]
     let drag: { x: number, y: number, rotation: [number, number] } | null = null
     let shown: Array<{ x: number, y: number, r: number, newest: boolean }> = []
     // Small dots; a busier place is only a little larger.
@@ -205,7 +212,8 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
 
     const tick = () => {
       raf = 0
-      if (mode === "globe" && !drag && !reduced) rotation = [rotation[0] + 0.08, rotation[1]]
+      if (mode === "globe" && !drag && !reduced) rotation = [(rotation[0] + 0.08) % 360, rotation[1]]
+      rotationRef.current = rotation
       draw()
       // The flat map stands still, but keeps drawing while the newest dot breathes.
       if (!reduced && (mode === "globe" || newest) && visible && document.visibilityState === "visible") raf = requestAnimationFrame(tick)
@@ -220,6 +228,7 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
     const onMove = (event: PointerEvent) => {
       if (!drag) return
       rotation = [drag.rotation[0] + (event.clientX - drag.x) * 0.3, Math.max(-60, Math.min(60, drag.rotation[1] - (event.clientY - drag.y) * 0.3))]
+      rotationRef.current = rotation
       if (reduced) draw()
     }
     const onUp = () => { drag = null }

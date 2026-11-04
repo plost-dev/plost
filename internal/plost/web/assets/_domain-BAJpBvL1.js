@@ -1,0 +1,1 @@
+import{Lt as e}from"./index-LsIfL_gU.js";var t=e;export{t as component};
