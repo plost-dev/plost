@@ -1,3 +1,4 @@
+import { SiteUptimeStrip } from "./SiteHealthPanel"
 import {downloadDashboardZip} from "~/lib/export"
 import {useState} from "react"
 import {UIIcon} from "./UIIcon"
@@ -71,5 +72,6 @@ export function AnalyticsDashboard({data,domain,search,dataSearch=search,onSearc
     <PageReport data={data} domain={domain} active={pageTab} onChange={setPageTab} mode={pageMode} onMode={setPageMode} eventMode={eventMode} onEventMode={setEventMode} onPick={name=>go({page:name})}/>
     <ReportCard className="location-report" tabs={[{id:"countries",label:"国家/地区"},{id:"regions",label:"地区"},{id:"cities",label:"城市"}]} active={locationTab} onChange={setLocationTab} details={{title:t(locationTab==="regions"?"地区":locationTab==="cities"?"城市":"国家/地区"),kind:locationTab==="regions"?"region":locationTab==="cities"?"city":"country",rows:locationRows,onPick:locationTab==="countries"?name=>go({country:name}):undefined}}><List plain kind={locationTab==="regions"?"region":locationTab==="cities"?"city":"country"} rows={locationRows} onPick={locationTab==="countries"?name=>go({country:name}):undefined}/></ReportCard>
     <ReportCard className="device-report traffic-paired-report" tabs={[{id:"browser",label:"浏览器"},{id:"os",label:"操作系统"},{id:"device",label:"设备"},{id:"language",label:"语言"},{id:"screen",label:"屏幕"},{id:"hours",label:"时段"}]} active={deviceTab} onChange={setDeviceTab} details={deviceTab==="hours"?undefined:{title:deviceTitle,kind:deviceKind,rows:deviceRows,onPick:deviceTab==="language"||deviceTab==="screen"?undefined:name=>go({[deviceTab==="os"?"os":deviceTab==="device"?"device":"browser"]:name})}}>{deviceTab==="hours"?<TrafficHeatmap bare cells={data.heatmap} days={data.heatmapDays}/>:<div key={deviceTab} className="device-report-scroll" role="region" aria-label={deviceTitle} tabIndex={0}><List plain maxItems={0} kind={deviceKind} rows={deviceRows} onPick={deviceTab==="language"||deviceTab==="screen"?undefined:name=>go({[deviceTab==="os"?"os":deviceTab==="device"?"device":"browser"]:name})}/></div>}</ReportCard>
+    {data.health?.enabled ? <SiteUptimeStrip report={data.health}/> : null}
   </div>
 }

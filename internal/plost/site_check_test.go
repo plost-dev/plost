@@ -315,7 +315,7 @@ func TestSiteCheckHistoryWindowAndRetention(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	seed(8*24*time.Hour, "https://example.com/")
+	seed(92*24*time.Hour, "https://example.com/")
 	seed(30*time.Hour, "https://example.com/")
 	seed(2*time.Hour, "https://example.com/")
 	seed(time.Hour, "https://example.com/")
@@ -331,14 +331,22 @@ func TestSiteCheckHistoryWindowAndRetention(t *testing.T) {
 		t.Fatal("history runs oldest to newest and the newest is the latest")
 	}
 
-	// Recording a new result prunes what is older than a week, and nothing else.
+	counted := 0
+	for _, day := range r.Uptime.Days {
+		counted += day.Total
+	}
+	if len(r.Uptime.Days) != 90 || counted != 3 || r.Uptime.Days[0].Percent != nil {
+		t.Fatalf("uptime has 90 days with only the current address in the window counted: %d days, %d checks", len(r.Uptime.Days), counted)
+	}
+
+	// Recording a new result prunes what is older than the 90-day window, and nothing else.
 	x.call(t, "PUT", "/api/sites/example.com/checks", map[string]any{"enabled": true, "path": "/"}, 200)
 	x.waitForChecks(t, "example.com", 3)
 	var old, kept int
-	x.app.db.QueryRow("SELECT count(*) FROM site_check_results WHERE checked_at<?", now.Add(-7*24*time.Hour).Unix()).Scan(&old)
+	x.app.db.QueryRow("SELECT count(*) FROM site_check_results WHERE checked_at<?", now.Add(-91*24*time.Hour).Unix()).Scan(&old)
 	x.app.db.QueryRow("SELECT count(*) FROM site_check_results").Scan(&kept)
 	if old != 0 || kept != 5 {
-		t.Fatalf("retention: %d older than a week, %d rows left (want 0 and 5)", old, kept)
+		t.Fatalf("retention: %d older than 91 days, %d rows left (want 0 and 5)", old, kept)
 	}
 }
 

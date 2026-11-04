@@ -6,7 +6,6 @@ const labels = {
   addSite: { "zh-CN": "添加站点", en: "Add site" },
   siteSettings: { "zh-CN": "站点设置", en: "Site settings" },
   activity: { "zh-CN": "活动日志", en: "Activity log" },
-  health: { "zh-CN": "站点检查", en: "Site check" },
   login: { "zh-CN": "登录", en: "Log in" },
   setup: { "zh-CN": "初始化", en: "Set up" },
   share: { "zh-CN": "公开统计", en: "Shared statistics" },
@@ -40,11 +39,10 @@ export function pageTitle(pathname: string, locale: Locale): string {
   else if (path === "/docs/api") label = "api"
   else if (/^\/share\/[^/]+$/.test(path)) label = "share"
   else {
-    const site = /^\/sites\/([^/]+)(?:\/(settings|activity|health))?(?:(?<=settings)\/[a-z-]+)?$/.exec(path)
+    const site = /^\/sites\/([^/]+)(?:\/(settings|activity))?(?:(?<=settings)\/[a-z-]+)?$/.exec(path)
     if (site && domainLabel(site[1])) {
       if (site[2] === "settings") label = "siteSettings"
       else if (site[2] === "activity") label = "activity"
-      else if (site[2] === "health") label = "health"
       else return `${domainLabel(site[1])} | Plost`
     }
   }

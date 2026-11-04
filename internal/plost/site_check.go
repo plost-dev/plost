@@ -13,7 +13,8 @@ import (
 
 const (
 	siteCheckInterval  = 5 * time.Minute
-	siteCheckRetention = 7 * 24 * time.Hour
+	siteCheckRetention = 91 * 24 * time.Hour // the 90-day uptime row plus today's partial day
+	uptimeDays         = 90
 )
 
 type SiteCheckReport struct {
@@ -23,7 +24,66 @@ type SiteCheckReport struct {
 	Expiry  *ExpirySnapshot `json:"expiry"`
 	Latest  *HTTPCheck      `json:"latest"`
 	Checks  []HTTPCheck     `json:"checks"`
+	Uptime  SiteUptime      `json:"uptime"`
 	Now     string          `json:"now"`
+}
+
+// SiteUptime is one entry per calendar day in the site's timezone, oldest first, ending today.
+// Percent is null on a day without any check.
+type SiteUptime struct {
+	Days []UptimeDay `json:"days"`
+}
+
+type UptimeDay struct {
+	Date    string   `json:"date"`
+	Percent *float64 `json:"percent"`
+	Total   int      `json:"total"`
+	Failed  int      `json:"failed"`
+}
+
+// siteUptime counts the checks of the last 90 days per local calendar day.
+func (a *App) siteUptime(ctx context.Context, site Site, target string, now time.Time) (SiteUptime, error) {
+	loc, err := time.LoadLocation(site.Timezone)
+	if err != nil {
+		loc = time.UTC
+	}
+	today := now.In(loc)
+	first := time.Date(today.Year(), today.Month(), today.Day()-(uptimeDays-1), 0, 0, 0, 0, loc)
+	days := make([]UptimeDay, uptimeDays)
+	index := map[string]int{}
+	for i := range days {
+		date := time.Date(first.Year(), first.Month(), first.Day()+i, 0, 0, 0, 0, loc).Format("2006-01-02")
+		days[i].Date = date
+		index[date] = i
+	}
+	rows, err := a.db.QueryContext(ctx, "SELECT checked_at,ok FROM site_check_results WHERE site_id=? AND target_url=? AND checked_at>=?", site.ID, target, first.Unix())
+	if err != nil {
+		return SiteUptime{}, err
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var at int64
+		var ok bool
+		if err := rows.Scan(&at, &ok); err != nil {
+			return SiteUptime{}, err
+		}
+		if i, found := index[time.Unix(at, 0).In(loc).Format("2006-01-02")]; found {
+			days[i].Total++
+			if !ok {
+				days[i].Failed++
+			}
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return SiteUptime{}, err
+	}
+	for i := range days {
+		if days[i].Total > 0 {
+			percent := float64(days[i].Total-days[i].Failed) / float64(days[i].Total) * 100
+			days[i].Percent = &percent
+		}
+	}
+	return SiteUptime{Days: days}, nil
 }
 
 func parseExpiry(text string) *ExpirySnapshot {
@@ -37,8 +97,8 @@ func parseExpiry(text string) *ExpirySnapshot {
 	return &s
 }
 
-// siteCheckReport is what the site check page and the toolbar badge show: settings, the last 24 hours of
-// checks and the latest expiry lookup. The caller holds a.mu.
+// siteCheckReport is what the dashboard's status badge and uptime card show: settings, the last 24 hours of
+// checks, daily uptime for 90 days and the latest expiry lookup. The caller holds a.mu.
 func (a *App) siteCheckReport(ctx context.Context, site Site) (SiteCheckReport, error) {
 	enabled, path, expiryText, expiryHost := false, "/", "", ""
 	err := a.db.QueryRowContext(ctx, "SELECT enabled,path,expiry,expiry_host FROM site_check_settings WHERE site_id=?", site.ID).Scan(&enabled, &path, &expiryText, &expiryHost)
@@ -86,6 +146,9 @@ func (a *App) siteCheckReport(ctx context.Context, site Site) (SiteCheckReport, 
 	}
 	if n := len(report.Checks); n > 0 {
 		report.Latest = &report.Checks[n-1]
+	}
+	if report.Uptime, err = a.siteUptime(ctx, site, target.String(), now); err != nil {
+		return report, err
 	}
 	return report, nil
 }

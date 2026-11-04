@@ -1,6 +1,8 @@
 // Shapes returned by GET /api/sites/{domain}/checks. Absent values arrive as null, an empty string or not at all.
 export type HttpCheck = {checkedAt: string; ok: boolean; status: number | null; durationMs: number | null; error: string | null}
 
+export type UptimeDay = {date: string; percent: number | null; total: number; failed: number}
+
 export type DomainExpiry = {
   domain?: string | null
   expiresAt?: string | null
@@ -31,5 +33,7 @@ export type SiteCheckReport = {
   expiry: ExpirySnapshot | null
   latest: HttpCheck | null
   checks: HttpCheck[]
+  /** One entry per calendar day in the site's timezone, oldest first; percent is null without checks. */
+  uptime?: {days: UptimeDay[]}
   now: string
 }

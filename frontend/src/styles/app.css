@@ -1390,7 +1390,6 @@ html[data-theme="dark"] .metric-grid .metric-item > button[aria-pressed="true"] 
 .visitor-map-tooltip { width:168px; max-width:calc(100% - 16px); overflow-wrap:anywhere; }
 .traffic-scroll { max-width:100%; overflow-x:auto; overscroll-behavior-inline:contain; }
 .activity-type-tabs button .activity-type-label { font-size:inherit; }
-.health-response-chart { touch-action:pan-y; min-width:0; }
 .settings-content, .settings-form, .settings-field, .settings-form fieldset { min-width:0; }
 .settings-form .input, .new-site-wizard .input { min-width:0; max-width:100%; }
 .settings-share-list a { max-width:100%; }
@@ -1428,8 +1427,7 @@ html[data-theme="dark"] .metric-grid .metric-item > button[aria-pressed="true"] 
   .health-path { align-items:stretch; }
   .health-path > span { flex-basis:100%; min-width:0; overflow-wrap:anywhere; }
   .health-path .input { width:100%; min-width:0; font-size:16px; }
-  .health-chart-caption, .health-footer > span, .health-registration-note { overflow-wrap:anywhere; }
-  .health-chart-stats { max-width:100%; flex-wrap:wrap; gap:12px 24px; }
+  .health-footer > span, .health-registration-note { overflow-wrap:anywhere; }
 }
 @media(max-width:639px) {
   .traffic-scroll :is(.traffic-grid,.traffic-hourly-chart) { min-width:600px; }
