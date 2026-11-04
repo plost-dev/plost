@@ -170,6 +170,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("GET /api/sites/{domain}/visitors", a.api(a.visitors, true))
 	mux.HandleFunc("POST /api/sites/{domain}/shares", a.api(a.createShare, true))
 	mux.HandleFunc("DELETE /api/sites/{domain}/shares/{id}", a.api(a.deleteShare, true))
+	mux.HandleFunc("PUT /api/sites/{domain}/share", a.api(a.setShare, true))
 	mux.HandleFunc("GET /api/share/{token}", a.api(a.shareReport, false))
 	mux.HandleFunc("GET /api/api-keys", a.api(a.apiKeys, true))
 	mux.HandleFunc("POST /api/api-keys", a.api(a.createAPIKey, true))
@@ -447,7 +448,10 @@ func (a *App) siteSettings(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return failure(404, "网站不存在")
 	}
-	rows, err := a.db.QueryContext(r.Context(), "SELECT id,name,created_at,slug FROM shared_links WHERE site_id=? ORDER BY id DESC", s.ID)
+	if err := a.ensureShare(r.Context(), s.ID); err != nil {
+		return err
+	}
+	rows, err := a.db.QueryContext(r.Context(), "SELECT id,name,created_at,slug,enabled FROM shared_links WHERE site_id=? ORDER BY id", s.ID)
 	if err != nil {
 		return err
 	}
@@ -456,10 +460,11 @@ func (a *App) siteSettings(w http.ResponseWriter, r *http.Request) error {
 	for rows.Next() {
 		var id, at int64
 		var name, slug string
-		if err := rows.Scan(&id, &name, &at, &slug); err != nil {
+		var enabled bool
+		if err := rows.Scan(&id, &name, &at, &slug, &enabled); err != nil {
 			return err
 		}
-		shares = append(shares, map[string]any{"id": id, "name": name, "createdAt": at, "slug": slug})
+		shares = append(shares, map[string]any{"id": id, "name": name, "createdAt": at, "slug": slug, "enabled": enabled})
 	}
 	if err := rows.Err(); err != nil {
 		return err
@@ -537,6 +542,40 @@ func (a *App) createShare(w http.ResponseWriter, r *http.Request) error {
 	}
 	return jsonResponse(w, map[string]string{"token": token})
 }
+
+// ensureShare gives a site its share link the first time its settings are read. The link starts switched off, so
+// nothing becomes readable until the owner turns it on; its address stays the same however often it is toggled.
+func (a *App) ensureShare(ctx context.Context, siteID int64) error {
+	var n int
+	if err := a.db.QueryRowContext(ctx, "SELECT count(*) FROM shared_links WHERE site_id=?", siteID).Scan(&n); err != nil || n > 0 {
+		return err
+	}
+	token := randomHex(24)
+	_, err := a.db.ExecContext(ctx, "INSERT INTO shared_links(site_id,name,token_hash,created_at,slug,enabled) VALUES(?,?,?,?,?,0)", siteID, "公开报表", digest(token), unixNow(), token)
+	return err
+}
+
+// setShare switches the site's share links on or off without changing their addresses.
+func (a *App) setShare(w http.ResponseWriter, r *http.Request) error {
+	s, err := readSite(r.Context(), a.db, r.PathValue("domain"))
+	if err != nil {
+		return failure(404, "网站不存在")
+	}
+	var in struct {
+		Enabled bool `json:"enabled"`
+	}
+	if err := readJSON(w, r, &in); err != nil {
+		return err
+	}
+	if err := a.ensureShare(r.Context(), s.ID); err != nil {
+		return err
+	}
+	if _, err := a.db.ExecContext(r.Context(), "UPDATE shared_links SET enabled=? WHERE site_id=?", in.Enabled, s.ID); err != nil {
+		return err
+	}
+	return jsonResponse(w, map[string]bool{"ok": true})
+}
+
 func (a *App) deleteShare(w http.ResponseWriter, r *http.Request) error {
 	s, err := readSite(r.Context(), a.db, r.PathValue("domain"))
 	if err != nil {
@@ -562,7 +601,7 @@ func (a *App) sharedSite(r *http.Request, token string) (Site, error) {
 		return Site{}, sql.ErrNoRows
 	}
 	var d string
-	err := a.db.QueryRowContext(r.Context(), "SELECT s.domain FROM shared_links l JOIN sites s ON s.id=l.site_id WHERE l.token_hash=?", digest(token)).Scan(&d)
+	err := a.db.QueryRowContext(r.Context(), "SELECT s.domain FROM shared_links l JOIN sites s ON s.id=l.site_id WHERE l.token_hash=? AND l.enabled=1", digest(token)).Scan(&d)
 	if err != nil {
 		return Site{}, err
 	}

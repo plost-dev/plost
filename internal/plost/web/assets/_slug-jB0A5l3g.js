@@ -1,1 +1,0 @@
-import{nt as e}from"./index-De8LGL5P.js";import{r as t}from"./useRouter-ChX2SBsk.js";var n=t(),r=({error:t})=>(0,n.jsx)(e,{title:`分享链接无效`,description:t instanceof Error?t.message:void 0});export{r as errorComponent};

@@ -1,62 +1,58 @@
 import { ActionButton } from "~/components/ActionButton"
-import { SettingsForm, Field, FormActions } from "~/components/SettingsForm"
-import { Link, createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router"
-import { useState } from "react"
+import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router"
+import { useRef, useState } from "react"
 import { Toggle } from "~/components/Toggle"
 import { Tile } from "~/components/ui"
 import { useT } from "~/lib/i18n"
 import { showToast } from "~/lib/toast"
-import { createShareFn, removeShareFn, saveSettingsFn } from "~/lib/actions"
+import { saveSettingsFn, setShareFn } from "~/lib/actions"
 
 const settings = getRouteApi("/sites/$domain/settings")
 
 export const Route = createFileRoute("/sites/$domain/settings/visibility")({ component: VisibilityPage })
+
+/** The address with a copy button; dimmed while its switch is off, when it cannot be opened. */
+function LinkRow({ url, enabled }: { url: string, enabled: boolean }) {
+  const { t } = useT()
+  const [copied, setCopied] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  return <div className={`flex min-w-0 items-center gap-2${enabled ? "" : " opacity-50"}`}>
+    <input className="squircle input min-w-0 flex-1" readOnly value={url} aria-label={t("链接地址")} onFocus={event => event.target.select()} />
+    <ActionButton type="button" className="btn btn-secondary shrink-0" icon={copied ? "check" : "copy"} onClick={async () => {
+      try { await navigator.clipboard.writeText(url); setCopied(true); clearTimeout(timer.current); timer.current = setTimeout(() => setCopied(false), 2000) }
+      catch { showToast("无法复制，请手动选中链接", "error") }
+    }}>{t(copied ? "已复制" : "复制")}</ActionButton>
+  </div>
+}
 
 function VisibilityPage() {
   const { data } = settings.useLoaderData()
   const { domain } = settings.useParams()
   const router = useRouter()
   const { t } = useT()
+  const share = data.shares[0]
   const [isPublic, setIsPublic] = useState(!!data.site.public)
-  const [shareName, setShareName] = useState(t("公开报表"))
+  const [shared, setShared] = useState(!!share?.enabled)
+  const [busy, setBusy] = useState(false)
+  const origin = typeof window === "undefined" ? "" : window.location.origin
+
+  // Each switch saves as soon as it is flipped and goes back if the save fails.
+  async function flip(next: boolean, set: (value: boolean) => void, save: () => Promise<unknown>) {
+    set(next); setBusy(true)
+    try { await save(); await router.invalidate(); showToast(next ? "已开启" : "已关闭") }
+    catch (error) { set(!next); showToast(error instanceof Error ? error.message : "保存失败", "error") }
+    finally { setBusy(false) }
+  }
 
   return (
     <div>
-      <Tile icon="eye" title={t("公开仪表盘")}>
-        <SettingsForm onSubmit={async event => {
-          event.preventDefault()
-          await saveSettingsFn({data:{domain,public:isPublic}})
-          await router.invalidate()
-          showToast("设置已保存")
-        }}>
-          <Toggle checked={isPublic} onChange={setIsPublic}>{t("公开这个站点的仪表盘")}</Toggle>
-          <FormActions><ActionButton className="btn btn-primary" type="submit">{t("保存设置")}</ActionButton></FormActions>
-        </SettingsForm>
+      <Tile icon="eye" title={t("公开仪表盘")} actions={<Toggle hideLabel checked={isPublic} disabled={busy}
+        onChange={next => void flip(next, setIsPublic, () => saveSettingsFn({ data: { domain, public: next } }))}>{t("公开这个站点的仪表盘")}</Toggle>}>
+        <LinkRow url={`${origin}/sites/${encodeURIComponent(domain)}`} enabled={isPublic} />
       </Tile>
-      <Tile icon="plug" title={t("共享链接")}>
-        <p className="mb-4 text-sm"><Link to="/settings/api" className="text-indigo-600 hover:underline">{t("API")} · {t("在线人数")} / UV / PV</Link></p>
-        <SettingsForm
-          className="mb-4"
-          onSubmit={async event => {
-            event.preventDefault()
-            await createShareFn({ data: { domain, name: shareName } })
-            setShareName(t("公开报表"))
-            await router.invalidate()
-          }}
-        >
-          <Field label={t("共享链接名称")}><input className="squircle input" value={shareName} onChange={event => setShareName(event.target.value)} /></Field>
-          <FormActions><ActionButton className="btn btn-primary" type="submit">{t("创建")}</ActionButton></FormActions>
-        </SettingsForm>
-        <ul className="settings-share-list space-y-2 text-sm">
-          {data.shares.map(share => (
-            <li key={share.id} className="settings-list-row flex min-w-0 flex-wrap justify-between gap-3">
-              {share.slug
-                ? <a className="min-w-0 flex-1 text-indigo-600 hover:text-indigo-500" href={`/share/${share.slug}`}><span className="min-w-0 [overflow-wrap:anywhere]">{share.name} · /share/{share.slug}</span></a>
-                : <span className="min-w-0 flex-1">{share.name}</span>}
-              <ActionButton className="shrink-0 text-red-600" type="button" onClick={async () => { await removeShareFn({ data: { domain, id: share.id } }); await router.invalidate() }}>{t("删除")}</ActionButton>
-            </li>
-          ))}
-        </ul>
+      <Tile icon="plug" title={t("共享链接")} actions={<Toggle hideLabel checked={shared} disabled={busy || !share}
+        onChange={next => void flip(next, setShared, () => setShareFn({ data: { domain, enabled: next } }))}>{t("开启共享链接")}</Toggle>}>
+        {share ? <LinkRow url={`${origin}/share/${share.slug}`} enabled={shared} /> : null}
       </Tile>
     </div>
   )

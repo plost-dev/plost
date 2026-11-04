@@ -79,7 +79,7 @@ func (a *App) serveSiteIcon(w http.ResponseWriter, r *http.Request, name string)
 	var at int64
 	var public bool
 	var shares int
-	err := a.db.QueryRowContext(r.Context(), `SELECT i.type,i.data,i.updated_at,s.public,(SELECT count(*) FROM shared_links l WHERE l.site_id=s.id)
+	err := a.db.QueryRowContext(r.Context(), `SELECT i.type,i.data,i.updated_at,s.public,(SELECT count(*) FROM shared_links l WHERE l.site_id=s.id AND l.enabled=1)
 		FROM site_icons i JOIN sites s ON s.id=i.site_id WHERE s.domain=?`, name).Scan(&kind, &data, &at, &public, &shares)
 	if errors.Is(err, sql.ErrNoRows) || err != nil {
 		return false

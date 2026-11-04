@@ -49,6 +49,7 @@ function SettingsPage() {
           title={t("settings.site_for")}
           domain={domain}
           name={data.site.name || ""}
+          iconVersion={data.iconVersion || 0}
           back={(
             <ActionLink to="/sites/$domain" params={{ domain }} className="btn-secondary settings-back">
               {t("settings.back_stats")}

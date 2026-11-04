@@ -215,6 +215,20 @@ html[data-theme="dark"] .management-shell .settings-content :is(.ui-action[data-
 .management-shell .site-settings-workspace > .settings-layout { border:0; margin:0; }
 .site-settings-workspace .management-heading h1 { font-size:var(--ui-text-page); }
 .site-settings-workspace .site-settings-title { min-height:32px; }
+.site-settings-domain { display:flex; align-items:center; gap:8px; }
+.site-settings-favicon { width:16px; height:16px; --sq-r:4px; }
+/* Wide screens: the title takes the sidebar's 216px and the line before the address continues the one between the
+   sidebar and the content, through the heading's 20px top and bottom padding; the address starts where the cards do. */
+@media(min-width:1024px) {
+  .management-shell .site-settings-workspace > .management-heading { align-items:stretch; }
+  .site-settings-workspace > .management-heading > div:first-child { display:flex; }
+  .site-settings-workspace > .management-heading > .management-heading-actions { align-self:center; }
+  .site-settings-workspace .management-heading-title { gap:0; }
+  .site-settings-workspace .management-heading-title > .ui-icon { margin-inline-end:10px; }
+  .site-settings-workspace .site-settings-title { flex-wrap:nowrap; gap:0; align-self:stretch; }
+  .site-settings-workspace .site-settings-title > span:first-child { flex:none; width:calc(216px - 24px - 22px - 10px); }
+  .site-settings-workspace .site-settings-domain { align-self:stretch; margin-block:-20px; padding-block:20px; padding-inline-start:24px; }
+}
 .management-shell .site-card-menu-trigger { --control-size:var(--ui-control-compact); width:var(--control-size); min-width:var(--control-size); height:var(--control-size); min-height:var(--control-size); padding:6px; border:0; background:transparent; box-shadow:none; color:var(--color-gray-500); }
 .management-shell .site-card-menu-trigger.ui-action:not([aria-expanded="true"]):is(:hover,:active) { background:transparent; border-color:transparent; box-shadow:none; color:var(--color-gray-800); }
 .management-shell .site-card-menu-trigger:focus { outline:none; }

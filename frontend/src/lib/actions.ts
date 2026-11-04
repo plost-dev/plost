@@ -41,7 +41,7 @@ export type OverviewCharts={totals:GoOverview;previous:GoOverview}
 export const overviewChartsFn=()=>rpc<OverviewCharts>("/api/overview/charts")
 export async function createSiteFn({data}:Input<{domain:string;timezone:string;name?:string|null}>){return rpc<{domain:string}>("/api/sites","POST",data)}
 export async function siteReadyFn({data}:Input<{domain:string}>){const r=await rpc<GoReport>(sitePath(data.domain)+"/report?period=all");return {ready:r.overview.pageviews>0}}
-export type Share={id:number;name:string;slug:string;createdAt:number}
+export type Share={id:number;name:string;slug:string;createdAt:number;enabled:boolean}
 const siteSettingsOnly=({data}:Input<{domain:string}>)=>rpc<{site:Site;shares:Share[];iconVersion?:number}>(sitePath(data.domain)+"/settings")
 export const siteCheckFn=({data}:Input<{domain:string}>)=>rpc<{report:SiteCheckReport;canManage:boolean}>(sitePath(data.domain)+"/checks")
 export const runSiteCheckFn=({data}:Input<{domain:string}>)=>rpc<{ok:boolean}>(sitePath(data.domain)+"/checks/run","POST",{})
@@ -53,6 +53,7 @@ export async function siteSettingsFn({data}:Input<{domain:string}>){
 export async function saveSettingsFn({data}:Input<{domain:string;name?:string;timezone?:string;public?:boolean;newDomain?:string}>){const {site}=await siteSettingsOnly({data});return rpc<{domain:string}>(sitePath(data.domain)+"/settings","PUT",{name:data.name??site.name,domain:data.newDomain??site.domain,timezone:data.timezone??site.timezone,public:data.public??site.public})}
 export const removeSiteFn=({data}:Input<{domain:string}>)=>rpc(sitePath(data.domain),"DELETE",{confirmation:data.domain})
 export const createShareFn=({data}:Input<{domain:string;name:string}>)=>rpc<{token:string}>(sitePath(data.domain)+"/shares","POST",{name:data.name})
+export const setShareFn=({data}:Input<{domain:string;enabled:boolean}>)=>rpc<{ok:boolean}>(sitePath(data.domain)+"/share","PUT",{enabled:data.enabled})
 export const removeShareFn=({data}:Input<{domain:string;id:number}>)=>rpc(sitePath(data.domain)+"/shares/"+data.id,"DELETE")
 
 export function overview(o:GoOverview):Overview{return {visitors:o.visitors,session_visitors:o.visitors,visits:o.visits,pageviews:o.pageviews,views_per_visit:o.visits?o.pageviews/o.visits:0,bounce_rate:o.bounceRate,visit_duration:o.duration,live:o.online}}
