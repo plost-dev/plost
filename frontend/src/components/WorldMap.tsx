@@ -447,7 +447,7 @@ function WorldMap({
       <div className="squircle map-stage relative overflow-hidden" data-show-flags={showFlags}>
         {focusCode ? (
           <button type="button" className="squircle map-back absolute top-2.5 left-2.5 z-10" onClick={onBack} title={t("返回世界地图")}>
-            <UIIcon name="arrow-left" className="size-3"/><span>{t("全球")}</span><span aria-hidden="true">/</span>
+            <UIIcon name="globe" className="size-3.5"/><span>{t("全球")}</span><span aria-hidden="true">/</span>
             <CountryFlag code={focusCode}/><strong>{countryName(focusCode, locale)}</strong>
           </button>
         ) : null}

@@ -277,7 +277,6 @@ export function TrendChart({
           {layout.bars && hover ? <rect className="traffic-hover-band" x={layout.left + layout.slot * hover.index} y={MARGIN.top - 4} width={layout.slot} height={layout.baseline - MARGIN.top + 4} /> : null}
           {layout.areas.map(({key, path}) => <path key={key} data-metric={key} className="traffic-series-area" d={path} fill={`url(#${gradientId}-${key})`} />)}
           {layout.lines.map(({key, path}) => <g key={key}>
-            {key === "visits" ? <path data-metric={key} className="traffic-series-halo" d={path} fill="none" stroke={`var(--traffic-${key})`} strokeWidth="8" strokeOpacity="0.5" strokeLinejoin="round" strokeLinecap="round" /> : null}
             <path data-metric={key} className="traffic-series-path" d={path} fill="none" stroke={`var(--traffic-${key})`} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
           </g>)}
           {layout.columns.map(({key, i, path}) => path ? <path key={`${i}-${key}`} data-metric={key} className="traffic-bar" d={path} /> : null)}

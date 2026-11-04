@@ -71,7 +71,6 @@ html .traffic-overview[data-chart="bar"] {
 .traffic-summary-item[data-hidden] .traffic-series-dot { background: transparent; box-shadow: inset 0 0 0 1.5px var(--traffic-visitors); }
 .traffic-summary-item[data-hidden][data-metric="visits"] .traffic-series-dot { box-shadow: inset 0 0 0 1.5px var(--traffic-visits); }
 .traffic-summary-item[data-hidden][data-metric="pageviews"] .traffic-series-dot { box-shadow: inset 0 0 0 1.5px var(--traffic-pageviews); }
-.traffic-series-halo { pointer-events: none; }
 /* Bars are nested, tallest and widest at the back; lighter tints sit behind, the full colour in front. */
 .traffic-bar { pointer-events: none; stroke: none; }
 .traffic-bar[data-metric="pageviews"] { fill: var(--traffic-pageviews); }

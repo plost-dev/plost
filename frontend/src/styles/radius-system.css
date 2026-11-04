@@ -63,6 +63,9 @@
 .tracking-snippet pre.squircle { --sq-r: 19px; --sq-tl: 0px; --sq-tr: 0px; }
 .squircle.segmented-control { --sq-r: 16px; }
 .squircle.segmented-control > button.squircle { --sq-r: 12px; }
+/* Multi-select series toggle: neighbouring selected buttons join into one block. */
+.series-toggle > button[aria-pressed="true"]:has(+ button[aria-pressed="true"]) { --sq-tr: 0px; --sq-br: 0px; }
+.series-toggle > button[aria-pressed="true"] + button[aria-pressed="true"] { --sq-tl: 0px; --sq-bl: 0px; }
 
 .management-shell .settings-content .snippet-copy.squircle { --sq-r: calc(var(--ui-control-compact) * .46); }
 .management-shell .settings-nav .settings-nav-link.squircle { --sq-r: 20.24px; }

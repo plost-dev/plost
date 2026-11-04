@@ -292,7 +292,7 @@ export function DashTopBar({
                 {onToggleSeries ? (
                   <div className="flex w-full items-center justify-between gap-x-2 py-1 pr-2 pl-4">
                     <span className="shrink-0 text-sm font-medium text-gray-700">{t("显示数据")}</span>
-                    <div className="squircle segmented-control flex rounded-md bg-gray-100">
+                    <div className="squircle segmented-control series-toggle flex rounded-md bg-gray-100">
                       {TRAFFIC_METRICS.map(({ key, label }) => {
                         const on = !hiddenSeries.includes(key)
                         return (
