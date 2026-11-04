@@ -22,10 +22,11 @@ html {
   --mapbox-accent-low:#c7d2fe;
   --mapbox-accent-high:#6366f1;
   --mapbox-accent-border:#818cf8;
-  /* Visitors online on the map: a colour that stands out against each accent's map (2026-11-03). */
+  /* Visitors online on the map: green for purple, blue and black; the green accent uses orange so the dots do not
+     blend into its green map (2026-11-04). */
   --map-live:#22c55e;
 }
-html[data-accent="green"] { --map-live:#facc15; }
+html[data-accent="green"] { --map-live:#f97316; }
 
 /* Bar chart: one hue per accent, the front bar (visitors) at full strength and the bars behind mixed towards the
    surface (traffic-overview.css). --bar-base-tooltip is the same hue lifted for the dark tooltip (2026-11-04). */
@@ -36,8 +37,6 @@ html[data-accent="black"] { --bar-base:#3f3f46; --bar-base-tooltip:#d4d4d8; }
 html[data-accent="blue"][data-theme="dark"] { --bar-base:#3b82f6; }
 html[data-accent="green"][data-theme="dark"] { --bar-base:#22c55e; }
 html[data-accent="black"][data-theme="dark"] { --bar-base:#d4d4d8; }
-html[data-accent="blue"] { --map-live:#fb923c; }
-html[data-accent="black"] { --map-live:#22d3ee; }
 
 /* The purple fills (logo, selected pills, charts) stay the same as in light mode (2026-11-03); only the soft tint and
    text on dark surfaces change. */
