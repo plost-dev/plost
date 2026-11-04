@@ -81,6 +81,7 @@ const BROWSER_NAMES_ZH: Record<string, string> = {
 const BROWSER_LABELS: Record<string, string> = {
   "Chromium WebView": "Chrome Android",
   "iOS WebView": "Safari iOS",
+  "macOS WebView": "Safari macOS",
 }
 
 export function browserDisplayName(name: string): string {

@@ -109,6 +109,9 @@ func parseUA(ua string) (browser, osName, device string) {
 			browser = "Chrome"
 		case apple && has("AppleWebKit") && !has("Safari/"):
 			browser = "iOS WebView"
+		case osName == "macOS" && has("AppleWebKit") && !has("Safari/"):
+			// A Mac app's own web view (WKWebView) gives WebKit but not Safari's token.
+			browser = "macOS WebView"
 		case has("Safari/"):
 			browser = "Safari"
 		}

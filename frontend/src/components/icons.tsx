@@ -52,6 +52,7 @@ const BROWSER_ICONS: Record<string, string> = {
   "Huawei Browser": platform("huawei"),
   "vivo Browser": platform("vivo"),
   "iOS WebView": platform("safari"),
+  "macOS WebView": platform("safari"),
   WeChat: "/brands/sources/wechat.svg",
   QQ: "/brands/sources/qq.svg",
   Weibo: "/brands/sources/sina-weibo.svg",
