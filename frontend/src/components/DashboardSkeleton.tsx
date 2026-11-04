@@ -74,11 +74,10 @@ export function AnalyticsDashboardSkeleton({ domain, search, onSearch, readonly 
         </div>
       </section>
 
-      <SkeletonReport className="location-report col-span-full" rows={9} more />
       <SkeletonReport className="source-report" tabs={4} more />
       <SkeletonReport tabs={5} more />
-      <Surface className="analytics-panel traffic-report traffic-paired-report" aria-hidden="true"><span className="skeleton squircle heatmap-skeleton" /></Surface>
-      <SkeletonReport className="device-report traffic-paired-report" tabs={5} />
+      <SkeletonReport className="location-report" tabs={3} more />
+      <SkeletonReport className="device-report traffic-paired-report" tabs={6} />
     </div>
   )
 }

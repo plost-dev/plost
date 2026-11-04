@@ -9,7 +9,8 @@ export type HeatDay = { date: string, dow: number }
 
 // Rows are the last seven real days ending today (from the server, in the site's timezone),
 // so the grid fills in as the week goes on and today is always the bottom row.
-export function TrafficHeatmap({ cells, days }: { cells: HeatCell[], days: HeatDay[] }) {
+/** `bare` drops the title when the heatmap sits under a report card tab that already names it. */
+export function TrafficHeatmap({ cells, days, bare = false }: { cells: HeatCell[], days: HeatDay[], bare?: boolean }) {
   const { t, locale } = useT()
   const [selected, setSelected] = useState<{ row: number, hour: number } | null>(null)
   const [chosenDate, setChosenDate] = useState<string | null>(null)
@@ -50,7 +51,7 @@ export function TrafficHeatmap({ cells, days }: { cells: HeatCell[], days: HeatD
   }
   return (
     <div className="traffic-panel">
-      <div className="analytics-heading"><h3 title={t("颜色越深，代表这个时段的访客越多。")}><UIIcon name="clock" className="analytics-heading-icon" />{t("访问时段")}</h3><span>{t("最近 7 天 × 小时")}</span></div>
+      {bare ? null : <div className="analytics-heading"><h3 title={t("颜色越深，代表这个时段的访客越多。")}><UIIcon name="clock" className="analytics-heading-icon" />{t("访问时段")}</h3><span>{t("最近 7 天 × 小时")}</span></div>}
       <div className="traffic-scroll"><div className="traffic-grid">
         <span />
         {Array.from({length: 24}, (_, hour) => <span className="traffic-hour" key={hour}>{hour % 6 === 0 ? `${String(hour).padStart(2, "0")}` : ""}</span>)}

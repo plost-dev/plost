@@ -1190,12 +1190,15 @@ html { scrollbar-gutter: stable; }
 }
 
 .location-report { height: auto; min-height: 0; }
-.traffic-report { align-self: stretch; }
 .traffic-paired-report { height:460px; min-height:0; }
 .traffic-panel { display:flex; flex-direction:column; height:100%; min-height:0; }
 .traffic-panel .traffic-grid { margin-top:16px; }
 .traffic-panel > .traffic-hourly { margin-top:auto; }
 .traffic-panel > .traffic-meta { margin-bottom:14px; }
+/* Under the device card's 时段 tab the heatmap fills the space below the tabs. */
+.device-report .traffic-panel { flex:1 1 auto; height:auto; }
+/* On narrow screens the heatmap and hourly bars are taller than the list height, so the card grows instead of clipping them. */
+@media(max-width:767px) { .device-report:has(.traffic-panel) { height:auto; } }
 .device-report .report-heading { flex-shrink:0; }
 .device-report-scroll { height:100%; min-height:0; overflow-y:auto; overflow-x:hidden; overscroll-behavior-y:contain; scrollbar-width:none; }
 .device-report-scroll::-webkit-scrollbar { display:none; }

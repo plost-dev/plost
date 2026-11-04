@@ -1,1 +1,0 @@
-import{kn as e}from"./index-DSzifXLR.js";var t=e;export{t as component};
