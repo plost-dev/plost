@@ -253,7 +253,8 @@ func TestUmamiConversionRules(t *testing.T) {
 		check  func(Event) bool
 	}{
 		"own domain is direct":     {func(e *UmamiEvent) { e.ReferrerDomain = "example.com" }, func(e Event) bool { return e.Source == "Direct" && e.Referrer == "https://example.com" }},
-		"utm source wins":          {func(e *UmamiEvent) { e.ReferrerDomain, e.UTMSource = "google.com", "newsletter" }, func(e Event) bool { return e.Source == "newsletter" && e.UTMSource == "newsletter" }},
+		"referring site wins":      {func(e *UmamiEvent) { e.ReferrerDomain, e.UTMSource = "google.com", "newsletter" }, func(e Event) bool { return e.Source == "google.com" && e.UTMSource == "newsletter" }},
+		"utm only is a campaign":   {func(e *UmamiEvent) { e.ReferrerDomain, e.UTMSource = "", "newsletter" }, func(e Event) bool { return e.Source == "utm:newsletter" && e.UTMSource == "newsletter" }},
 		"empty path":               {func(e *UmamiEvent) { e.Path = "" }, func(e Event) bool { return e.Path == "/" }},
 		"hostname falls back":      {func(e *UmamiEvent) { e.Hostname = "" }, func(e Event) bool { return e.Hostname == "example.com" }},
 		"invalid screen and place": {func(e *UmamiEvent) { e.Screen, e.Country = "wide", "XXX" }, func(e Event) bool { return e.Screen == "" && e.Country == "" }},

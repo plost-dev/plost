@@ -14,7 +14,6 @@ import {RowIcon} from "./icons"
 import {useT} from "~/lib/i18n"
 import {countryName} from "~/lib/countries"
 import {languageName} from "~/lib/languages"
-import {isDirectSource} from "~/lib/source-icons"
 import {reportValueLabel} from "~/lib/report-values"
 import {isoDate,parseDate,parseDashSearch,type DashSearch} from "~/lib/range"
 import {readChartType,saveChartType,type ChartType} from "~/lib/chart-type-preference"
@@ -52,7 +51,7 @@ export function AnalyticsDashboard({data,domain,search,onSearch,readonly=true,ca
   const deviceTitle=t(deviceTab==="os"?"操作系统":deviceTab==="device"?"设备":deviceTab==="language"?"语言":deviceTab==="screen"?"屏幕":"浏览器")
   const locationRows=locationTab==="regions"?data.regions:locationTab==="cities"?data.cities:countries
   const chips=([
-    search.source&&{key:"source",label:t("来源 {0}",{0:isDirectSource(search.source)?t("直接访问"):search.source})},
+    search.source&&{key:"source",label:t("来源 {0}",{0:reportValueLabel("source",search.source,locale)})},
     search.page&&{key:"page",label:t("页面 {0}",{0:search.page})},
     search.country&&{key:"country",label:t("地区 {0}",{0:countryName(search.country,locale)})},
     search.browser&&{key:"browser",label:t("浏览器 {0}",{0:reportValueLabel("browser",search.browser,locale)})},
@@ -62,7 +61,7 @@ export function AnalyticsDashboard({data,domain,search,onSearch,readonly=true,ca
   return <div className="analytics-dashboard grid min-w-0 grid-cols-1 md:grid-cols-2" aria-busy={loading||undefined} data-loading={loading||undefined}>
     {loading?<DotsLoader className="dots-loader-floating" label={t("加载中…")}/>:null}
     <DashTopBar domain={domain} search={search} readonly={readonly} canManage={canManage} health={data.health} onPeriod={go} chartType={chartType} onChartType={changeChartType} hiddenSeries={hiddenSeries} onToggleSeries={toggleSeries}
-      filterOptions={{page:data.pages,source:data.sources.map(r=>({...r,label:isDirectSource(r.name)?t("直接访问"):r.name})),country:countries,device:data.devices,browser:data.browsers,os:data.os}}
+      filterOptions={{page:data.pages,source:data.sources.map(r=>({...r,label:reportValueLabel("source",r.name,locale)})),country:countries,device:data.devices,browser:data.browsers,os:data.os}}
       filters={chips.length?<div className="dash-active-filters" role="group" aria-label={t("筛选")}>{chips.map(c=><button key={c.key} type="button" title={c.label} className="squircle active-filter-chip flex min-h-8 items-center gap-1.5 rounded-md px-2.5 py-1 text-sm" onClick={()=>go({[c.key]:""})}>{c.key!=="page"?<span className="report-value-icon"><RowIcon kind={c.key} name={String(search[c.key]||"")}/></span>:null}<span className="filter-chip-label">{c.label}</span><UIIcon name="close" className="ml-1.5 size-3"/></button>)}{/* With one filter its own × clears it; a square button clears them all once there are two or more. */}{chips.length>1?<button type="button" className="squircle dash-clear-filters" aria-label={t("清除筛选")} title={t("清除筛选")} onClick={()=>go({source:"",page:"",country:"",browser:"",os:"",device:""})}><UIIcon name="filter-clear"/></button>:null}</div>:null}
       onExport={()=>downloadDashboardZip({...data,domain,from:search.from,to:search.to})}/>
     <VisitorGraph overview={data.overview} compare={data.compare} seriesBy={data.seriesBy} chartType={chartType} hiddenSeries={hiddenSeries} onToggleSeries={toggleSeries} interval={search.interval} realtime={search.period==="realtime"} onZoom={date=>{const day=date.slice(0,10);if(search.interval==="month"){const start=parseDate(day);go({period:"custom",from:isoDate(new Date(start.getFullYear(),start.getMonth(),1)),to:isoDate(new Date(start.getFullYear(),start.getMonth()+1,0))})}else go({period:"custom",from:day,to:day})}}/>

@@ -257,9 +257,7 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 		source = "Direct"
 	}
 	q := u.Query()
-	if q.Get("utm_source") != "" {
-		source = short(q.Get("utm_source"), 200)
-	}
+	source = sourceName(source, q.Get("utm_source"))
 	props := map[string]any{}
 	for _, k := range []string{"p", "props", "m", "meta"} {
 		if len(data[k]) > 0 {

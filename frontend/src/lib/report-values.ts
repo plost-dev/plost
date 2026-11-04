@@ -1,7 +1,7 @@
 import { countryName } from "./countries"
 import { translate, type Locale } from "./i18n"
 import { languageCode, languageName } from "./languages"
-import { isDirectSource } from "./source-icons"
+import { campaignTag, isDirectSource } from "./source-icons"
 import { geographyLabel } from "./geography"
 
 type ReportValue = { name: string; label?: string; code?: string }
@@ -63,6 +63,8 @@ export function reportValueLabel(kind: string | undefined, name: string, locale:
   if (kind === "country") return countryName(name, locale)
   if (kind === "region" || kind === "city") return geographyLabel(kind, kind === "city" && locale === "en" ? name : label || name, country || "", locale)
   if (kind === "source" && isDirectSource(name)) return translate(locale, "直接访问")
+  const tag = kind === "source" || kind === "ai" ? campaignTag(name) : null
+  if (tag !== null) return translate(locale, "{0}（推广链接）", {0: tag})
   if (kind === "channel" && Object.hasOwn(CHANNEL_NAMES, name)) return translate(locale, CHANNEL_NAMES[name])
   if (kind === "event" && Object.hasOwn(EVENT_NAMES, name)) return translate(locale, EVENT_NAMES[name])
   if (kind === "device" && Object.hasOwn(DEVICE_NAMES, name)) return translate(locale, DEVICE_NAMES[name])

@@ -1,6 +1,6 @@
 import { UIIcon } from "./UIIcon"
 import { ImageWithFallback } from "./ImageWithFallback"
-import { isDirectSource, sourceIconSrc } from "~/lib/source-icons"
+import { campaignTag, isDirectSource, sourceIconSrc } from "~/lib/source-icons"
 import { browserDisplayName } from "~/lib/report-values"
 
 // Original-color SVGs are pinned to The SVG; unsupported products retain their
@@ -176,6 +176,7 @@ function SourceIcon({ name }: { name: string }) {
   if (isDirectSource(key)) {
     return <UIIcon name="direct" className={rowIconClassName} />
   }
+  if (campaignTag(key) !== null) return <UIIcon name="link" className={rowIconClassName} />
   const src = sourceIconSrc(key)
   if (src) return <AssetIcon src={src} fallback="link" className="source-brand-icon" />
   return <AssetIcon src={`/favicon/sources/${encodeURIComponent(key)}`} fallback="link" />

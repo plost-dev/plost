@@ -37,3 +37,17 @@ func TestChannelOfReferrer(t *testing.T) {
 		}
 	}
 }
+
+func TestSourceNamePrefersReferringSite(t *testing.T) {
+	for _, c := range []struct{ site, utm, want string }{
+		{"bimos.ylink.uk", "voguesly", "bimos.ylink.uk"},
+		{"Direct", "voguesly", "utm:voguesly"},
+		{"", " voguesly ", "utm:voguesly"},
+		{"Direct", "", "Direct"},
+		{"google.com", "", "google.com"},
+	} {
+		if got := sourceName(c.site, c.utm); got != c.want {
+			t.Errorf("sourceName(%q, %q) = %q, want %q", c.site, c.utm, got, c.want)
+		}
+	}
+}

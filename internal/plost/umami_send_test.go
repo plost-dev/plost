@@ -63,7 +63,7 @@ func TestUmamiShapedRequestsAreStored(t *testing.T) {
 	if len(got) != 2 {
 		t.Fatalf("want 2 events, got %v", got)
 	}
-	if e := got[0]; e["name"] != "pageview" || e["path"] != "/pricing" || e["source"] != "news" || e["title"] != "Pricing" || e["language"] != "zh-CN" || e["screen"] != "1920x1080" || e["via"] != "send" || e["user"] == "" {
+	if e := got[0]; e["name"] != "pageview" || e["path"] != "/pricing" || e["source"] != "search.example.org" || e["title"] != "Pricing" || e["language"] != "zh-CN" || e["screen"] != "1920x1080" || e["via"] != "send" || e["user"] == "" {
 		t.Errorf("first event: %v", e)
 	}
 	if e := got[1]; e["name"] != "signup" || e["path"] != "/docs" || e["props"] != `{"plan":"pro"}` || e["screen"] != "390x844" || e["via"] != "send" {

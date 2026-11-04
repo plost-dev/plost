@@ -80,6 +80,11 @@ const brands: SourceBrand[] = [
 ]
 
 /** Stored empty/legacy labels mean direct traffic; domains and campaign names do not. */
+/** A source known only from a link's utm_source tag; the server stores it as "utm:<tag>". */
+export function campaignTag(name: string): string | null {
+  return name.startsWith("utm:") ? name.slice(4) : null
+}
+
 export function isDirectSource(name: string): boolean {
   const key = name.trim()
   return !key || /^(direct(\s*\/\s*none)?|\(none\))$/i.test(key)

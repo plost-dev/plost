@@ -55,3 +55,20 @@ func hostGlob(patterns []string) string {
 var channelSQL = "CASE WHEN referrer_source IN ('','Direct') THEN 'direct' WHEN " + hostIn(aiReferrers) + " THEN 'ai' WHEN " +
 	hostGlob(searchPatterns) + " OR " + hostIn(searchReferrers) + " THEN 'organic_search' WHEN " + hostIn(socialReferrers) +
 	" THEN 'organic_social' ELSE 'referral' END"
+
+// campaignPrefix marks a source that is only known from a link's utm_source tag.
+const campaignPrefix = "utm:"
+
+// sourceName picks what the source report shows. A referring website always wins and
+// is stored as its domain; the utm_source tag is used only when the browser sent no
+// referring website, and is stored as "utm:<tag>" so the interface can say it is a
+// campaign link rather than a site.
+func sourceName(site, utmSource string) string {
+	if site != "" && site != "Direct" {
+		return site
+	}
+	if tag := strings.TrimSpace(utmSource); tag != "" {
+		return campaignPrefix + short(tag, 200)
+	}
+	return "Direct"
+}

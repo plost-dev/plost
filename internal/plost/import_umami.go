@@ -338,9 +338,7 @@ func convertUmami(e UmamiEvent, domain string) (Event, string, int) {
 	if source == domain {
 		source = "Direct"
 	}
-	if e.UTMSource != "" {
-		source = short(e.UTMSource, 200)
-	}
+	source = sourceName(source, e.UTMSource)
 	country := strings.ToUpper(strings.TrimSpace(e.Country))
 	if !countryPattern.MatchString(country) {
 		country = ""
