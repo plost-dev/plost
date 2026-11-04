@@ -10,7 +10,7 @@ import { useT } from "~/lib/i18n"
  * settings send the chosen service here. A service that fails to load falls back to the built-in globe. Right-clicking
  * (or the context-menu key while it has focus) switches globe and flat map; Google Maps is only ever flat.
  */
-export function OverviewMap({ places, config }: { places: OverviewPlace[], config: OverviewMapConfig | null }) {
+export function OverviewMap({ places, config, replay }: { places: OverviewPlace[], config: OverviewMapConfig | null, replay: number }) {
   const { t } = useT()
   const [mode, setMode] = useState<OverviewMapMode>("globe")
   const [menu, setMenu] = useState<{ x: number, y: number } | null>(null)
@@ -56,9 +56,9 @@ export function OverviewMap({ places, config }: { places: OverviewPlace[], confi
         event.preventDefault()
         setMenu({ x: event.currentTarget.clientWidth / 2, y: event.currentTarget.clientHeight / 2 })
       }}>
-      {service === "mapbox" ? <OverviewMapboxMap token={config!.key!} places={places} mode={mode} onFailure={() => setFailed(true)} />
-        : service === "google" ? <OverviewGoogleMap apiKey={config!.key!} places={places} onFailure={() => setFailed(true)} />
-        : <OverviewGlobe places={places} mode={mode} />}
+      {service === "mapbox" ? <OverviewMapboxMap token={config!.key!} places={places} mode={mode} replay={replay} onFailure={() => setFailed(true)} />
+        : service === "google" ? <OverviewGoogleMap apiKey={config!.key!} places={places} replay={replay} onFailure={() => setFailed(true)} />
+        : <OverviewGlobe places={places} mode={mode} replay={replay} />}
       {menu ? (
         <div ref={menuRef} role="menu" aria-label={t("地图样式")} className="squircle overview-globe-menu" style={{ left: menu.x, top: menu.y }}>
           {(["globe", "map"] as const).map((value) => (

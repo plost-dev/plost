@@ -3,7 +3,7 @@ import { SiteSparkline } from "~/components/SiteSparkline"
 import { Surface } from "~/components/Surface"
 import { ActionLink } from "~/components/ActionButton"
 import { SiteFavicon } from "~/components/SiteFavicon"
-import { redirect, Link, createFileRoute, useRouter } from "@tanstack/react-router"
+import { redirect, Link, createFileRoute } from "@tanstack/react-router"
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react"
 import { Shell } from "~/components/Shell"
 import { meFn, sitesFn } from "~/lib/actions"
@@ -12,7 +12,7 @@ import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
 import { readSiteLayout, setSiteLayout, subscribeSiteLayout, type SiteLayout } from "~/lib/site-layout-preference"
 import { useRouterAutoRefresh } from "~/lib/router-refresh"
-import { useLiveChanges } from "~/lib/live-changes"
+import { RollingNumber } from "~/components/RollingNumber"
 import { expiryState } from "~/lib/site-check-view"
 
 export const Route = createFileRoute("/dashboard")({
@@ -30,10 +30,8 @@ function DashboardPage() {
   const [q, setQ] = useState("")
   const layout = useSyncExternalStore(subscribeSiteLayout, readSiteLayout, (): SiteLayout => "compact")
   const [layoutSaveFailed, setLayoutSaveFailed] = useState(false)
-  // New visits are pushed by the server; the 30-second refresh still moves the time windows on when nothing arrives.
-  const router = useRouter()
-  useLiveChanges(() => { void router.invalidate() })
-  useRouterAutoRefresh()
+  // The figures update once a minute; new visits pushed by the server move only the live dots on the overview's map.
+  useRouterAutoRefresh({ intervalMs: 60_000 })
   const now = new Date().toISOString()
   function changeLayout(value: SiteLayout) {
     setLayoutSaveFailed(!setSiteLayout(value))
@@ -115,18 +113,18 @@ function DashboardPage() {
                         </span>
                         <div className="flex items-center justify-between max-lg:col-span-full">
                           <div className="flex flex-col">
-                            <p className="text-lg font-bold text-gray-900 sm:text-xl">{numberShort(site.visitors || 0)}</p>
+                            <p className="text-lg font-bold text-gray-900 sm:text-xl"><RollingNumber text={numberShort(site.visitors || 0)} /></p>
                             <p className="text-gray-600">{site.visitors === 1 ? t("位访客（近 24 小时）") : t("位访客（近 24 小时）")}</p>
                           </div>
                           <div className="management-site-trend">
-                            <p className="management-site-online"><i/>{t("当前在线")} {site.live}</p>
+                            <p className="management-site-online"><i/>{t("当前在线")} <RollingNumber text={String(site.live || 0)} /></p>
                             <p className="text-sm text-gray-900">
                               {site.change > 0 ? (
                                 <UIIcon name="arrow-up-right" className="mr-0.5 inline-block h-3 w-3 text-green-500" />
                               ) : site.change < 0 ? (
                                 <UIIcon name="arrow-down-right" className="mr-0.5 inline-block h-3 w-3 text-red-500" />
                               ) : null}
-                              {Math.abs(site.change || 0)}%
+                              <RollingNumber text={`${Math.abs(site.change || 0)}%`} />
                             </p>
                           </div>
                         </div>
@@ -161,7 +159,7 @@ export function CompactMetrics({site}: {site: OverviewSite}) {
   ]
   return <>
     <span className="management-compact-spark"><SiteSparkline values={site.sparkline}/></span>
-    <div className="management-compact-metrics">{metrics.map(([label,value]) => <div key={label} className={label === t("当前在线") ? "is-online" : ""}><strong>{numberShort(value)}</strong><span>{label}</span></div>)}</div>
+    <div className="management-compact-metrics">{metrics.map(([label,value]) => <div key={label} className={label === t("当前在线") ? "is-online" : ""}><strong><RollingNumber text={numberShort(value)} /></strong><span>{label}</span></div>)}</div>
   </>
 }
 

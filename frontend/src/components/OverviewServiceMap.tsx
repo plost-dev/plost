@@ -16,12 +16,35 @@ const reducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)"
 // The globe fills the card about as the built-in one does; the flat map shows the whole world across.
 const ZOOM: Record<OverviewMapMode, number> = { globe: 0.7, map: 0 }
 
-/** A live dot element, a little larger for a busier place. */
-function liveDot(marker: PlaceMarker, max: number, newest: boolean) {
+/** A live dot element, a little larger for a busier place; `delay` (ms) makes it grow in after that long. */
+function liveDot(marker: PlaceMarker, max: number, newest: boolean, delay: number | null) {
   const dot = document.createElement("span")
-  dot.className = `overview-live-dot${newest ? " is-newest" : ""}`
+  dot.className = `overview-live-dot${newest ? " is-newest" : ""}${delay === null ? "" : " is-appearing"}`
   dot.style.setProperty("--size", `${(1.4 + Math.sqrt(marker.visitors / max)) * 2}px`)
+  if (delay !== null) dot.style.setProperty("--delay", `${delay}ms`)
   return dot
+}
+
+/**
+ * The dots for a list of places. Places not shown before grow in, one after another and newest first; `seen` keeps
+ * the places already shown, so a push adds only the new dots and a refresh (an emptied `seen`) brings all back.
+ */
+function liveDots(list: PlaceMarker[], seen: Set<string>) {
+  const newest = newestPlace(list), max = Math.max(1, ...list.map((m) => m.visitors))
+  const appearing = list.filter((m) => !seen.has(m.key)).sort((a, b) => b.last - a.last).map((m) => m.key)
+  const step = Math.min(80, 1200 / Math.max(1, appearing.length))
+  appearing.forEach((key) => seen.add(key))
+  return list.map((m) => {
+    const order = appearing.indexOf(m.key)
+    return { marker: m, element: liveDot(m, max, m.key === newest, order < 0 ? null : order * step) }
+  })
+}
+
+/** The set of places already shown, emptied whenever `replay` changes. */
+function useSeen(replay: number) {
+  const seen = useRef({ replay, keys: new Set<string>() })
+  if (seen.current.replay !== replay) seen.current = { replay, keys: new Set() }
+  return seen.current.keys
 }
 
 /** The world's countries, for placing country-only visitors at the country's middle. */
@@ -35,7 +58,7 @@ function useCountries() {
   return features
 }
 
-export function OverviewMapboxMap({ token, places, mode, onFailure }: { token: string, places: OverviewPlace[], mode: OverviewMapMode, onFailure: () => void }) {
+export function OverviewMapboxMap({ token, places, mode, replay, onFailure }: { token: string, places: OverviewPlace[], mode: OverviewMapMode, replay: number, onFailure: () => void }) {
   const { t } = useT()
   const styleId = useMapStyle()
   const container = useRef<HTMLDivElement>(null)
@@ -49,6 +72,7 @@ export function OverviewMapboxMap({ token, places, mode, onFailure }: { token: s
   modeRef.current = mode
   const [ready, setReady] = useState(false)
   const features = useCountries()
+  const seen = useSeen(replay)
 
   useEffect(() => {
     const element = container.current
@@ -131,23 +155,23 @@ export function OverviewMapboxMap({ token, places, mode, onFailure }: { token: s
       aimed.current = true
       map.setCenter([list[0].lonLat[0], map.getCenter().lat])
     }
-    const newest = newestPlace(list), max = Math.max(1, ...list.map((m) => m.visitors))
     markers.current.forEach((marker) => marker.remove())
-    markers.current = list.map((m) => new Marker({ element: liveDot(m, max, m.key === newest) }).setLngLat(m.lonLat).addTo(map))
-  }, [places, features, ready])
+    markers.current = liveDots(list, seen).map((dot) => new Marker({ element: dot.element }).setLngLat(dot.marker.lonLat).addTo(map))
+  }, [places, features, ready, seen])
 
   return <div ref={container} className="overview-map-stage" role="img" aria-label={t("当前在线访客位置")} />
 }
 
-export function OverviewGoogleMap({ apiKey, places, onFailure }: { apiKey: string, places: OverviewPlace[], onFailure: () => void }) {
+export function OverviewGoogleMap({ apiKey, places, replay, onFailure }: { apiKey: string, places: OverviewPlace[], replay: number, onFailure: () => void }) {
   const { t, locale } = useT()
   const styleId = useGoogleMapStyle()
   const container = useRef<HTMLDivElement>(null)
-  const overlay = useRef<{ setDots: (list: PlaceMarker[]) => void } | null>(null)
+  const overlay = useRef<{ setDots: (list: PlaceMarker[], seen: Set<string>) => void } | null>(null)
   const failRef = useRef(onFailure)
   failRef.current = onFailure
   const [ready, setReady] = useState(false)
   const features = useCountries()
+  const seen = useSeen(replay)
 
   useEffect(() => {
     const element = container.current
@@ -185,14 +209,9 @@ export function OverviewGoogleMap({ apiKey, places, onFailure }: { apiKey: strin
         const view = new Overlay()
         view.setMap(map)
         overlay.current = {
-          setDots(list) {
-            const newest = newestPlace(list), max = Math.max(1, ...list.map((m) => m.visitors))
-            layer.replaceChildren()
-            dots = list.map((marker) => {
-              const element = liveDot(marker, max, marker.key === newest)
-              layer.append(element)
-              return { marker, element }
-            })
+          setDots(list, seen) {
+            dots = liveDots(list, seen)
+            layer.replaceChildren(...dots.map((dot) => dot.element))
             view.draw()
           },
         }
@@ -211,8 +230,8 @@ export function OverviewGoogleMap({ apiKey, places, onFailure }: { apiKey: strin
   }, [apiKey, styleId, locale])
 
   useEffect(() => {
-    if (ready && features) overlay.current?.setDots(placeMarkers(places, features))
-  }, [places, features, ready])
+    if (ready && features) overlay.current?.setDots(placeMarkers(places, features), seen)
+  }, [places, features, ready, seen])
 
   return <div ref={container} className="overview-map-stage" role="img" aria-label={t("当前在线访客位置")} />
 }

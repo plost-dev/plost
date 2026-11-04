@@ -50,6 +50,8 @@ function loadDots() {
 
 // One breath of the glow around the newest visit.
 const PULSE_MS = 1800
+// How long one dot takes to grow in.
+const APPEAR_MS = 350
 
 function cssColor(el: Element, name: string, fallback: string) {
   return getComputedStyle(el).getPropertyValue(name).trim() || fallback
@@ -74,7 +76,8 @@ export function placeMarkers(places: OverviewPlace[], features: WorldJsonCountry
 export const newestPlace = (markers: PlaceMarker[]) => markers.reduce<PlaceMarker | null>((best, m) => !best || m.last > best.last ? m : best, null)?.key
 
 /** The built-in dotted globe or flat map, drawn on a canvas. The frame around it (OverviewMap) chooses the mode. */
-export function OverviewGlobe({ places, mode }: { places: OverviewPlace[], mode: OverviewMapMode }) {
+/** `replay` changes when the dots should appear again one by one (the overview's refresh button). */
+export function OverviewGlobe({ places, mode, replay = 0 }: { places: OverviewPlace[], mode: OverviewMapMode, replay?: number }) {
   const { t } = useT()
   const [data, setData] = useState<{ dots: Dots, features: WorldJsonCountryData[] } | null>(null)
   const [failed, setFailed] = useState(false)
@@ -82,6 +85,9 @@ export function OverviewGlobe({ places, mode }: { places: OverviewPlace[], mode:
   // The turn survives new data: every push of fresh places redraws, but the globe keeps spinning from where it is.
   const rotationRef = useRef<[number, number] | null>(null)
   const aimedRef = useRef(false)
+  // When each place's dot starts to appear; a place seen before keeps its time, so a push adds only the new dots.
+  const appearRef = useRef(new Map<string, number>())
+  const replayRef = useRef(replay)
 
   useEffect(() => {
     let alive = true
@@ -108,8 +114,22 @@ export function OverviewGlobe({ places, mode }: { places: OverviewPlace[], mode:
     let rotation: [number, number] = rotationRef.current ?? [-20, -25]
     let drag: { x: number, y: number, rotation: [number, number] } | null = null
     let shown: Array<{ x: number, y: number, r: number, newest: boolean }> = []
-    // Small dots; a busier place is only a little larger.
-    const dotSize = (m: Marker) => 1.4 + Math.sqrt(m.visitors / max)
+    // New places pop in; on first show and after a refresh every place comes back one after another, newest first.
+    if (replayRef.current !== replay) {
+      replayRef.current = replay
+      appearRef.current.clear()
+    }
+    const appearing = markers.filter((m) => !appearRef.current.has(m.key)).sort((a, b) => b.last - a.last)
+    const step = Math.min(80, 1200 / Math.max(1, appearing.length))
+    const begin = performance.now()
+    appearing.forEach((m, i) => appearRef.current.set(m.key, reduced ? 0 : begin + i * step))
+    const appearEnd = Math.max(0, ...markers.map((m) => appearRef.current.get(m.key) ?? 0)) + APPEAR_MS
+    // Small dots; a busier place is only a little larger. While appearing, a dot grows from nothing and overshoots a bit.
+    const dotSize = (m: Marker) => {
+      const t = (performance.now() - (appearRef.current.get(m.key) ?? 0)) / APPEAR_MS
+      const grow = t >= 1 ? 1 : t <= 0 ? 0 : 1 + 2.70158 * (t - 1) ** 3 + 1.70158 * (t - 1) ** 2
+      return (1.4 + Math.sqrt(m.visitors / max)) * grow
+    }
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect()
@@ -173,10 +193,10 @@ export function OverviewGlobe({ places, mode }: { places: OverviewPlace[], mode:
       // Plain dots for everyone online; the place of the newest visit breathes a ring and a soft glow.
       ctx.fillStyle = accent
       for (const dot of shown) {
-        if (dot.newest) continue
+        if (dot.newest || dot.r <= 0) continue
         ctx.beginPath(); ctx.arc(dot.x, dot.y, dot.r, 0, Math.PI * 2); ctx.fill()
       }
-      const fresh = shown.find((dot) => dot.newest)
+      const fresh = shown.find((dot) => dot.newest && dot.r > 0)
       if (fresh) {
         if (!reduced) {
           const phase = (performance.now() % PULSE_MS) / PULSE_MS
@@ -197,8 +217,9 @@ export function OverviewGlobe({ places, mode }: { places: OverviewPlace[], mode:
       if (mode === "globe" && !drag && !reduced) rotation = [(rotation[0] + 0.08) % 360, rotation[1]]
       rotationRef.current = rotation
       draw()
-      // The flat map stands still, but keeps drawing while the newest dot breathes.
-      if (!reduced && (mode === "globe" || newest) && visible && document.visibilityState === "visible") raf = requestAnimationFrame(tick)
+      // The flat map stands still, but keeps drawing while the newest dot breathes or dots are still appearing.
+      const moving = (!reduced && (mode === "globe" || newest)) || performance.now() < appearEnd
+      if (moving && visible && document.visibilityState === "visible") raf = requestAnimationFrame(tick)
     }
     const start = () => { if (!raf) raf = requestAnimationFrame(tick) }
 
@@ -238,7 +259,7 @@ export function OverviewGlobe({ places, mode }: { places: OverviewPlace[], mode:
       canvas.removeEventListener("pointerup", onUp)
       canvas.removeEventListener("pointercancel", onUp)
     }
-  }, [data, markers, mode])
+  }, [data, markers, mode, replay])
 
   return <>
     <canvas ref={canvasRef} className="overview-globe-canvas" role="img" aria-label={t("当前在线访客位置")} />

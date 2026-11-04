@@ -353,7 +353,11 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 .overview-live-dot.is-newest { z-index:1; box-shadow:0 0 10px 1px var(--analytics-accent, var(--accent-color)); }
 .overview-live-dot.is-newest::after { content:""; position:absolute; inset:0; border-radius:50%; background:inherit; animation:overview-live-ring 1.8s ease-out infinite; }
 @keyframes overview-live-ring { from { transform:scale(1); opacity:.45; } to { transform:scale(5); opacity:0; } }
-@media (prefers-reduced-motion: reduce) { .overview-live-dot.is-newest::after { animation:none; opacity:0; } }
+/* A dot shown for the first time, or again after a refresh, grows in and overshoots a little. It uses scale, not
+   transform, because Mapbox places its markers with transform. */
+.overview-live-dot.is-appearing { animation:overview-dot-in .35s cubic-bezier(.34,1.56,.64,1) var(--delay, 0ms) backwards; }
+@keyframes overview-dot-in { from { scale:0; } to { scale:1; } }
+@media (prefers-reduced-motion: reduce) { .overview-live-dot.is-newest::after { animation:none; opacity:0; } .overview-live-dot.is-appearing { animation:none; } }
 /* The right-click menu that switches globe and flat map. */
 .overview-globe-menu { --sq-r:10px; position:absolute; z-index:3; display:flex; flex-direction:column; min-width:120px; padding:4px; border:1px solid var(--color-gray-200); background:var(--surface); box-shadow:0 8px 24px rgb(0 0 0 / .12); }
 .overview-globe-menu button { --sq-r:7px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:7px 10px; font-size:13px; color:var(--color-gray-700); text-align:left; }
@@ -375,3 +379,11 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 .site-header-search .management-search { width:100%; }
 .site-header-search .management-search .input { height:36px; font-size:13px; }
 @media(max-width:639px) { .site-header-search { flex:1 1 auto; } }
+
+/* Odometer digits (RollingNumber): each digit is a window onto a strip of 0–9 that slides up. */
+.rolling-number { display:inline-flex; align-items:flex-start; line-height:1.15; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.rolling-digit { position:relative; display:inline-block; height:1.15em; overflow:hidden; }
+.rolling-sizer { visibility:hidden; }
+.rolling-strip { position:absolute; inset:0 0 auto; display:flex; flex-direction:column; transition:transform .9s cubic-bezier(.2,.75,.25,1); }
+.rolling-strip > span { display:block; height:1.15em; text-align:center; }
+@media (prefers-reduced-motion: reduce) { .rolling-strip { transition:none; } }

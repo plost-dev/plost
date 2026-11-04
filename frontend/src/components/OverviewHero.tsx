@@ -4,6 +4,9 @@ import { UIIcon } from "~/components/UIIcon"
 import type { OverviewPlace } from "~/components/OverviewGlobe"
 import { OverviewMap } from "~/components/OverviewMap"
 import { overviewMapFn, type OverviewMapConfig } from "~/lib/map-usage-actions"
+import { RollingNumber } from "~/components/RollingNumber"
+import { rollAllNumbers } from "~/lib/roll-signal"
+import { useLiveChanges } from "~/lib/live-changes"
 import { overviewChartsFn, overviewLiveFn, type OverviewCharts, type sitesFn } from "~/lib/actions"
 import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
@@ -22,6 +25,8 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
   const [updatedAt, setUpdatedAt] = useState(() => Date.now())
   const [now, setNow] = useState(() => Date.now())
   const [refreshing, setRefreshing] = useState(false)
+  // Bumped by the refresh button: the live dots on the map appear again one by one.
+  const [replay, setReplay] = useState(0)
   const [loading, setLoading] = useState(0)
   const loadingRef = useRef<Promise<void> | null>(null)
 
@@ -39,20 +44,28 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
       loadingRef.current = null
     }
   })(), [])
-  // Each loader refresh, by hand, by the timer or pushed by the server, hands over a new list; the figures follow it.
+  // Each loader refresh, by hand or by the minute timer, hands over a new list; the figures follow it.
   useEffect(() => { void load() }, [sites, load])
+  // New visits are pushed by the server and only move the live dots, quietly: the figures wait for the minute.
+  useLiveChanges(() => { void overviewLiveFn().then(setPlaces).catch(() => {}) })
   // Which map to draw, as the visitor map settings say; the built-in globe shows until it is known.
   useEffect(() => { void overviewMapFn().then(setMapConfig).catch(() => setMapConfig({ service: "" })) }, [])
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 30_000)
+    const timer = window.setInterval(() => setNow(Date.now()), 5_000)
     return () => window.clearInterval(timer)
   }, [])
 
-  const minutes = Math.floor(Math.max(0, now - updatedAt) / 60_000)
+  const seconds = Math.floor(Math.max(0, now - updatedAt) / 1000)
+  const updated = seconds < 10 ? t("刚刚更新") : seconds < 60 ? t("{n} 秒前更新").replace("{n}", String(Math.floor(seconds / 5) * 5)) : t("{n} 分钟前更新").replace("{n}", String(Math.floor(seconds / 60)))
   async function refresh() {
     setRefreshing(true)
+    setReplay(n => n + 1)
     // Kept turning for a moment at least, so a fast reload still shows that it happened.
-    try { await Promise.all([router.invalidate(), load(), new Promise(resolve => setTimeout(resolve, 600))]) } finally { setRefreshing(false) }
+    try { await Promise.all([router.invalidate(), load(), new Promise(resolve => setTimeout(resolve, 600))]) } finally {
+      setRefreshing(false)
+      // Every figure on the page rolls over once the new ones are in.
+      rollAllNumbers()
+    }
   }
   const spinning = refreshing || loading > 0
   return (
@@ -67,7 +80,7 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
             <span className="overview-hero-chip"><UIIcon name="clock" />{t("近 24 小时")}</span>
             <span className="overview-hero-live">
               <i aria-hidden="true" />
-              <span role="status">{minutes < 1 ? t("刚刚更新") : t("{n} 分钟前更新").replace("{n}", String(minutes))}</span>
+              <span role="status">{updated}</span>
               <button type="button" className="overview-hero-refresh" disabled={refreshing} onClick={refresh} aria-label={t("刷新")} title={t("刷新")}>
                 <UIIcon name="refresh" className={spinning ? "is-spinning" : undefined} />
               </button>
@@ -85,7 +98,7 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
       <div className="overview-hero-body">
         {charts ? <MetricsChart charts={charts} /> : <div className="overview-hero-loading" aria-hidden="true" />}
       </div>
-      <OverviewMap places={places} config={mapConfig} />
+      <OverviewMap places={places} config={mapConfig} replay={replay} />
     </section>
   )
 }
@@ -94,7 +107,7 @@ function Delta({ value }: { value: number }) {
   const { t } = useT()
   return (
     <span className={`overview-hero-delta${value > 0 ? " is-up" : value < 0 ? " is-down" : ""}`} title={t("与前一周期相比")}>
-      {value > 0 ? <UIIcon name="arrow-up-right" /> : value < 0 ? <UIIcon name="arrow-down-right" /> : null}{Math.abs(value)}%
+      {value > 0 ? <UIIcon name="arrow-up-right" /> : value < 0 ? <UIIcon name="arrow-down-right" /> : null}<RollingNumber text={`${Math.abs(value)}%`} />
     </span>
   )
 }
@@ -114,7 +127,7 @@ function MetricsChart({ charts }: { charts: OverviewCharts }) {
         {tiles.map(tile => (
           <div key={tile.label} className={`overview-hero-tile${tile.delta === undefined ? " is-online" : ""}`}>
             <span className="label">{tile.delta === undefined ? <i /> : null}{tile.label}</span>
-            <strong>{numberShort(tile.value)}</strong>
+            <strong><RollingNumber text={numberShort(tile.value)} /></strong>
             {tile.delta === undefined ? <span className="overview-hero-note">{t("实时，5 分钟内")}</span> : <Delta value={tile.delta} />}
           </div>
         ))}

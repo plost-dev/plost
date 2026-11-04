@@ -1309,6 +1309,7 @@
   "平面": "Map",
   "刚刚更新": "Updated just now",
   "{n} 分钟前更新": "Updated {n} min ago",
+  "{n} 秒前更新": "Updated {n}s ago",
   "当前在线访客位置": "Where visitors online now are",
   "桌面电脑": "Desktop",
   "笔记本电脑": "Laptop",
