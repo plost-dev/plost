@@ -1,16 +1,13 @@
 import { useEffect, useState } from "react"
 import "~/styles/backup-settings.css"
 import { readSettings, useCachedState } from "~/lib/settings-cache"
-import { geoipSettingsFn, saveGeoIPSettingsFn, updateGeoIPFn, type GeoIPEdition, type GeoIPSettings } from "~/lib/geoip-actions"
+import { geoipSettingsFn, saveGeoIPSettingsFn, updateGeoIPFn, type GeoIPSettings } from "~/lib/geoip-actions"
 import { formatTimestamp } from "~/lib/format"
 import { useT } from "~/lib/i18n"
 import { showToast } from "~/lib/toast"
 import { ActionButton } from "./ActionButton"
-import { Field } from "./SettingsForm"
 import { Tile } from "./ui"
 import { Toggle } from "./Toggle"
-
-const EDITIONS: GeoIPEdition[] = ["GeoLite2-City", "GeoLite2-Country"]
 
 /** MaxMind's build date, 20261103, written as 2026-11-03. */
 function versionLabel(version?: string) {
@@ -83,23 +80,18 @@ export function GeoIPSettingsPage() {
 
 function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (next: GeoIPSettings) => void }) {
   const { t, locale } = useT()
-  const [pending, setPending] = useState(false)
   const [checking, setChecking] = useState(false)
   const state = data.state
 
-  // The source is not a choice on the page: the database always comes from the Plost mirror.
-  async function chooseEdition(edition: GeoIPEdition) {
-    setPending(true)
-    try {
-      onChange(await saveGeoIPSettingsFn(data.source === "plost" ? { edition } : { edition, source: "plost" }))
-      showToast("已保存，正在后台下载 IP 数据库。")
-    } catch (error) {
-      showToast(error instanceof Error ? error.message : "保存失败", "error")
-    } finally { setPending(false) }
-  }
   async function check() {
     setChecking(true)
     try {
+      // The database always comes from the Plost mirror; an instance left on another source is moved back to it.
+      if (data.source !== "plost") {
+        onChange(await saveGeoIPSettingsFn({ source: "plost" }))
+        showToast("正在后台下载 IP 数据库。")
+        return
+      }
       const next = await updateGeoIPFn()
       const fresh = next.state.updatedAt !== state.updatedAt
       onChange(next)
@@ -111,24 +103,22 @@ function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (nex
   }
 
   const busy = data.updating || checking
+  const version = data.loaded ? state.version ? versionLabel(state.version) : versionOfTime(state.builtAt) : ""
+  const newer = !!state.latest && state.latest !== state.version
   // Only worth pressing when the mirror has a newer version than the one in use, or there is none yet or the last try failed.
-  const canUpdate = !data.loaded || !!state.error || (!!state.latest && state.latest !== state.version)
+  const canUpdate = data.source !== "plost" || !data.loaded || !!state.error || newer
+  const updated = state.updatedAt ? formatTimestamp(state.updatedAt * 1000, locale) : ""
   const badge = busy ? <GeoIPBadge text={t("正在更新…")} />
     : state.error ? <GeoIPBadge text={t(state.error)} tone="error" />
-    : data.loaded ? <GeoIPBadge text={[state.version ? versionLabel(state.version) : versionOfTime(state.builtAt), state.updatedAt ? t("更新于 {0}", { 0: formatTimestamp(state.updatedAt * 1000, locale) }) : ""].filter(Boolean).join(" · ")} />
-    : <GeoIPBadge text={t("尚未下载")} />
+    : !data.loaded ? <GeoIPBadge text={t("尚未下载")} />
+    : newer ? <GeoIPBadge text={t("有新版本 {0}", { 0: versionLabel(state.latest) })} />
+    : <GeoIPBadge text={updated ? t("已是最新 · 更新于 {0}", { 0: updated }) : t("已是最新")} />
   return <>
     <Tile icon="globe" title="IP 数据库" titleAddon={badge} actions={<MaxMindWatermark />}>
-      <fieldset disabled={pending} className="backup-fields">
-        <Field label="数据库">
-          <div className="geoip-edition-row">
-            <select className="squircle input" value={data.edition} onChange={event => void chooseEdition(event.target.value as GeoIPEdition)}>
-              {EDITIONS.map(id => <option key={id} value={id}>{id}</option>)}
-            </select>
-            <ActionButton className="btn btn-secondary" loading={checking} disabled={busy || !canUpdate} title={canUpdate ? undefined : t("已经是最新版本。")} onClick={() => void check()}>{t("更新")}</ActionButton>
-          </div>
-        </Field>
-      </fieldset>
+      <div className="geoip-edition-row">
+        <span className="geoip-edition-name">GeoLite2-City{version ? <span className="geoip-edition-version">{version}</span> : null}</span>
+        <ActionButton className="btn btn-secondary" loading={checking} disabled={busy || !canUpdate} title={canUpdate ? undefined : t("已经是最新版本。")} onClick={() => void check()}>{t("更新")}</ActionButton>
+      </div>
     </Tile>
   </>
 }

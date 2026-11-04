@@ -214,10 +214,9 @@ func TestGeoIPRejectsBadDownloadsAndKeepsTheOldDatabase(t *testing.T) {
 	}
 }
 
-func TestGeoIPSettingsSwitchEditionFallBackToMirrorAndTurnOff(t *testing.T) {
+func TestGeoIPSettingsFallBackToCityAndMirrorAndTurnOff(t *testing.T) {
 	m := newGeoMirror(t)
 	m.set("GeoLite2-City", geoArchive(t, "GeoLite2-City", "GeoLite2-City_20261001", "GB"), "")
-	m.set("GeoLite2-Country", geoArchive(t, "GeoLite2-Country", "GeoLite2-Country_20261001", "FR"), "")
 	x := geoTestApp(t, m)
 	x.setup(t)
 	a := x.app
@@ -233,13 +232,13 @@ func TestGeoIPSettingsSwitchEditionFallBackToMirrorAndTurnOff(t *testing.T) {
 			time.Sleep(10 * time.Millisecond)
 		}
 	}
-	x.call(t, "PUT", "/api/geoip", map[string]any{"edition": "GeoLite2-Country"}, 200)
-	wait()
-	if got := a.geo.country(geoTestAddr, time.Now()); got != "FR" {
-		t.Fatalf("country after switching to Country = %q", got)
+	// Only GeoLite2-City is offered; an instance that chose Country before uses City.
+	x.call(t, "PUT", "/api/geoip", map[string]any{"edition": "GeoLite2-Country"}, 400)
+	if _, err := a.db.Exec("INSERT INTO settings(key,value) VALUES('geoip_edition','GeoLite2-Country') ON CONFLICT(key) DO UPDATE SET value=excluded.value"); err != nil {
+		t.Fatal(err)
 	}
-	if files := geoDirFiles(t, a); len(files) != 1 {
-		t.Fatalf("switching edition left %v", files)
+	if _, edition, _ := a.geoSettings(t.Context()); edition != "GeoLite2-City" {
+		t.Fatalf("edition = %q", edition)
 	}
 
 	// Downloads come only from the mirror: MaxMind keys are no longer taken, and an instance that chose its own

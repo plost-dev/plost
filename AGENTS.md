@@ -113,3 +113,4 @@
 - 2026-11-04 用户要求测试保证：设置页保存的 Key（Mapbox Token、Google Maps Key）只写入 env 文件，不进数据库。`keys_storage_test.go` 保存后扫描所有表的所有列以及 plost.db、plost.db-wal 原始文件；备份凭据由 `backup_cloud_test.go` 同样检查。新增可在页面保存的 Key 时，要把它加进这个测试。
 - 2026-11-04 用户要求「更新」按钮放在数据库下拉框右侧同一行（`.geoip-edition-row`），只有镜像有比当前更新的版本（`state.latest` 不同于 `state.version`）、还没有数据库或上次更新失败时才能点，否则置灰。
 - 2026-11-04 用户要求「中国访客的省份和城市」下面说明采用 ip2region 付费版、每月更新，并显示版本号和最后更新时间。数据来自 cnip.io 香港服务器公开的 `https://api.cnip.io/ip2region/version.json`（服务器上 `ip2region-version-json.path` 在新库推送后自动重写，见 cnip.io 项目 README）。Plost 由 `cnip_version.go` 读取：成功缓存 6 小时，失败 10 分钟后重试，取不到时只显示「采用 ip2region 付费版，每月更新」；走与 cnip 查询相同的公网地址限制。测试用本地假服务，`newTestApp` 把地址指向被拒绝的回环地址，测试不连真实网络。
+- 2026-11-04 用户要求 IP 数据库只保留 GeoLite2-City：删除 Country 选项和下拉框（服务端 `geoEditions` 只剩 City，以前选了 Country 的实例自动改用 City，`/api/geoip` 不再接受 Country）。卡片里一行写「GeoLite2-City 版本号」加「更新」按钮；标题旁徽章：正在更新…／错误（红）／尚未下载／有新版本 X／已是最新 · 更新于 时间。上面「数据库下拉只写 GeoLite2-City / GeoLite2-Country」「按钮放在下拉框右侧」两条已被取代。

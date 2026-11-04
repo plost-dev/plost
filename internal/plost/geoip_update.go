@@ -43,7 +43,7 @@ const (
 var geoFirstCheck = 20 * time.Second
 
 var (
-	geoEditions = map[string]bool{"GeoLite2-City": true, "GeoLite2-Country": true}
+	geoEditions = map[string]bool{"GeoLite2-City": true} // City only; an instance that chose Country before uses City
 	geoSources  = map[string]bool{"plost": true, "online": true, "off": true}
 	sha256Form  = regexp.MustCompile(`^[0-9a-f]{64}$`)
 )
@@ -418,7 +418,7 @@ type geoView struct {
 	FlagPath string   `json:"flagPath"` // the -geoip-db file
 	Loaded   bool     `json:"loaded"`   // a database is in use
 	Source   string   `json:"source"`   // plost, online or off
-	Edition  string   `json:"edition"`  // GeoLite2-City or GeoLite2-Country
+	Edition  string   `json:"edition"`  // GeoLite2-City
 	Updating bool     `json:"updating"` // a download is running
 	State    geoState `json:"state"`
 	CNCity   bool     `json:"cnCity"` // visitors in mainland China are placed by api.cnip.io
