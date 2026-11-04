@@ -356,6 +356,8 @@ func TestDomainExpiryFailureModes(t *testing.T) {
 		"https://rdap.registry.test/com/domain/noevents.com": {status: 200, body: `{"events":[{"eventAction":"registration","eventDate":"2010-01-01T00:00:00Z"}]}`},
 		"https://rdap.registry.test/com/domain/garbage.com":  {status: 200, body: `not json`},
 		"https://rdap.registry.test/com/domain/slow.com":     {err: context.DeadlineExceeded},
+		"https://api.who.ga/example.xyz":                     {status: 404, body: whogaNotFound},
+		"https://api.who.ga/noevents.com":                    {status: 404, body: whogaNotFound},
 	}, whois)
 	ctx := context.Background()
 	notRetryable := func(d DomainExpiry) bool { return d.Retryable != nil && !*d.Retryable }
@@ -365,8 +367,8 @@ func TestDomainExpiryFailureModes(t *testing.T) {
 	if d := lookup.inspect(ctx, "com"); d.Error != "无法识别可注册域名" {
 		t.Errorf("a bare suffix: %+v", d)
 	}
-	if d := lookup.inspect(ctx, "example.xyz"); d.Error != "暂不支持该域名后缀的到期查询，请到注册商查看" || !notRetryable(d) {
-		t.Errorf("a suffix without RDAP: %+v", d)
+	if d := lookup.inspect(ctx, "example.xyz"); d.Error != "who.ga 未找到该域名的注册记录，请到注册商查看" || !notRetryable(d) {
+		t.Errorf("a suffix without RDAP reports what who.ga found: %+v", d)
 	}
 	if d := lookup.inspect(ctx, "gone.com"); d.Error != "域名到期信息暂时不可用" || d.Retryable != nil {
 		t.Errorf("a registry error is worth retrying: %+v", d)
@@ -383,7 +385,7 @@ func TestDomainExpiryFailureModes(t *testing.T) {
 	if cnCalls != 0 {
 		t.Fatal("WHOIS is only a fallback for .cn names")
 	}
-	if d := lookup.inspect(ctx, "shop.example.com.cn"); d.Domain != "example.com.cn" || d.ExpiresAt != "2027-03-17" || d.Error != "" || cnCalls != 1 {
+	if d := lookup.inspect(ctx, "shop.example.com.cn"); d.Domain != "example.com.cn" || d.ExpiresAt != "2027-03-17" || d.Error != "" || d.Source != "cnnic" || cnCalls != 1 {
 		t.Errorf("a .cn name without RDAP falls back to WHOIS: %+v", d)
 	}
 

@@ -10,6 +10,7 @@ export type DomainExpiry = {
   retryable?: boolean
   stale?: boolean
   lastSuccessAt?: string
+  source?: "rdap" | "cnnic" | "who.ga" | null
 }
 
 export type CertificateResult = {

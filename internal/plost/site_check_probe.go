@@ -46,6 +46,8 @@ type DomainExpiry struct {
 	Retryable     *bool  `json:"retryable,omitempty"`
 	Stale         bool   `json:"stale,omitempty"`
 	LastSuccessAt string `json:"lastSuccessAt,omitempty"`
+	// Source names where the expiration date came from: the registry's RDAP, CNNIC's WHOIS or who.ga.
+	Source string `json:"source,omitempty"`
 }
 
 type CertificateResult struct {
@@ -317,12 +319,13 @@ type rdapBootstrap struct {
 	Services [][][]string `json:"services"`
 }
 
-// domainLookup asks the registry that runs a domain's suffix. Only the registry's own RDAP service is
-// contacted, plus IANA once a day to learn which one that is; no third-party lookup service is used.
+// domainLookup asks the registry that runs a domain's suffix first: its RDAP service (IANA is asked once a
+// day which one that is), then CNNIC's WHOIS for .cn. Only when those have no date is who.ga asked.
 type domainLookup struct {
-	fetch func(ctx context.Context, u *url.URL) (int, []byte, error)
-	whois func(ctx context.Context, domain string) whoisResult
-	now   func() time.Time
+	fetch     fetchFunc
+	whois     func(ctx context.Context, domain string) whoisResult
+	now       func() time.Time
+	whogaBase string // tests point this at a local server; empty means api.who.ga
 
 	mu      sync.Mutex
 	boot    *rdapBootstrap
@@ -355,21 +358,41 @@ func (l *domainLookup) inspect(ctx context.Context, hostname string) DomainExpir
 	if !ok {
 		return DomainExpiry{Error: "无法识别可注册域名", Retryable: boolPtr(false)}
 	}
-	unavailable := l.rdap(ctx, domain)
-	if unavailable.ExpiresAt != "" {
-		return unavailable
+	official := l.rdap(ctx, domain)
+	if official.ExpiresAt != "" {
+		official.Source = "rdap"
+		return official
 	}
+	unsupported := official.Error == rdapUnsupported
 	// .com.cn and other .cn names share CNNIC's official WHOIS service, which fills in when RDAP has nothing.
 	if strings.HasSuffix(domain, ".cn") {
 		result := l.whois(ctx, domain)
-		out := DomainExpiry{Domain: domain, ExpiresAt: result.ExpiresAt, Error: result.Error}
-		if result.Error != "" {
-			out.Retryable = boolPtr(result.Retryable)
+		if result.Error == "" {
+			return DomainExpiry{Domain: domain, ExpiresAt: result.ExpiresAt, Retryable: boolPtr(false), Source: "cnnic"}
 		}
-		return out
+		official = DomainExpiry{Domain: domain, Error: result.Error, Retryable: boolPtr(result.Retryable)}
+		unsupported = false
 	}
-	return unavailable
+	fallback := l.whoga(ctx, domain)
+	if fallback.ExpiresAt != "" {
+		return fallback
+	}
+	// The registry's own answer explains a failure best, unless it has no service for the suffix at all.
+	out := official
+	if unsupported {
+		out = fallback
+	}
+	out.Domain = domain
+	if retryable(official) || retryable(fallback) {
+		out.Retryable = nil
+	}
+	return out
 }
+
+const rdapUnsupported = "暂不支持该域名后缀的到期查询，请到注册商查看"
+
+// retryable treats an unmarked failure as transient, like expiryRefreshDue does.
+func retryable(d DomainExpiry) bool { return d.Error != "" && (d.Retryable == nil || *d.Retryable) }
 
 func boolPtr(v bool) *bool { return &v }
 
@@ -393,7 +416,7 @@ func (l *domainLookup) rdap(ctx context.Context, domain string) DomainExpiry {
 		break
 	}
 	if endpoint == "" {
-		return DomainExpiry{Domain: domain, Error: "暂不支持该域名后缀的到期查询，请到注册商查看", Retryable: boolPtr(false)}
+		return DomainExpiry{Domain: domain, Error: rdapUnsupported, Retryable: boolPtr(false)}
 	}
 	base, err := url.Parse(endpoint)
 	if err != nil {
@@ -438,11 +461,32 @@ type siteChecker struct {
 func newSiteChecker(allow []netip.Prefix) siteChecker {
 	client := newSiteHTTPClient(allow)
 	dialer := &net.Dialer{Timeout: 8 * time.Second, Control: outboundGuard(allow)}
-	lookup := &domainLookup{now: time.Now}
-	lookup.fetch = func(ctx context.Context, u *url.URL) (int, []byte, error) {
+	lookup := &domainLookup{now: time.Now, fetch: publicFetch(client, validatePublicURL)}
+	lookup.whois = func(ctx context.Context, domain string) whoisResult {
+		return inspectCnWhois(ctx, dialer.DialContext, domain)
+	}
+	return siteChecker{
+		http: func(ctx context.Context, u *url.URL) HTTPCheck {
+			if err := validatePublicURL(u); err != nil {
+				return HTTPCheck{CheckedAt: isoTime(time.Now()), Error: checkErrorMessage(err)}
+			}
+			return probeHTTP(ctx, client, u, time.Now)
+		},
+		expiry: func(ctx context.Context, host string) ExpirySnapshot {
+			return checkExpiry(ctx, lookup, dialer.DialContext, nil, host)
+		},
+	}
+}
+
+type fetchFunc func(ctx context.Context, u *url.URL) (int, []byte, error)
+
+// publicFetch reads a lookup service's JSON answer through the site-check client, so RDAP and who.ga
+// requests pass the same public-address checks as the site probes, both on the URL and at connect time.
+func publicFetch(client *http.Client, validate func(*url.URL) error) fetchFunc {
+	return func(ctx context.Context, u *url.URL) (int, []byte, error) {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 		defer cancel()
-		if err := validatePublicURL(u); err != nil {
+		if err := validate(u); err != nil {
 			return 0, nil, err
 		}
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
@@ -465,20 +509,6 @@ func newSiteChecker(allow []netip.Prefix) siteChecker {
 			return 0, nil, siteCheckError("响应内容过大")
 		}
 		return resp.StatusCode, body, nil
-	}
-	lookup.whois = func(ctx context.Context, domain string) whoisResult {
-		return inspectCnWhois(ctx, dialer.DialContext, domain)
-	}
-	return siteChecker{
-		http: func(ctx context.Context, u *url.URL) HTTPCheck {
-			if err := validatePublicURL(u); err != nil {
-				return HTTPCheck{CheckedAt: isoTime(time.Now()), Error: checkErrorMessage(err)}
-			}
-			return probeHTTP(ctx, client, u, time.Now)
-		},
-		expiry: func(ctx context.Context, host string) ExpirySnapshot {
-			return checkExpiry(ctx, lookup, dialer.DialContext, nil, host)
-		},
 	}
 }
 
@@ -540,6 +570,7 @@ func mergeExpiry(previous *ExpirySnapshot, current ExpirySnapshot) ExpirySnapsho
 		d.Stale, d.LastSuccessAt = false, current.CheckedAt
 	case d.Error != "" && oldDomain.ExpiresAt != "":
 		d.ExpiresAt, d.Stale, d.LastSuccessAt = oldDomain.ExpiresAt, true, firstNonEmpty(oldDomain.LastSuccessAt, prevChecked)
+		d.Source = oldDomain.Source
 	}
 	c := current.Certificate
 	if c.Validation == "" {

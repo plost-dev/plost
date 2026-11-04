@@ -120,6 +120,11 @@ export function SiteHealthCards({report}: {report: SiteCheckReport}) {
   </div>
 }
 
+/** Where the domain's expiration date came from, as reported by the server. */
+function sourceLabel(source?: string | null) {
+  return source === "rdap" ? "来自注册局 RDAP" : source === "cnnic" ? "来自 CNNIC WHOIS" : source === "who.ga" ? "来自 who.ga" : ""
+}
+
 export function SiteHealthPanel({report}: {report: SiteCheckReport}) {
   const {t, locale} = useT()
   const latest = report.latest
@@ -127,6 +132,8 @@ export function SiteHealthPanel({report}: {report: SiteCheckReport}) {
     <SiteHealthCards report={report}/>
     <ResponseChart report={report}/>
     <div className="health-footer"><span>{t("最近检查")}: {latest ? formatTimestamp(latest.checkedAt, locale) : "—"}</span><span>{t("到期信息每日更新，临时查询失败后 15 分钟重试")}{report.expiry ? ` · ${formatTimestamp(report.expiry.checkedAt, locale)}` : ""}</span></div>
-    {report.expiry?.domain.domain ? <p className="health-registration-note">{t("域名到期信息对应 {0}", {0: report.expiry.domain.domain})}</p> : null}
+    {report.expiry?.domain.domain ? <p className="health-registration-note">{t("域名到期信息对应 {0}", {0: report.expiry.domain.domain})}{sourceLabel(report.expiry.domain.source) ? ` · ${t(sourceLabel(report.expiry.domain.source))}` : ""}</p> : null}
+    <p className="health-registration-note health-sponsor-note">{t("域名查询由 {0} 赞助；注册局没有到期日期时由 {0} 补充。", {0: "who.ga"})}{" "}
+      <a className="settings-heading-link" href="https://who.ga" target="_blank" rel="noreferrer">{t("打开 who.ga")}</a></p>
   </div>
 }

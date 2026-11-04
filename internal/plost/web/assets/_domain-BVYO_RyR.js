@@ -1,0 +1,1 @@
+import{kn as e}from"./index-D40vIx86.js";var t=e;export{t as component};
