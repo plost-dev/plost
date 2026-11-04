@@ -56,6 +56,7 @@ type App struct {
 	cfg      Config
 	db       *sql.DB
 	rdb      *sql.DB      // Read-only pool for reports, see reader.go.
+	reports  reportCache  // Long-range reports, see report_cache.go.
 	mu       sync.RWMutex // Quiesce all database access for an in-process restore.
 	secret   []byte
 	epoch    uint64

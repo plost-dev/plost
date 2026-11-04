@@ -168,10 +168,16 @@ func (a *App) overview(ctx context.Context, site int64, r Range, q url.Values) (
 			return o, err
 		}
 	}
-	live := Range{From: time.Now().Add(-5 * time.Minute), To: time.Now().Add(time.Second)}
-	lw, la := where(site, live, q)
-	err = a.rdb.QueryRowContext(ctx, "SELECT count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+lw, la...).Scan(&o.Online)
+	o.Online, err = a.onlineNow(ctx, site, q)
 	return o, err
+}
+
+// onlineNow counts the visitors of the last five minutes, with the report's filters.
+func (a *App) onlineNow(ctx context.Context, site int64, q url.Values) (n int64, err error) {
+	live := Range{From: time.Now().Add(-5 * time.Minute), To: time.Now().Add(time.Second)}
+	w, args := where(site, live, q)
+	err = a.rdb.QueryRowContext(ctx, "SELECT count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+w, args...).Scan(&n)
+	return
 }
 
 func (a *App) rows(ctx context.Context, site int64, r Range, q url.Values, column string, pageviews bool, events bool) ([]Row, error) {
@@ -322,17 +328,38 @@ func (a *App) report(r *http.Request, site Site, readonly bool) (Report, error) 
 	if err != nil {
 		return Report{}, err
 	}
-	result := Report{Site: site, Range: rng, Readonly: readonly}
-	tasks := []func(context.Context) error{
-		func(ctx context.Context) (err error) { result.Overview, err = a.overview(ctx, site.ID, rng, q); return },
-		func(ctx context.Context) (err error) { result.Series, err = a.series(ctx, site.ID, rng, q); return },
-		func(ctx context.Context) (err error) { result.Regions, err = a.regions(ctx, site.ID, rng, q); return },
-		func(ctx context.Context) (err error) { result.Cities, err = a.cities(ctx, site.ID, rng, q); return },
+	result, err := a.cachedReport(r.Context(), site, rng, q)
+	if err != nil {
+		return result, err
+	}
+	result.Site, result.Readonly = site, readonly
+	// Who is online now is never served from the cache: these are small scans of the last five minutes.
+	err = parallel(r.Context(),
+		func(ctx context.Context) (err error) {
+			result.Overview.Online, err = a.onlineNow(ctx, site.ID, q)
+			return
+		},
 		func(ctx context.Context) (err error) { result.Live, err = a.liveCountries(ctx, site.ID, q); return },
 		func(ctx context.Context) (err error) {
 			result.LiveRegions, err = a.liveRegions(ctx, site.ID, q)
 			return
 		},
+	)
+	if err != nil {
+		return result, err
+	}
+	result.LivePoints = a.live.points(site.ID, time.Now(), strings.ToUpper(q.Get("country")))
+	return result, nil
+}
+
+// computeReport runs the statistics of a range, everything in a report except who is online now.
+func (a *App) computeReport(ctx context.Context, site Site, rng Range, q url.Values) (Report, error) {
+	result := Report{Site: site, Range: rng}
+	tasks := []func(context.Context) error{
+		func(ctx context.Context) (err error) { result.Overview, err = a.overview(ctx, site.ID, rng, q); return },
+		func(ctx context.Context) (err error) { result.Series, err = a.series(ctx, site.ID, rng, q); return },
+		func(ctx context.Context) (err error) { result.Regions, err = a.regions(ctx, site.ID, rng, q); return },
+		func(ctx context.Context) (err error) { result.Cities, err = a.cities(ctx, site.ID, rng, q); return },
 	}
 	if rng.Period != "all" {
 		prev := Range{From: rng.From.Add(-rng.To.Sub(rng.From)), To: rng.From, Period: rng.Period}
@@ -363,11 +390,8 @@ func (a *App) report(r *http.Request, site Site, readonly bool) (Report, error) 
 			return
 		})
 	}
-	if err := parallel(r.Context(), tasks...); err != nil {
-		return result, err
-	}
-	result.LivePoints = a.live.points(site.ID, time.Now(), strings.ToUpper(q.Get("country")))
-	return result, nil
+	err := parallel(ctx, tasks...)
+	return result, err
 }
 
 func (a *App) siteReport(w http.ResponseWriter, r *http.Request) error {
