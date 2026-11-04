@@ -1079,6 +1079,10 @@ html[data-theme="dark"] .mapboxgl-ctrl-attrib-button { filter:invert(1); }
 .settings-card-heading h2 + div { margin-top: 4px; font-size: 12px; line-height: 1.7; }
 .settings-heading-title-row { display:flex; flex-wrap:wrap; align-items:center; gap:4px 14px; }
 .settings-brand-logo { display:block; height:24px; background:currentColor; mask:center / contain no-repeat; -webkit-mask:center / contain no-repeat; }
+/* A logo in its own colours: the light-theme file, swapped for its dark variant on dark surfaces. */
+.settings-brand-logo-color { display:block; height:24px; object-fit:contain; object-position:left center; }
+.settings-brand-logo-color.is-dark, html[data-theme="dark"] .settings-brand-logo-color:not(.is-dark) { display:none; }
+html[data-theme="dark"] .settings-brand-logo-color.is-dark { display:block; }
 .settings-tips { display:grid; gap:12px; margin:0; padding:0; list-style:none; font-size:12px; line-height:1.7; color:var(--color-gray-600); }
 .settings-tips li { display:flex; gap:10px; align-items:flex-start; }
 .settings-tip-number { display:inline-flex; flex:none; align-items:center; justify-content:center; width:20px; height:20px; margin-top:0; --sq-r:7px; background:var(--accent-soft); color:var(--accent-text); font-size:11px; font-weight:600; font-variant-numeric:tabular-nums; }

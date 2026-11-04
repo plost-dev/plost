@@ -124,7 +124,9 @@ embedded images.
 ## MaxMind logo (2026-11-04)
 
 `maxmind.svg` is made from MaxMind's own header logo (`https://static.maxmind.com/fd6ead67cd5e7440ba1e/images/maxmind-header-logo-compact-alt.svg`,
-downloaded 2026-11-04): the wordmark paths are kept as they are, and the symbol's embedded gradient image is replaced
-by its own clipping path filled solid, so the whole mark can be drawn in the text colour like the Mapbox logo. It is
-shown only on the MaxMind settings card to identify the service the licence key belongs to; MaxMind's trademark
-rules apply and no rights are granted. It contains no scripts, event handlers, external references or images.
+downloaded 2026-11-04) and keeps its original colours: the symbol and wordmark paths are kept as they are, the wordmark
+stays MaxMind navy (`#142454`), and the symbol's embedded blue gradient photo is replaced by an SVG radial gradient
+sampled from it (`#5e98da` to `#84cae9`). `maxmind-dark.svg` is the same file with the wordmark in light grey
+(`#e4e4e7`) so it stays legible in the dark theme. Both are shown only on the MaxMind settings card to identify the
+service the licence key belongs to; MaxMind's trademark rules apply and no rights are granted. They contain no scripts,
+event handlers, external references or images.

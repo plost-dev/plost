@@ -174,7 +174,7 @@ function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (nex
         </FormActions>
       </> : null}
     </Tile>
-    <Tile icon="key" title="MaxMind" logo={{ src: "/brands/maxmind.svg", width: 128 }}
+    <Tile icon="key" title="MaxMind" logo={{ src: "/brands/maxmind.svg", dark: "/brands/maxmind-dark.svg", width: 128 }}
       titleAddon={<a className="settings-heading-link" href="https://www.maxmind.com/en/accounts/current/license-key" target="_blank" rel="noreferrer">{t("打开 MaxMind 获取 License Key")}</a>}>
       <SettingsForm onSubmit={async () => {
         const next = await saveGeoIPSettingsFn({ source: "maxmind", account: account.trim(), key: key.trim() })

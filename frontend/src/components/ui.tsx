@@ -582,8 +582,9 @@ export function Tile({
   titleAddon?: React.ReactNode
   /** Shown at the right end of the heading, such as a switch. */
   actions?: React.ReactNode
-  /** A brand logo drawn in the text colour in place of the icon and the title, which stays for screen readers. */
-  logo?: { src: string; width: number }
+  /** A brand logo in place of the icon and the title, which stays for screen readers. Drawn in the text colour, or
+   *  in its own colours when `dark` names the variant for the dark theme. */
+  logo?: { src: string; width: number; dark?: string }
   children: React.ReactNode
 }) {
   const { t } = useT()
@@ -592,7 +593,7 @@ export function Tile({
       <header className="settings-card-heading">
         {logo ? null : <span className="squircle settings-card-icon">{brand ? <BrandIcon name={brand}/> : <UIIcon name={icon}/>}</span>}
         <div className="settings-heading-copy min-w-0">{(() => {
-          const heading = <h2 className="text-lg leading-7 font-medium text-gray-900">{logo ? <><span className="settings-brand-logo" aria-hidden="true" style={{width: logo.width, maskImage: `url(${logo.src})`, WebkitMaskImage: `url(${logo.src})`}}/><span className="sr-only">{t(title || "")}</span></> : t(title || "")}</h2>
+          const heading = <h2 className="text-lg leading-7 font-medium text-gray-900">{logo ? <>{logo.dark ? <><img className="settings-brand-logo-color" src={logo.src} width={logo.width} alt=""/><img className="settings-brand-logo-color is-dark" src={logo.dark} width={logo.width} alt=""/></> : <span className="settings-brand-logo" aria-hidden="true" style={{width: logo.width, maskImage: `url(${logo.src})`, WebkitMaskImage: `url(${logo.src})`}}/>}<span className="sr-only">{t(title || "")}</span></> : t(title || "")}</h2>
           return titleAddon ? <div className="settings-heading-title-row">{heading}{titleAddon}</div> : heading
         })()}
         {subtitle ? <div className="mt-px text-sm leading-5 text-gray-500">{t(subtitle || "")}</div> : null}</div>
