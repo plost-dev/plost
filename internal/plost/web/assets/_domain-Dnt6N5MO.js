@@ -1,0 +1,1 @@
+import{kn as e}from"./index-CaLyVwu3.js";var t=e;export{t as component};
