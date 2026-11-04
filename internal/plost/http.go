@@ -17,6 +17,7 @@ import (
 	"path"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -258,15 +259,17 @@ func (a *App) serveAsset(w http.ResponseWriter, r *http.Request, name string) {
 		http.NotFound(w, r)
 		return
 	}
-	w.Header().Set("Cache-Control", "public, max-age=300")
+	// Built files carry a hash of their content in the name, so a browser may keep them for good and not ask again on
+	// a reload; the other files may change under the same name.
+	if strings.HasPrefix(name, "assets/") {
+		w.Header().Set("Cache-Control", "public, max-age=31536000, immutable")
+	} else {
+		w.Header().Set("Cache-Control", "public, max-age=300")
+	}
 	w.Header().Set("Content-Type", mime.TypeByExtension(path.Ext(name)))
 	w.Header().Set("Vary", "Accept-Encoding")
 	if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") && len(b) > 512 {
-		var buf bytes.Buffer
-		z, _ := gzip.NewWriterLevel(&buf, gzip.BestSpeed)
-		_, _ = z.Write(b)
-		_ = z.Close()
-		b = buf.Bytes()
+		b = gzipped(name, b)
 		w.Header().Set("Content-Encoding", "gzip")
 	}
 	http.ServeContent(w, r, name, time.Time{}, bytes.NewReader(b))
@@ -578,4 +581,19 @@ func (a *App) contentSecurityPolicy() string {
 		connect += " https://*.googleapis.com https://*.google.com https://*.gstatic.com"
 	}
 	return "default-src 'self'; script-src " + script + "; style-src " + style + "; img-src " + img + "; font-src " + font + "; connect-src " + connect + "; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'"
+}
+
+// gzippedAssets keeps each embedded file compressed once, at the best level, instead of again on every request.
+var gzippedAssets sync.Map
+
+func gzipped(name string, b []byte) []byte {
+	if z, ok := gzippedAssets.Load(name); ok {
+		return z.([]byte)
+	}
+	var buf bytes.Buffer
+	z, _ := gzip.NewWriterLevel(&buf, gzip.BestCompression)
+	_, _ = z.Write(b)
+	_ = z.Close()
+	gzippedAssets.Store(name, buf.Bytes())
+	return buf.Bytes()
 }

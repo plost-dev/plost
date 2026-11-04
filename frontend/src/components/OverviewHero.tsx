@@ -7,6 +7,7 @@ import { overviewMapFn, type OverviewMapConfig } from "~/lib/map-usage-actions"
 import { RollingNumber } from "~/components/RollingNumber"
 import { rollAllNumbers } from "~/lib/roll-signal"
 import { useLiveChanges } from "~/lib/live-changes"
+import { takeOverviewPrefetch } from "~/lib/overview-prefetch"
 import { overviewChartsFn, overviewLiveFn, type OverviewCharts, type sitesFn } from "~/lib/actions"
 import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
@@ -29,12 +30,19 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
   const [replay, setReplay] = useState(0)
   const [loading, setLoading] = useState(0)
   const loadingRef = useRef<Promise<void> | null>(null)
+  const mapConfigAsked = useRef(false)
 
   // The figures and the globe, once at a time; the refresh icon turns while they load.
   const load = useCallback(() => loadingRef.current ??= (async () => {
     setLoading(n => n + 1)
     try {
-      const [rows, figures] = await Promise.all([overviewLiveFn().catch(() => null), overviewChartsFn().catch(() => null)])
+      // The first load uses what the page's loader already asked for.
+      const early = takeOverviewPrefetch()
+      if (early) {
+        mapConfigAsked.current = true
+        void early.map.then(setMapConfig, () => setMapConfig({ service: "" }))
+      }
+      const [rows, figures] = await Promise.all([(early?.live ?? overviewLiveFn()).catch(() => null), (early?.charts ?? overviewChartsFn()).catch(() => null)])
       if (rows) setPlaces(rows)
       if (figures) setCharts(figures)
       if (rows || figures) setUpdatedAt(Date.now())
@@ -49,7 +57,12 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
   // New visits are pushed by the server and only move the live dots, quietly: the figures wait for the minute.
   useLiveChanges(() => { void overviewLiveFn().then(setPlaces).catch(() => {}) })
   // Which map to draw, as the visitor map settings say; the built-in globe shows until it is known.
-  useEffect(() => { void overviewMapFn().then(setMapConfig).catch(() => setMapConfig({ service: "" })) }, [])
+  // The load above takes it from the loader's prefetch when there is one; otherwise it is asked for here.
+  useEffect(() => {
+    if (mapConfigAsked.current) return
+    mapConfigAsked.current = true
+    void overviewMapFn().then(setMapConfig).catch(() => setMapConfig({ service: "" }))
+  }, [])
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 5_000)
     return () => window.clearInterval(timer)

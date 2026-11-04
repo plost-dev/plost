@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react"
 import type { Map as MapboxMap, Marker } from "mapbox-gl"
-import { loadGoogleMaps, type Maps } from "~/components/GoogleVisitorMap"
+import { loadGoogleMaps, type Maps } from "~/lib/google-maps-loader"
 import { newestPlace, placeMarkers, type OverviewMapMode, type OverviewPlace, type PlaceMarker } from "~/components/OverviewGlobe"
 import { googleMapLook } from "~/lib/google-map-styles"
 import { useT } from "~/lib/i18n"

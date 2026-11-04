@@ -13,7 +13,12 @@ type GoPoint={at:number;visitors:number;pageviews:number;visits:number;bounceRat
 export type GoReport={site:Site;range:{from:string;to:string;period:string};overview:GoOverview;previous:GoOverview;series:GoPoint[];sources:Row[];pages:Row[];countries:Row[];regions?:Array<{country:string;name:string;value:number}>;browsers:Row[];os:Row[];devices:Row[];live?:Row[];liveRegions?:Array<{country:string;name:string;value:number}>;livePoints?:LivePoint[];languages:Row[];screens:Row[];events:Row[];readonly:boolean;details?:Record<string,any>}
 const sitePath=(domain:string)=>"/api/sites/"+encodeURIComponent(domain)
 const asUser=(u:User|null)=>u?{...u,isAdmin:true,totp_enabled:u.totp}:null
-export async function meFn(){const result=await rpc<{user:User|null}>("/api/auth");return asUser(result.user)}
+// The root and the page loaders both ask who is signed in as a page opens; while one answer is on its way, they share it.
+let meAsking:Promise<User|null>|null=null
+export function meFn(){
+  meAsking??=rpc<{user:User|null}>("/api/auth").then(result=>asUser(result.user)).finally(()=>{meAsking=null})
+  return meAsking
+}
 export async function instanceSetupFn(){const result=await rpc<{needsSetup:boolean;passkey?:boolean}>("/api/auth");return {needsSetup:result.needsSetup,passkey:!!result.passkey}}
 export async function loginFn({data}:Input<{email:string;password:string}>){const r=await rpc<{requiresTOTP:boolean}>("/api/login","POST",data);return r.requiresTOTP?{needs2fa:true,email:data.email}:{needs2fa:false}}
 export const setupAdminFn=({data}:Input<{email:string;password:string;name:string}>)=>rpc("/api/setup","POST",data)

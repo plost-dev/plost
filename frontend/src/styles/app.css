@@ -79,9 +79,6 @@
 
 html {
   --surface: #fff;
-  --map-ocean: #eef3f8;
-  --map-empty: #d5dde7;
-  --map-border: #f8fafc;
   --header-surface: rgb(255 255 255 / 0.92);
   color-scheme: light;
   color: var(--color-gray-800);
@@ -622,8 +619,6 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
 .settings-field {
   display: block;
   width: 100%;
-  max-width: 28rem;
-  margin-top: 1.5rem;
 }
 
 .settings-field:first-child {
@@ -638,9 +633,6 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
 .settings-label {
   display: block;
   margin-bottom: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--color-gray-900);
 }
 
 .settings-hint {
@@ -651,13 +643,6 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   color: var(--color-gray-500);
 }
 
-.settings-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
-}
 
 .settings-avatar-row {
   display: flex;
@@ -789,9 +774,6 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
 html[data-theme="dark"] {
   color-scheme: dark;
   --surface: #0c0c0c;
-  --map-ocean: #202735;
-  --map-empty: #485166;
-  --map-border: #30394c;
   --header-surface: #000000;
   --color-gray-50: #000000;
   --color-gray-100: #171717;
@@ -906,11 +888,10 @@ html[data-theme="dark"] { --map-ocean: #242630; --map-empty: #3d4151; --map-bord
 .analytics-heading-icon { flex: none; display: inline-grid; place-items: center; width: 18px; font-size: 16px; line-height: 1; color: var(--color-gray-500); }
 .analytics-heading > span { font-size: var(--ui-text-caption); color: var(--color-gray-500); }
 .visitor-graph { padding: 8px 0 0; overflow: hidden; }
-.metric-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); padding: 4px 12px 16px; gap: 6px; }
+.metric-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .metric-grid .metric-item { width: auto; margin: 0; padding: 0; border: 0; min-width: 0; }
-.metric-grid .metric-item > button { margin: 0; width: 100%; height: 86px; padding: 12px; --sq-r:15px; gap: 8px; border: 1px solid transparent; }
-.metric-grid .metric-item > button > div { font-size: 12px; font-weight: 500; white-space: normal; }
-.metric-grid .metric-item p { font-size: 24px; line-height: 1.1; letter-spacing: -0.035em; }
+.metric-grid .metric-item > button { margin: 0; width: 100%; --sq-r:15px; }
+.metric-grid .metric-item > button > div { font-weight: 500; white-space: normal; }
 .trend-section { --trend-inset:var(--ui-card-padding); border-top: 1px solid var(--color-gray-100); padding: 16px var(--ui-card-padding) 8px; }
 .geography-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px; }
 .geography-map .map-stage { --sq-r:15px; }
@@ -985,7 +966,6 @@ button.map-live-count:focus-visible { outline:2px solid var(--analytics-accent);
 :is(.map-stage, .overview-map-stage) .gm-style iframe + div { border:none !important; }
 .map-viewport path:focus { outline:none; }
 .map-viewport path:focus-visible { stroke:var(--accent-focus); stroke-width:2px; }
-.mapbox-country-marker:focus-visible { outline-offset:1px; }
 /* An open country on the built-in map: the way back to the world, in the same frosted style as the zoom buttons. */
 .map-back { --sq-r:7px; display:inline-flex; align-items:center; gap:6px; height:var(--ui-control-compact); max-width:calc(100% - 140px); padding:0 10px; border:1px solid rgb(255 255 255 / .7); background:rgb(255 255 255 / .9); box-shadow:0 1px 2px rgb(0 0 0 / .05); backdrop-filter:blur(4px); color:var(--color-gray-500); font-size:12px; white-space:nowrap; cursor:pointer; }
 .map-back strong { overflow:hidden; text-overflow:ellipsis; color:var(--color-gray-900); font-weight:600; }
@@ -1338,7 +1318,7 @@ html[data-theme="dark"] .site-footer { background:#000; }
 .metric-grid .metric-item > button > div { position:relative; z-index:1; display:block; width:100%; font-size:12px; line-height:18px; padding-right:16px; }
 .metric-grid .metric-item > button > span { position:relative; z-index:1; justify-content:flex-start; }
 .metric-grid .metric-item p { font-size:22px; line-height:1.2; font-weight:600; font-variant-numeric:tabular-nums; letter-spacing:-.02em; }
-@media(max-width:639px) { .metric-grid { gap:6px; padding:8px; } .metric-grid .metric-item > button { height:86px; padding:12px; } .metric-grid .metric-item p { font-size:21px; } }
+@media(max-width:639px) { .metric-grid { gap:6px; padding:8px; } .metric-grid .metric-item > button { padding:12px; } .metric-grid .metric-item p { font-size:21px; } }
 
 /* Shared content spacing, with compact padding on narrow screens. */
 .analytics-dashboard { gap:var(--ui-grid-gap); }

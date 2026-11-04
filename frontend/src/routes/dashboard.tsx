@@ -13,12 +13,17 @@ import { useT } from "~/lib/i18n"
 import { readSiteLayout, setSiteLayout, subscribeSiteLayout, type SiteLayout } from "~/lib/site-layout-preference"
 import { useRouterAutoRefresh } from "~/lib/router-refresh"
 import { RollingNumber } from "~/components/RollingNumber"
+import { prefetchOverview } from "~/lib/overview-prefetch"
 
 export const Route = createFileRoute("/dashboard")({
+  // Everything the page needs leaves at once: who is signed in, the sites, and the overview's figures and map.
   loader: async () => {
+    const sites = sitesFn()
+    sites.catch(() => {})
+    prefetchOverview()
     const me = await meFn()
     if (!me) throw redirect({ to: "/login" })
-    return { me, sites: await sitesFn() }
+    return { me, sites: await sites }
   },
   component: DashboardPage,
 })

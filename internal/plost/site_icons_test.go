@@ -15,9 +15,9 @@ import (
 func TestNormalizeDomainDropsTheRestOfAnAddress(t *testing.T) {
 	for in, want := range map[string]string{
 		"https://www.Example.com/blog?x=1#top": "example.com",
-		"http://shop.example.com:8080/":       "shop.example.com",
-		"www.example.com":                     "example.com",
-		"example.com/":                        "example.com",
+		"http://shop.example.com:8080/":        "shop.example.com",
+		"www.example.com":                      "example.com",
+		"example.com/":                         "example.com",
 	} {
 		if got, err := normalizeDomain(in); err != nil || got != want {
 			t.Errorf("%q: %q %v", in, got, err)

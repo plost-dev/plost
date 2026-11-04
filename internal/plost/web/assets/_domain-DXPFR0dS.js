@@ -1,0 +1,1 @@
+import{Cn as e}from"./index-BNH9DTY2.js";var t=e;export{t as component};
