@@ -57,6 +57,9 @@ const BROWSER_ICONS: Record<string, string> = {
   Douyin: "/brands/sources/tiktok.svg",
   Baidu: "/brands/sources/baidu.svg",
   "Sogou Browser": "/brands/sources/sogou.svg",
+  Feishu: platform("lark-badge"),
+  Alipay: platform("alipay"),
+  LINE: platform("line"),
 }
 
 const OS_ICONS: Record<string, string> = {

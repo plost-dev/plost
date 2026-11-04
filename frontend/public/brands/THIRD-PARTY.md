@@ -78,6 +78,13 @@ or the Font Awesome monochrome brand font. Unknown products and failed images
 use the existing local generic UI fallback at the same 16 × 16 size.
 
 
+### Added 2026-11-04
+
+`lark-badge.svg` (shown for Feishu / Lark), `alipay.svg` and `line.svg` are unmodified `default` variants from
+[`32a228fad39a1080417076bb32ca920cc24d3577`](https://github.com/glincker/thesvg/tree/32a228fad39a1080417076bb32ca920cc24d3577),
+all declaring CC0-1.0, checked the same way and listed in `platforms/sources.json` with their checksums. They identify
+in-app browsers only.
+
 ## Traffic source icons (2026-10-22)
 
 The bundled `sources/` icons are unmodified SVG assets from [The SVG](https://thesvg.org/),

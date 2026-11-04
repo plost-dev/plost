@@ -218,6 +218,36 @@
       "license": "brand-use",
       "brandUrl": "https://support.microsoft.com/en-us/windows/internet-explorer-downloads-d49e1f0d-571c-9a7b-d97e-be248806ca17",
       "guidelines": null
+    },
+    {
+      "slug": "lark-badge",
+      "file": "lark-badge.svg",
+      "source": "https://github.com/glincker/thesvg/blob/32a228fad39a1080417076bb32ca920cc24d3577/public/icons/lark-badge/default.svg",
+      "variant": "default",
+      "license": "CC0-1.0",
+      "brandUrl": "https://www.larksuite.com/",
+      "guidelines": null,
+      "sha256": "e49eb50ac392d4e4d2c8dae24aa7282b266033bacfcb2cdf52d3fdd4ab8c215e"
+    },
+    {
+      "slug": "alipay",
+      "file": "alipay.svg",
+      "source": "https://github.com/glincker/thesvg/blob/32a228fad39a1080417076bb32ca920cc24d3577/public/icons/alipay/default.svg",
+      "variant": "default",
+      "license": "CC0-1.0",
+      "brandUrl": "https://www.alipay.com/",
+      "guidelines": null,
+      "sha256": "132c6ea12c4eff484434a25aaf3676cab1bba444ee0d60da2da353b906e48f46"
+    },
+    {
+      "slug": "line",
+      "file": "line.svg",
+      "source": "https://github.com/glincker/thesvg/blob/32a228fad39a1080417076bb32ca920cc24d3577/public/icons/line/default.svg",
+      "variant": "default",
+      "license": "CC0-1.0",
+      "brandUrl": "https://line.me/",
+      "guidelines": null,
+      "sha256": "b33b86ee7c335abcccb12c08188823d40eb3ddc9521362ac94d9d9c55077db68"
     }
   ]
 }
