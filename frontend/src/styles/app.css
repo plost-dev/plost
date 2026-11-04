@@ -863,7 +863,14 @@ html[data-theme="dark"] { --map-ocean: #242630; --map-empty: #3d4151; --map-bord
 .report-tab-trigger { display:inline-flex; align-items:center; height:var(--ui-control-compact); padding-inline:8px; line-height:20px; font-size:var(--ui-text-control); font-weight:500; color:var(--color-gray-600); }
 .report-tab-trigger:hover { background:var(--color-gray-100); }
 .report-tab-trigger > span { color:inherit; font-size:inherit; font-weight:inherit; letter-spacing:normal; text-transform:none; }
-.report-card { min-width:0; min-height:460px; padding:var(--ui-card-padding); }
+/* A transparent 1px border, like the bordered analytics panels, so content sits the same distance from every card's edge. */
+.report-card { min-width:0; min-height:460px; padding:var(--ui-card-padding); border:1px solid transparent; }
+/* The heading's icon buttons are wider than their 16px glyph: pull them right so the glyph lines up with the
+   numbers below instead of sitting 8px further in. */
+.report-heading > :last-child { margin-right:-8px; }
+/* The vertical ellipsis is a narrow column of dots in the middle of its 18px glyph: pull it further, so the dots
+   end where the numbers do. */
+.report-heading > :last-child > [data-report-menu]:last-child { margin-right:-7px; }
 .report-list-rows { min-height:var(--report-rows-height,0); }
 .report-list-empty { min-height:var(--report-empty-height,160px); }
 .report-card h2, .report-heading h3 { font-size:var(--ui-text-card); line-height:24px; font-weight:600; }
