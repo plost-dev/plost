@@ -190,7 +190,7 @@ export function BackupSchedulePanel() {
                 setMsg(""); setErr(""); setForm(cur => cur && { ...cur, hour, minute })
               }} />
             </Field> : null}
-            <Field label={t("本地保留份数")} hint={t("最近的备份保存在数据目录的 backups/scheduled 中。0 表示不在本地保留，需要启用云存储上传。")}>
+            <Field label={t("本地保留份数")}>
               <input className="squircle input" type="number" min={0} max={90} step={1} required value={form.keep} onChange={e => set("keep", Math.max(0, Math.min(90, Math.trunc(Number(e.target.value) || 0))))} />
             </Field>
             {saved.editable ? <Field wide label={t("计划备份密码")} hint={t("用来加密自动备份的文件，恢复时需要它。至少 12 个字符，不能含引号、反斜杠和 $。")}>

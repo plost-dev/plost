@@ -976,6 +976,13 @@ button.map-live-count:focus-visible { outline:2px solid var(--analytics-accent);
 .map-flags-toggle input:checked + .map-flags-track .map-flags-thumb { transform:translateX(12px); background:var(--ui-selection-text); }
 .map-flags-toggle input:focus-visible + .map-flags-track { outline:2px solid var(--accent-text); outline-offset:3px; }
 .map-stage[data-show-flags="false"] .country-flags { display:none; }
+/* Maps are clicked far more than tabbed through: a click leaves no focus frame, neither the browser's outline round a
+   country or a flag marker nor the border Google Maps draws round its map. Keyboard focus still shows, inside the shape. */
+:is(.map-stage, .overview-map-stage) :focus:not(:focus-visible), .overview-globe:focus:not(:focus-visible) { outline:none; }
+:is(.map-stage, .overview-map-stage) .gm-style iframe + div { border:none !important; }
+.map-viewport path:focus { outline:none; }
+.map-viewport path:focus-visible { stroke:var(--accent-focus); stroke-width:2px; }
+.mapbox-country-marker:focus-visible { outline-offset:1px; }
 /* An open country on the built-in map: the way back to the world, in the same frosted style as the zoom buttons. */
 .map-back { --sq-r:7px; display:inline-flex; align-items:center; gap:6px; height:var(--ui-control-compact); max-width:calc(100% - 140px); padding:0 10px; border:1px solid rgb(255 255 255 / .7); background:rgb(255 255 255 / .9); box-shadow:0 1px 2px rgb(0 0 0 / .05); backdrop-filter:blur(4px); color:var(--color-gray-500); font-size:12px; white-space:nowrap; cursor:pointer; }
 .map-back strong { overflow:hidden; text-overflow:ellipsis; color:var(--color-gray-900); font-weight:600; }

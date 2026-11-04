@@ -90,7 +90,9 @@ export function MapboxVisitorMap({token, rows, live, points = [], showFlags = tr
             if (country.live) {const dot = document.createElement("span"); dot.className = "mapbox-live-dot"; button.append(dot)}
             const reveal = () => {if (map) {const point = map.project(country.center); show(country, point.x, point.y)}}
             button.addEventListener("mouseenter", reveal); button.addEventListener("focus", reveal)
-            button.addEventListener("mouseleave", () => setHovered(null)); button.addEventListener("blur", () => setHovered(null))
+            // A click selects the country without focusing the marker, so no focus ring is left round the flag.
+              button.addEventListener("mousedown", event => event.preventDefault())
+              button.addEventListener("mouseleave", () => setHovered(null)); button.addEventListener("blur", () => setHovered(null))
             button.addEventListener("click", () => props.current.onCountryClick?.(country.code))
             const marker = new gl.Marker({element: button}).setLngLat(country.center).addTo(map)
             // Mapbox gives custom markers role="img"; these markers remain interactive buttons.

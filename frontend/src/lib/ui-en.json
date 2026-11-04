@@ -1044,7 +1044,7 @@
   "云端旧备份不会被自动删除，请在存储桶中设置生命周期规则。": "Old cloud backups are never deleted automatically. Set a lifecycle rule on the bucket.",
   "距离上次成功备份满一小时后执行，服务每 30 秒检查一次。": "Runs one hour after the last successful backup. The server checks every 30 seconds.",
   "本地保留份数": "Local copies to keep",
-  "最近的备份保存在数据目录的 backups/scheduled 中。0 表示不在本地保留，需要启用云存储上传。": "Recent backups are kept in backups/scheduled inside the data directory. 0 keeps none locally and requires cloud upload.",
+  "计划备份保存在数据目录的 backups/scheduled 中，按「本地保留份数」只留最近几份；填 0 则不在本地保留，需要打开云存储上传。": "Scheduled backups are kept in backups/scheduled inside the data directory, only the latest as many as \"Local copies to keep\" says; with 0 none stay here and cloud upload must be on.",
   "计划备份密码": "Scheduled backup password",
   "至少 12 个字符。用于加密每份自动备份，加密后保存在这台服务器上，不会再显示。恢复时需要它，请另外保管。": "At least 12 characters. It encrypts every automatic backup and is stored encrypted on this server and never shown again. You need it to restore, so keep a copy elsewhere.",
   "已保存的计划备份密码": "Saved scheduled backup password",

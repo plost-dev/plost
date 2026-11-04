@@ -118,6 +118,8 @@ export function GoogleVisitorMap({ apiKey, styleId, rows, live, points = [], sho
               button.append(flag)
               if (country.live) { const dot = document.createElement("span"); dot.className = "mapbox-live-dot"; button.append(dot) }
               button.addEventListener("mouseenter", () => { const r = button.getBoundingClientRect(), box = stage.getBoundingClientRect(); show(country, r.left - box.left, r.top - box.top) })
+              // A click selects the country without focusing the marker, so no focus ring is left round the flag.
+              button.addEventListener("mousedown", event => event.preventDefault())
               button.addEventListener("mouseleave", () => setHovered(null))
               button.addEventListener("click", event => { event.stopPropagation(); props.current.onCountryClick?.(country.code) })
               this.layer.append(button)
