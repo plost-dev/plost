@@ -94,6 +94,10 @@ function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (nex
   const [account, setAccount] = useState("")
   const [key, setKey] = useState("")
   const hasKeys = !!data.account && !!data.key
+  // Saved keys stay locked until Edit, as the map keys do; Save waits for both fields.
+  const [editingKeys, setEditingKeys] = useState(false)
+  const keysLocked = !data.editable || (hasKeys && !editingKeys)
+  useEffect(() => { if (editingKeys) document.getElementById("maxmind-account")?.focus() }, [editingKeys])
   const state = data.state
 
   async function save(change: { source?: GeoIPSource; edition?: GeoIPEdition }) {
@@ -174,7 +178,7 @@ function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (nex
       titleAddon={<a className="settings-heading-link" href="https://www.maxmind.com/en/accounts/current/license-key" target="_blank" rel="noreferrer">{t("打开 MaxMind 获取 License Key")}</a>}>
       <SettingsForm onSubmit={async () => {
         const next = await saveGeoIPSettingsFn({ source: "maxmind", account: account.trim(), key: key.trim() })
-        onChange(next); setSource(next.source); setAccount(""); setKey("")
+        onChange(next); setSource(next.source); setAccount(""); setKey(""); setEditingKeys(false)
         showToast("已写入 env 文件，正在从 MaxMind 检测并下载最新版本…")
         const done = await settled()
         if (!done) return
@@ -183,15 +187,18 @@ function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (nex
       }}>
         <div className="backup-fields">
           <Field label="账号 ID（Account ID）" hint={data.editable ? undefined : t("启动 Plost 时没有指定 env 文件（-env-file），请直接在 env 文件里修改 {0}。", { 0: "PLOST_MAXMIND_ACCOUNT_ID" })}>
-            <input id="maxmind-account" className="squircle input" inputMode="numeric" autoComplete="off" spellCheck={false} required disabled={!data.editable}
+            <input id="maxmind-account" className="squircle input" inputMode="numeric" autoComplete="off" spellCheck={false} required disabled={keysLocked}
               value={account} placeholder={data.account || "1234567"} onChange={event => setAccount(event.target.value)} />
           </Field>
           <Field label="License Key">
-            <input className="squircle input" autoComplete="off" spellCheck={false} required disabled={!data.editable}
+            <input className="squircle input" autoComplete="off" spellCheck={false} required disabled={keysLocked}
               value={key} placeholder={data.key || "xxxxxx_…_mmk"} onChange={event => setKey(event.target.value)} />
           </Field>
         </div>
-        {data.editable ? <FormActions><ActionButton type="submit" className="btn btn-primary">{t(hasKeys ? "保存并更新" : "保存并下载")}</ActionButton></FormActions> : null}
+        {data.editable ? <FormActions>
+          <ActionButton type="submit" className="btn btn-primary" disabled={keysLocked || !account.trim() || !key.trim()}>{t(hasKeys ? "保存并更新" : "保存并下载")}</ActionButton>
+          {hasKeys ? <ActionButton className="btn btn-secondary" onClick={() => { setEditingKeys(!editingKeys); setAccount(""); setKey("") }}>{t(editingKeys ? "取消" : "修改")}</ActionButton> : null}
+        </FormActions> : null}
       </SettingsForm>
     </Tile>
   </>

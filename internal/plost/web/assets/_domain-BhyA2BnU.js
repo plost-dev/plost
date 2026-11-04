@@ -1,0 +1,1 @@
+import{Cn as e}from"./index-DJLP9QJ6.js";var t=e;export{t as component};
