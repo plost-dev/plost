@@ -248,7 +248,7 @@ export function List({
                   </div>
                 </div>
                 {bundlePct ? (
-                  <div className={`${valueWidth} shrink-0 text-right text-sm font-medium text-gray-800`}>
+                  <div className={`${valueWidth} shrink-0 overflow-hidden text-right text-sm font-medium text-gray-800`}>
                     <div className="flex w-full">
                       <div className={!showPercent ? "w-full" : expanded ? "w-1/2" : "w-full md:w-1/2"}>
                         <span className={`block w-full tabular-nums ${expanded || !showPercent ? "" : "transition-all duration-150 md:translate-x-[100%] md:group-hover/report:translate-x-0"}`}>{numberShort(r.value)}</span>
