@@ -338,6 +338,12 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 .overview-hero-body > .overview-hero-loading { height:84px; border-radius:12px; background:var(--color-gray-100); animation:overview-hero-pulse 1.2s ease-in-out infinite; }
 @keyframes overview-hero-pulse { 50% { opacity:.5; } }
 
+/* The note under the figures: faint until the card is hovered. */
+.overview-hero-footnote { display:flex; align-items:center; gap:5px; margin-top:6px; font-size:11px; color:var(--color-gray-500); opacity:.45; transition:opacity 200ms; }
+.overview-hero-footnote .ui-icon { width:11px; height:11px; font-size:10px; }
+.overview-hero:is(:hover, :focus-within) .overview-hero-footnote { opacity:.8; }
+@media (hover:none) { .overview-hero-footnote { opacity:.7; } }
+
 /* Key figures */
 /* No boxes: the four figures stand in a row, parted by thin vertical rules. */
 .overview-hero-body > .overview-hero-tiles { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); padding:6px 0; }
@@ -376,12 +382,7 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
   .overview-hero-head { padding:22px 20px 0; }
   .overview-hero-meta { flex-basis:100%; margin-left:0; }
   .overview-hero-body { padding:18px 20px 0; }
-  /* The note under the figures: faint until the card is hovered. */
-.overview-hero-footnote { display:flex; align-items:center; gap:5px; margin-top:6px; font-size:11px; color:var(--color-gray-500); opacity:.45; transition:opacity 200ms; }
-.overview-hero-footnote .ui-icon { width:11px; height:11px; font-size:10px; }
-.overview-hero:is(:hover, :focus-within) .overview-hero-footnote { opacity:.8; }
-@media (hover:none) { .overview-hero-footnote { opacity:.7; } }
-.overview-hero-body > .overview-hero-tiles { grid-template-columns:repeat(2, minmax(0,1fr)); row-gap:20px; }
+  .overview-hero-body > .overview-hero-tiles { grid-template-columns:repeat(2, minmax(0,1fr)); row-gap:20px; }
   .overview-hero-tile:nth-child(odd) { padding-left:0; border-left:0; }
   .overview-globe { grid-column:1; grid-row:3; min-height:280px; }
 }

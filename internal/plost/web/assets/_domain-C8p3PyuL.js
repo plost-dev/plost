@@ -1,0 +1,1 @@
+import{Mt as e}from"./index-WJsm2AFE.js";var t=e;export{t as component};
