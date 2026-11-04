@@ -37,7 +37,8 @@ function GeoIPBadge({ text, tone }: { text: string, tone?: "error" }) {
 
 /** Visitors in mainland China placed by api.cnip.io, which names their province and city far better than GeoLite2. */
 function ChinaCityTile({ data, onChange }: { data: GeoIPSettings, onChange: (next: GeoIPSettings) => void }) {
-  const { t } = useT()
+  const { t, locale } = useT()
+  const release = data.cnVersion
   const [pending, setPending] = useState(false)
   async function change(cnCity: boolean) {
     setPending(true)
@@ -48,6 +49,9 @@ function ChinaCityTile({ data, onChange }: { data: GeoIPSettings, onChange: (nex
   return <Tile icon="map" title="中国访客的省份和城市"
     titleAddon={<a className="settings-heading-link" href="https://cnip.io" target="_blank" rel="noreferrer">{t("打开 cnip.io")}</a>}>
     <Toggle checked={data.cnCity} disabled={pending} onChange={next => void change(next)}>{t("用 cnip.io 查询中国大陆访客的省份和城市")}</Toggle>
+    <p className="geoip-cn-note">{release
+      ? t("采用 ip2region 付费版，每月更新 · 版本 {0} · 更新于 {1}", { 0: release.version, 1: formatTimestamp(release.updatedAt * 1000, locale) })
+      : t("采用 ip2region 付费版，每月更新")}</p>
   </Tile>
 }
 

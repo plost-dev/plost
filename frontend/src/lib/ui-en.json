@@ -1392,6 +1392,8 @@
   "正在更新…": "Updating…",
   "未使用": "Not in use",
   "更新于 {0}": "Updated {0}",
+  "采用 ip2region 付费版，每月更新 · 版本 {0} · 更新于 {1}": "Uses the paid edition of ip2region, updated monthly · version {0} · updated {1}",
+  "采用 ip2region 付费版，每月更新": "Uses the paid edition of ip2region, updated monthly",
   "更新": "Update",
   "尚未下载": "Not downloaded yet",
   "检查更新": "Check for updates",

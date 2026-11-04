@@ -422,6 +422,8 @@ type geoView struct {
 	Updating bool     `json:"updating"` // a download is running
 	State    geoState `json:"state"`
 	CNCity   bool     `json:"cnCity"` // visitors in mainland China are placed by api.cnip.io
+	// The ip2region release cnip.io is using; missing while it cannot be fetched.
+	CNVersion *cnipRelease `json:"cnVersion,omitempty"`
 	// With -geoip-db: when the file in use was built and when it last changed on disk.
 	FileBuiltAt   int64 `json:"fileBuiltAt,omitempty"`
 	FileChangedAt int64 `json:"fileChangedAt,omitempty"`
@@ -441,7 +443,9 @@ func (a *App) geoViewOf(ctx context.Context) geoView {
 }
 
 func (a *App) geoipGet(w http.ResponseWriter, r *http.Request) error {
-	return jsonResponse(w, a.geoViewOf(r.Context()))
+	view := a.geoViewOf(r.Context())
+	view.CNVersion = a.cnipVersion.get(r.Context())
+	return jsonResponse(w, view)
 }
 
 // geoipPut saves the source or the edition, then brings the database in line in the background.

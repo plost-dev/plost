@@ -1,1 +1,0 @@
-import{c as e}from"./index-ZAFJ-6wl.js";import{r as t}from"./useRouter-ChX2SBsk.js";var n=t(),r=()=>(0,n.jsx)(n.Fragment,{children:(0,n.jsx)(e,{})});export{r as component};

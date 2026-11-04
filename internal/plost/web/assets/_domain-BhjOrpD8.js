@@ -1,1 +1,0 @@
-import{kn as e}from"./index-ZAFJ-6wl.js";var t=e;export{t as component};

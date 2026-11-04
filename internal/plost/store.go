@@ -96,6 +96,7 @@ type App struct {
 	online       *onlineGeo
 	cnCity       atomic.Bool // Visitors in mainland China are placed by api.cnip.io (geoip_cn_city).
 	cnip         *onlineGeo
+	cnipVersion  *cnipVersion // the ip2region release cnip.io is using, shown on the IP database page
 	geoHTTP      *http.Client // Test seams: a local fake for the download servers.
 	geoMirrorURL string
 }
@@ -184,6 +185,7 @@ func Open(cfg Config) (*App, error) {
 	a.siteProbe = newSiteChecker(cfg.OutboundAllow)
 	a.online = newOnlineGeo(geoOnlineBase, newOnlineClient(cfg.OutboundAllow))
 	a.cnip = newOnlineGeo(cnipBase, a.online.client)
+	a.cnipVersion = newCNIPVersion(cnipVersionURL, a.online.client)
 	a.cnCity.Store(a.setting(context.Background(), "geoip_cn_city", "") == "1")
 	a.geoOnline.Store(cfg.GeoIPPath == "" && a.setting(context.Background(), "geoip_source", "plost") == "online")
 	// Google Maps counts as on only with a key, so the page policy never allows its hosts for nothing.

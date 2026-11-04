@@ -35,6 +35,8 @@ func newTestApp(t *testing.T) *testApp {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// Tests never reach cnip.io: the outbound guard refuses this loopback address at once.
+	a.cnipVersion = newCNIPVersion("http://127.0.0.1:9/ip2region/version.json", a.online.client)
 	s := httptest.NewServer(a.Handler())
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{Jar: jar, Timeout: 15 * time.Second}

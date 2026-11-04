@@ -1539,3 +1539,5 @@ select:disabled { opacity:.65; cursor:not-allowed; }
 .geoip-edition-row { display:flex; align-items:center; gap:12px; }
 .geoip-edition-row > select { flex:1 1 auto; min-width:0; }
 .geoip-edition-row > .btn { flex:none; }
+/* The note under the mainland China option: which ip2region release cnip.io uses. */
+.geoip-cn-note { margin:12px 0 0; font-size:13px; line-height:20px; color:var(--color-gray-500); font-variant-numeric:tabular-nums; }
