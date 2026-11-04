@@ -976,6 +976,15 @@ button.map-live-count:focus-visible { outline:2px solid var(--analytics-accent);
 .map-flags-toggle input:checked + .map-flags-track .map-flags-thumb { transform:translateX(12px); background:var(--ui-selection-text); }
 .map-flags-toggle input:focus-visible + .map-flags-track { outline:2px solid var(--accent-text); outline-offset:3px; }
 .map-stage[data-show-flags="false"] .country-flags { display:none; }
+/* An open country on the built-in map: the way back to the world, in the same frosted style as the zoom buttons. */
+.map-back { --sq-r:7px; display:inline-flex; align-items:center; gap:6px; height:var(--ui-control-compact); max-width:calc(100% - 140px); padding:0 10px; border:1px solid rgb(255 255 255 / .7); background:rgb(255 255 255 / .9); box-shadow:0 1px 2px rgb(0 0 0 / .05); backdrop-filter:blur(4px); color:var(--color-gray-500); font-size:12px; white-space:nowrap; cursor:pointer; }
+.map-back strong { overflow:hidden; text-overflow:ellipsis; color:var(--color-gray-900); font-weight:600; }
+.map-back:hover { color:var(--color-gray-900); }
+html[data-theme="dark"] .map-back { border-color:var(--color-gray-300); background:var(--surface); }
+.map-empty-note { padding:4px 8px; border-radius:6px; background:rgb(255 255 255 / .85); color:var(--color-gray-500); font-size:12px; }
+html[data-theme="dark"] .map-empty-note { background:var(--surface); }
+.map-legend { font-variant-numeric:tabular-nums; }
+.map-legend-bar { --sq-r:3px; display:inline-block; width:96px; height:8px; }
 @media(prefers-reduced-motion:reduce) { .map-flags-track, .map-flags-thumb { transition:none; } }
 /* Form switch: the same look as the map's flag switch, sized for a form row. */
 .toggle { display:inline-flex; align-items:center; gap:12px; min-height:var(--ui-control-compact); font-size:14px; line-height:20px; color:var(--color-gray-800); cursor:pointer; }

@@ -114,11 +114,12 @@ html[data-site-layout="grid"] .management-site-data .text-lg { font-size:24px; }
 }
 
 html[data-site-layout="compact"] .management-site-list { gap:8px; }
-html[data-site-layout="compact"] .management-site-list .management-site-row { grid-template-columns:minmax(200px,1fr) minmax(140px,.7fr) minmax(0,1.5fr); gap:16px; padding:14px 56px 14px 16px; }
-.management-compact-spark { display:block; justify-self:end; width:100%; max-width:240px; color:var(--analytics-accent); }
+/* Without the SSL badge the name needs less room, so the trend line gets more. */
+html[data-site-layout="compact"] .management-site-list .management-site-row { grid-template-columns:minmax(180px,.8fr) minmax(200px,1.1fr) minmax(0,1.5fr); gap:16px; padding:14px 56px 14px 16px; }
+.management-site-data > .management-compact-spark { display:block; justify-self:end; width:100%; max-width:380px; color:var(--analytics-accent); }
 .management-compact-metrics { display:grid; grid-template-columns:repeat(4,minmax(72px,1fr)); gap:12px; }
 .management-compact-metrics > div { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0; text-align:center; }
-.management-compact-metrics strong { font-size:16px; line-height:22px; font-weight:600; color:var(--color-gray-900); font-variant-numeric:tabular-nums; }
+.management-compact-metrics strong { display:inline-flex; align-items:center; font-size:16px; line-height:22px; font-weight:600; color:var(--color-gray-900); font-variant-numeric:tabular-nums; }
 .management-compact-metrics span { font-size:11px; color:var(--color-gray-500); white-space:nowrap; }
 @media(max-width:900px) {
   html[data-site-layout="compact"] .management-site-list .management-site-row { grid-template-columns:minmax(0,1fr); }
@@ -383,8 +384,9 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 @media(max-width:639px) { .site-header-search { flex:1 1 auto; } }
 
 /* Odometer digits (RollingNumber): each digit is a window onto a strip of 0–9 that slides up. */
-.rolling-number { display:inline-flex; align-items:flex-start; line-height:1.15; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.rolling-digit { position:relative; display:inline-block; height:1.15em; overflow:hidden; }
+.rolling-number { display:inline-flex; align-items:baseline; line-height:1.15; font-variant-numeric:tabular-nums; white-space:nowrap; }
+/* Clipped, not overflow:hidden, so the digit keeps its text baseline and lines up with the words around it. */
+.rolling-digit { position:relative; display:inline-block; height:1.15em; clip-path:inset(0); }
 .rolling-sizer { visibility:hidden; }
 .rolling-strip { position:absolute; inset:0 0 auto; display:flex; flex-direction:column; transition:transform .9s cubic-bezier(.2,.75,.25,1); }
 .rolling-strip > span { display:block; height:1.15em; text-align:center; }

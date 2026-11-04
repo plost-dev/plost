@@ -1,0 +1,1 @@
+import{Mt as e}from"./index-DpB1cwOP.js";var t=e;export{t as component};
