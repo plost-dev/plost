@@ -187,9 +187,13 @@ func (a *App) mapboxSettings(w http.ResponseWriter, r *http.Request) error {
 	return jsonResponse(w, a.mapKeyState(enabled, token))
 }
 
-func (a *App) groupRows(ctx context.Context, site int64, rng Range, q url.Values, expression, extra string) ([]Row, error) {
+func (a *App) groupRows(ctx context.Context, site int64, rng Range, q url.Values, expression, extra string, visitors ...bool) ([]Row, error) {
 	w, args := where(site, rng, q)
-	rows, err := a.db.QueryContext(ctx, "SELECT "+expression+",count(*) AS n FROM events_v2 WHERE "+w+extra+" GROUP BY 1 ORDER BY n DESC,1 LIMIT 200", args...)
+	count := "count(*)"
+	if len(visitors) > 0 && visitors[0] {
+		count = "count(DISTINCT " + visitorSQL + ")"
+	}
+	rows, err := a.db.QueryContext(ctx, "SELECT "+expression+","+count+" AS n FROM events_v2 WHERE "+w+extra+" GROUP BY 1 ORDER BY n DESC,1 LIMIT 200", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +215,7 @@ func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Val
 	if service, key := a.mapService(ctx); service != "" && a.setting(ctx, mapUseDetail, "true") == "true" {
 		result[map[string]string{"mapbox": "mapboxToken", "google": "googleMapsKey"}[service]] = key
 	}
-	channel := `CASE WHEN referrer_source IN ('','Direct') THEN 'direct' WHEN referrer_source IN ('google.com','bing.com','baidu.com','duckduckgo.com','yahoo.com','yandex.com','yandex.ru','search.brave.com','ecosia.org','sogou.com','so.com') THEN 'organic_search' WHEN referrer_source IN ('twitter.com','x.com','t.co','facebook.com','instagram.com','reddit.com','weibo.com','youtube.com','bsky.app','threads.net','tiktok.com') THEN 'organic_social' WHEN referrer_source IN ('chatgpt.com','chat.openai.com','perplexity.ai','claude.ai','gemini.google.com','copilot.microsoft.com','grok.com','deepseek.com','chat.deepseek.com') THEN 'ai' ELSE 'referral' END`
+	channel := channelSQL
 	w0, a0 := where(site.ID, rng, q)
 	channelRows, err := a.db.QueryContext(ctx, "SELECT "+channel+",count(DISTINCT "+visitorSQL+") AS n FROM events_v2 WHERE "+w0+" AND name='pageview' GROUP BY 1 ORDER BY n DESC,1", a0...)
 	if err != nil {
@@ -232,7 +236,8 @@ func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Val
 		return nil, err
 	}
 	result["channels"] = channels
-	ai, err := a.groupRows(ctx, site.ID, rng, q, "referrer_source", " AND name='pageview' AND ("+channel+")='ai'")
+	// Visitors, like the channel list and the column heading, not pageviews.
+	ai, err := a.groupRows(ctx, site.ID, rng, q, "referrer_source", " AND name='pageview' AND ("+channel+")='ai'", true)
 	if err != nil {
 		return nil, err
 	}

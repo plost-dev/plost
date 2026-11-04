@@ -1,0 +1,1 @@
+import{Cn as e}from"./index-DjezpJiU.js";var t=e;export{t as component};

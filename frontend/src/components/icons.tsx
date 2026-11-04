@@ -181,11 +181,22 @@ function SourceIcon({ name }: { name: string }) {
   return <AssetIcon src={`/favicon/sources/${encodeURIComponent(key)}`} fallback="link" />
 }
 
-export type RowIconKind = "source" | "country" | "browser" | "os" | "device"
+/** The traffic channels (report-values CHANNEL_NAMES): a symbol for what kind of visit each one is. */
+const CHANNEL_ICONS: Record<string, string> = {
+  direct: "direct", organic_search: "search", organic_social: "share", paid_search: "bullhorn", paid_social: "bullhorn",
+  email: "mail", display: "ad", affiliate: "handshake", ai: "sparkles", referral: "link", other: "unknown",
+}
+
+function ChannelIcon({ name }: { name: string }) {
+  return <UIIcon name={CHANNEL_ICONS[name] || "link"} className={rowIconClassName} />
+}
+
+export type RowIconKind = "source" | "ai" | "channel" | "country" | "browser" | "os" | "device"
 
 export function RowIcon({ kind, name }: { kind?: RowIconKind, name: string }) {
   if (!kind) return null
-  if (kind === "source") return <SourceIcon name={name} />
+  if (kind === "source" || kind === "ai") return <SourceIcon name={name} />
+  if (kind === "channel") return <ChannelIcon name={name} />
   if (kind === "country") return <CountryFlag code={name} />
   if (kind === "browser") return <BrowserIcon name={name} />
   if (kind === "os") return <OsIcon name={name} />

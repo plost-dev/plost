@@ -66,10 +66,17 @@ const brands: SourceBrand[] = [
   ["microsoft-copilot", ["Copilot", "Microsoft Copilot", "Bing Chat"], ["copilot.microsoft.com"]],
   ["github-copilot", ["GitHub Copilot"], ["copilot.github.com"]],
   ["kimi", ["Kimi", "Kimi AI"], ["kimi.com", "kimi.ai", "kimi.moonshot.cn"]],
-  ["qwen", ["Qwen", "通义千问", "通义"], ["qwen.ai", "tongyi.aliyun.com"]],
+  ["qwen", ["Qwen", "通义千问", "通义"], ["qwen.ai", "tongyi.aliyun.com", "qianwen.aliyun.com", "tongyi.com", "qianwen.com"]],
   ["doubao", ["Doubao", "豆包"], ["doubao.com"]],
   ["mistral-ai", ["Mistral", "Mistral AI", "Le Chat"], ["mistral.ai"]],
   ["grok", ["Grok", "xAI"], ["grok.com", "x.ai"]],
+  ["metaai", ["Meta AI"], ["meta.ai"]],
+  ["poe", ["Poe"], ["poe.com"]],
+  ["phind", ["Phind"], ["phind.com"]],
+  ["yuanbao", ["Yuanbao", "腾讯元宝", "元宝"], ["yuanbao.tencent.com"]],
+  ["wenxin", ["Wenxin", "ERNIE Bot", "文心一言", "文心"], ["yiyan.baidu.com"]],
+  ["zhipu", ["ChatGLM", "Zhipu", "智谱清言", "智谱"], ["chatglm.cn", "zhipuai.cn", "bigmodel.cn"]],
+  ["notebooklm", ["NotebookLM"], ["notebooklm.google", "notebooklm.google.com"]],
 ]
 
 /** Stored empty/legacy labels mean direct traffic; domains and campaign names do not. */

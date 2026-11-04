@@ -1,1 +1,0 @@
-import{t as e}from"./useRouter-t8FfT4No.js";import{t}from"./MapServicesSettings-CaalTbkQ.js";import{t as n}from"./jsx-runtime-C-7WyuLU.js";var r=n();function i(){let n=e();return(0,r.jsx)(t,{onSaved:()=>n.invalidate()})}export{i as component};

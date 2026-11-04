@@ -100,6 +100,13 @@ mark (`y-combinator.svg`). There is no dedicated Bing Ads / Microsoft Advertisin
 mark at this revision, so that source family uses the Bing logo. Ask and 360
 Search have no matching entry and continue to use the existing favicon fallback.
 
+On 2026-11-04 seven more AI assistants were added from
+[`32a228fad39a1080417076bb32ca920cc24d3577`](https://github.com/glincker/thesvg/tree/32a228fad39a1080417076bb32ca920cc24d3577),
+each the upstream `default` variant, unmodified and checked the same way: Meta AI (`metaai.svg`),
+Poe (`poe.svg`, CC0-1.0), Phind (`phind.svg`), Tencent Yuanbao (`yuanbao.svg`), Baidu Wenxin
+(`wenxin.svg`), Zhipu / ChatGLM (`zhipu.svg`) and NotebookLM (`notebooklm.svg`, CC0-1.0); the
+others declare MIT. Their entries in `sources/sources.json` name that commit.
+
 ## Mapbox logo (2026-11-03)
 
 `mapbox.svg` is the Mapbox brandmark as supplied by the instance owner (file `mapbox-com-brandmark.svg`), unmodified.

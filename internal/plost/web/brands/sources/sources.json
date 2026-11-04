@@ -926,6 +926,90 @@
       "brandUrl": "https://en.wikipedia.org/wiki/File:Tencent_QQ.svg",
       "guidelines": "https://qq.design/brand/BrandDesign/Logo",
       "sha256": "17372d117ab2c56d3aeb9cd18cdac8b9bcec875872e89222aec8f90e31e31636"
+    },
+    {
+      "slug": "metaai",
+      "title": "MetaAI",
+      "file": "metaai.svg",
+      "source": "https://github.com/glincker/thesvg/blob/32a228fad39a1080417076bb32ca920cc24d3577/public/icons/metaai/color.svg",
+      "variant": "default",
+      "license": "MIT",
+      "brandUrl": "https://meta.ai",
+      "sha256": "a7b52cfde49434eab56dfaf8550633fe2200885d7fe9880f0ddac49ecef71393",
+      "downloaded": "2026-11-04",
+      "commit": "32a228fad39a1080417076bb32ca920cc24d3577"
+    },
+    {
+      "slug": "poe",
+      "title": "Poe",
+      "file": "poe.svg",
+      "source": "https://github.com/glincker/thesvg/blob/32a228fad39a1080417076bb32ca920cc24d3577/public/icons/poe/default.svg",
+      "variant": "default",
+      "license": "CC0-1.0",
+      "brandUrl": "https://poe.com",
+      "sha256": "5e50e10d6ef231593fc406b0d78bea24f8266e2555cab47a8bbbb88e42d31797",
+      "downloaded": "2026-11-04",
+      "commit": "32a228fad39a1080417076bb32ca920cc24d3577"
+    },
+    {
+      "slug": "phind",
+      "title": "Phind",
+      "file": "phind.svg",
+      "source": "https://github.com/glincker/thesvg/blob/32a228fad39a1080417076bb32ca920cc24d3577/public/icons/phind/mono.svg",
+      "variant": "default",
+      "license": "MIT",
+      "brandUrl": "https://phind.com",
+      "sha256": "3396f272f81d101a0e2f3857a932ea54702bf67475c4ce2232e9c88eba5501ab",
+      "downloaded": "2026-11-04",
+      "commit": "32a228fad39a1080417076bb32ca920cc24d3577"
+    },
+    {
+      "slug": "yuanbao",
+      "title": "Yuanbao (腾讯元宝)",
+      "file": "yuanbao.svg",
+      "source": "https://github.com/glincker/thesvg/blob/32a228fad39a1080417076bb32ca920cc24d3577/public/icons/yuanbao/color.svg",
+      "variant": "default",
+      "license": "MIT",
+      "brandUrl": "https://yuanbao.tencent.com",
+      "sha256": "4de43315c50c8b616206d4da9ee5fb115c904fdba6bfc9ba15bb710dbd0ab51c",
+      "downloaded": "2026-11-04",
+      "commit": "32a228fad39a1080417076bb32ca920cc24d3577"
+    },
+    {
+      "slug": "wenxin",
+      "title": "Wenxin (文心)",
+      "file": "wenxin.svg",
+      "source": "https://github.com/glincker/thesvg/blob/32a228fad39a1080417076bb32ca920cc24d3577/public/icons/wenxin/color.svg",
+      "variant": "default",
+      "license": "MIT",
+      "brandUrl": "https://yiyan.baidu.com",
+      "sha256": "858de21408163aa80148b70545d5d41016be7bb73d8afa44cd5f4738cc79047c",
+      "downloaded": "2026-11-04",
+      "commit": "32a228fad39a1080417076bb32ca920cc24d3577"
+    },
+    {
+      "slug": "zhipu",
+      "title": "Zhipu (智谱)",
+      "file": "zhipu.svg",
+      "source": "https://github.com/glincker/thesvg/blob/32a228fad39a1080417076bb32ca920cc24d3577/public/icons/zhipu/color.svg",
+      "variant": "default",
+      "license": "MIT",
+      "brandUrl": "https://zhipuai.cn",
+      "sha256": "4e7400476df64ad7c41a19828bd1dc8250cfab014a97e7cc89a1536384c48e31",
+      "downloaded": "2026-11-04",
+      "commit": "32a228fad39a1080417076bb32ca920cc24d3577"
+    },
+    {
+      "slug": "notebooklm",
+      "title": "NotebookLM",
+      "file": "notebooklm.svg",
+      "source": "https://github.com/glincker/thesvg/blob/32a228fad39a1080417076bb32ca920cc24d3577/public/icons/notebooklm/default.svg",
+      "variant": "default",
+      "license": "CC0-1.0",
+      "brandUrl": "https://notebooklm.google",
+      "sha256": "db7c074281f17235eafea0f5f821139b68b492e5aa2149840881ddc7ba7dd880",
+      "downloaded": "2026-11-04",
+      "commit": "32a228fad39a1080417076bb32ca920cc24d3577"
     }
   ],
   "unavailable": [
