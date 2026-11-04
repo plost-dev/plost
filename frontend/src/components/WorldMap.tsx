@@ -11,7 +11,7 @@ import { numberShort } from "~/lib/format"
 import { MapboxVisitorMap } from "./MapboxVisitorMap"
 import { HelpHint } from "./HelpHint"
 import { readMapFlags, saveMapFlags, useGoogleMapStyle, useMapStyle } from "~/lib/map-preferences"
-import { loadRegionMap, mainland, type CountryShape, type RegionMap } from "~/lib/world-regions"
+import { loadRegionMap, mainland, type CountryShape, type RegionFeature, type RegionMap } from "~/lib/world-regions"
 import { regionName } from "~/lib/geography"
 
 const MAP_ROTATE: [number, number] = [-150, 0]
@@ -45,10 +45,13 @@ function worldProjection() {
 
 // A country opened from the map fills the frame: the United States with Alaska and Hawaii moved in beside it, as maps
 // of it usually are, and other countries in Mercator centred on themselves, so none is cut by the world map's seam.
-function countryProjection(shape: CountryShape) {
+function countryProjection(shape: CountryShape, regions: RegionFeature[]) {
   const extent: [[number, number], [number, number]] = [[FOCUS_PAD, FOCUS_PAD], [WIDE_WIDTH - FOCUS_PAD, WIDE_HEIGHT - FOCUS_PAD]]
+  // Framed by the lower 48: Alaska and Hawaii are drawn in their usual corner and would only shrink the rest.
+  if (shape.properties.code === "US") return d3.geoAlbersUsa().fitExtent(extent, {
+    type: "FeatureCollection", features: regions.filter(r => r.properties.c === "US" && r.properties.i !== "US-AK" && r.properties.i !== "US-HI"),
+  } as never)
   const main = mainland(shape)
-  if (shape.properties.code === "US") return d3.geoAlbersUsa().fitExtent(extent, main as never)
   const [lon] = d3.geoCentroid(main as never)
   return d3.geoMercator().rotate([-lon, 0]).fitExtent(extent, main as never)
 }
@@ -158,7 +161,8 @@ function WorldMap({
     shownRef.current = view
 
     const root = svg.append("g").attr("class", "map-root").attr("transform", keepZoom ? d3.zoomTransform(el).toString() : null)
-    const projection = shape ? countryProjection(shape) : worldProjection()
+    const projection = shape ? countryProjection(shape, map.regions) : worldProjection()
+    if (!keepZoom) setTooltip({ x: 0, y: 0, hovered: null })
     const path = d3.geoPath().projection(projection)
 
     root.append("rect")
@@ -185,7 +189,8 @@ function WorldMap({
     // Countries: the whole map, or around an open country the neighbours in a paler shade for orientation.
     const countries = root.append("g").attr("class", "countries")
       .selectAll("path.country")
-      .data(map.countries.filter(c => !shape || c !== shape))
+      // The United States' projection moves Alaska and Hawaii, which would leave Canada and Mexico in pieces under them.
+      .data(shape ? (shape.properties.code === "US" ? [] : map.countries.filter(c => c !== shape)) : map.countries)
       .enter()
       .append("path")
       .attr("class", "country")

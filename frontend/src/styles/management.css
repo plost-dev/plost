@@ -100,7 +100,7 @@
 /* The early preference script also controls selection before React hydrates. */
 html[data-site-layout="grid"] .management-site-list { grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
 html[data-site-layout="grid"] .management-site-item > a { height:100%; }
-html[data-site-layout="grid"] .management-site-list .management-site-row { display:flex; flex-direction:column; align-items:stretch; height:100%; gap:24px; padding:24px 20px 20px; }
+html[data-site-layout="grid"] .management-site-list .management-site-row { display:flex; flex-direction:column; align-items:stretch; height:100%; gap:24px; padding:24px 24px 20px; }
 html[data-site-layout="grid"] .management-site-row > .management-site-identity { min-height:28px; padding-right:24px; }
 html[data-site-layout="grid"] .management-site-title { display:block; white-space:nowrap; }
 html[data-site-layout="grid"] .management-site-data { display:flex; flex-direction:column; gap:18px; margin-top:auto; }
@@ -115,7 +115,7 @@ html[data-site-layout="grid"] .management-site-data .text-lg { font-size:24px; }
 
 html[data-site-layout="compact"] .management-site-list { gap:8px; }
 /* Without the SSL badge the name needs less room, so the trend line gets more. */
-html[data-site-layout="compact"] .management-site-list .management-site-row { grid-template-columns:minmax(180px,.8fr) minmax(200px,1.1fr) minmax(0,1.5fr); gap:16px; padding:14px 56px 14px 16px; }
+html[data-site-layout="compact"] .management-site-list .management-site-row { grid-template-columns:minmax(180px,.8fr) minmax(200px,1.1fr) minmax(0,1.5fr); gap:16px; padding:14px 68px 14px 24px; }
 .management-site-data > .management-compact-spark { display:block; justify-self:end; width:100%; max-width:380px; color:var(--analytics-accent); }
 .management-compact-metrics { display:grid; grid-template-columns:repeat(4,minmax(72px,1fr)); gap:12px; }
 .management-compact-metrics > div { display:flex; flex-direction:column; align-items:center; gap:3px; min-width:0; text-align:center; }
@@ -221,6 +221,10 @@ html[data-theme="dark"] .management-shell .settings-content :is(.ui-action[data-
 .management-shell .site-card-menu-trigger { --control-size:var(--ui-control-compact); width:var(--control-size); min-width:var(--control-size); height:var(--control-size); min-height:var(--control-size); padding:6px; border:0; background:transparent; box-shadow:none; color:var(--color-gray-500); }
 .management-shell .site-card-menu-trigger.ui-action:not([aria-expanded="true"]):is(:hover,:active) { background:transparent; border-color:transparent; box-shadow:none; color:var(--color-gray-800); }
 .management-shell .site-card-menu-trigger:focus { outline:none; }
+/* The site cards keep the overview's 24px inside edges: the settings button lines up with its buttons on the right,
+   centred on the row in the compact list and in the top corner of a card. */
+html[data-site-layout="compact"] .management-site-item > .site-card-menu { top:50%; right:24px; transform:translateY(-50%); }
+html[data-site-layout="grid"] .management-site-item > .site-card-menu { top:16px; right:16px; }
 /* The settings button shows only while the card is hovered or has focus; touch screens, which cannot hover, keep it. */
 .management-shell .management-site-item .site-card-menu-trigger { opacity:0; transition:opacity 150ms; }
 .management-shell .management-site-item:is(:hover, :focus-within) .site-card-menu-trigger { opacity:1; }
@@ -287,9 +291,9 @@ html.dark .tag-required { background:#450a0a; color:#fca5a5; }
 html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overview-globe-sphere:#050506; }
 /* The heading runs across the whole card, so all the buttons sit in one row in the top-right corner over the globe;
    the figures sit below it on the left. On wide screens the card is as tall as a site card in the card layout. */
-.overview-hero-head { position:relative; z-index:2; grid-column:1 / -1; grid-row:1; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 16px; padding:24px 24px 0 32px; pointer-events:none; }
+.overview-hero-head { position:relative; z-index:2; grid-column:1 / -1; grid-row:1; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 16px; padding:24px 24px 0; pointer-events:none; }
 .overview-hero-head > * { pointer-events:auto; }
-.overview-hero-body { position:relative; z-index:1; grid-column:1; grid-row:2; display:flex; flex-direction:column; justify-content:center; gap:10px; min-width:0; min-height:0; padding:12px 8px 20px 32px; }
+.overview-hero-body { position:relative; z-index:1; grid-column:1; grid-row:2; display:flex; flex-direction:column; justify-content:center; gap:10px; min-width:0; min-height:0; padding:12px 8px 20px 24px; }
 /* Icon, title, then the site count and update time on the same line. */
 .overview-hero-heading { display:flex; flex-wrap:wrap; align-items:center; column-gap:10px; row-gap:4px; min-width:0; }
 .overview-hero-badge { --sq-r:10px; display:grid; place-items:center; width:32px; height:32px; flex:none; background:color-mix(in srgb, var(--accent-color) 12%, var(--surface)); color:var(--accent-color); }
