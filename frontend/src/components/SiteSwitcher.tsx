@@ -54,7 +54,7 @@ export function SiteSwitcher({
 
   if (readonly) {
     return (
-      <div className="squircle control-trigger flex items-center gap-x-1.5 rounded-md pr-2.5 pl-0 text-sm font-medium text-gray-700" title={fullTitle}>
+      <div className="squircle control-trigger flex items-center gap-x-1.5 rounded-md pe-2.5 ps-0 text-sm font-medium text-gray-700" title={fullTitle}>
         <SiteFavicon domain={domain} version={currentSite?.iconVersion} className="size-4" />
         <span className="hidden truncate font-semibold sm:mr-1 sm:block lg:mr-0">{displayName}</span>
       </div>
@@ -67,7 +67,7 @@ export function SiteSwitcher({
         type="button"
         title={fullTitle}
         aria-expanded={open}
-        className="squircle control-trigger flex items-center gap-x-1.5 rounded-md !pl-1.5 pr-2.5 text-sm font-medium text-gray-700 hover:bg-gray-150/80"
+        className="squircle control-trigger flex items-center gap-x-1.5 rounded-md !ps-1.5 pe-2.5 text-sm font-medium text-gray-700 hover:bg-gray-150/80"
         onClick={() => setOpen((v) => !v)}
       >
         <SiteFavicon domain={domain} version={currentSite?.iconVersion} className="size-4" />
@@ -75,7 +75,7 @@ export function SiteSwitcher({
         <UIIcon name="chevron-down" className="ui-chevron hidden lg:block" />
       </button>
       {open ? (
-        <div className="squircle dashboard-popover absolute left-0 z-20 mt-2 flex w-[min(calc(100vw-2rem),20rem)] origin-top-left flex-col gap-0.5 rounded-md bg-white p-1 font-medium text-gray-800 shadow-lg ring-1 ring-black/5">
+        <div className="squircle dashboard-popover absolute start-0 z-20 mt-2 flex w-[min(calc(100vw-2rem),20rem)] origin-top-left rtl:origin-top-right flex-col gap-0.5 rounded-md bg-white p-1 font-medium text-gray-800 shadow-lg ring-1 ring-black/5">
           <div className="flex">
             <Link
               to="/dashboard"
@@ -103,13 +103,13 @@ export function SiteSwitcher({
               onClick={() => setOpen(false)}
             >
               <span className="flex min-w-0 items-center">
-                <SiteFavicon domain={site.domain} version={site.iconVersion} className="mr-2 size-4" />
+                <SiteFavicon domain={site.domain} version={site.iconVersion} className="me-2 size-4" />
                 <span className="truncate">{site.name || site.domain}</span>
                 {site.name && site.name.toLowerCase() !== site.domain.toLowerCase() ? (
-                  <span className="selection-detail ml-2 text-xs font-normal text-gray-400 truncate">{site.domain}</span>
+                  <span className="selection-detail ms-2 text-xs font-normal text-gray-400 truncate">{site.domain}</span>
                 ) : null}
               </span>
-              {sites.length > 1 && index < 8 ? <kbd className="ml-2 text-xs font-normal text-gray-400">{index + 1}</kbd> : null}
+              {sites.length > 1 && index < 8 ? <kbd className="ms-2 text-xs font-normal text-gray-400">{index + 1}</kbd> : null}
             </Link>
           ))}
         </div>

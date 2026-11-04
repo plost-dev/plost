@@ -1,6 +1,6 @@
 import { Surface } from "~/components/Surface"
 import { UIIcon } from "~/components/UIIcon"
-import { useT } from "~/lib/i18n"
+import { intlLocale, useT } from "~/lib/i18n"
 import { TRAFFIC_METRICS, TrendChart, type TrafficMetric } from "~/components/TrendChart"
 import type { ChartType } from "~/lib/chart-type-preference"
 import { formatDuration, numberShort } from "~/lib/format"
@@ -66,9 +66,9 @@ export function VisitorGraph({
           return <div key={key} className="metric-item traffic-summary-item" data-metric={key} data-hidden={hiddenSeries.includes(key as TrafficMetric) || undefined}>
             <dt className="traffic-summary-label">{plotted ? <span className="traffic-series-dot" aria-hidden="true" /> : null}{t(label)}</dt>
             <dd className="metric-value-row traffic-summary-values">
-              <p className="metric-value" title={format ? text : value.toLocaleString(locale)}>{text}</p>
+              <p className="metric-value" title={format ? text : value.toLocaleString(intlLocale(locale))}>{text}</p>
               {change ? <span className="metric-change">
-                {change.diff !== 0 ? <UIIcon name={change.diff > 0 ? "arrow-up-right" : "arrow-down-right"} className={`mb-0.5 mr-0.5 inline-block size-2.5 ${improved ? "text-green-500" : "text-red-500"}`} /> : null}
+                {change.diff !== 0 ? <UIIcon name={change.diff > 0 ? "arrow-up-right" : "arrow-down-right"} className={`mb-0.5 me-0.5 inline-block size-2.5 ${improved ? "text-green-500" : "text-red-500"}`} /> : null}
                 {Math.abs(change.pct)}%
               </span> : null}
             </dd>

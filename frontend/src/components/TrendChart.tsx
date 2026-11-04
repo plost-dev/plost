@@ -1,4 +1,4 @@
-import { useT } from "~/lib/i18n"
+import { intlLocale, translate, useT, type Locale } from "~/lib/i18n"
 import { line as chartLine, curveMonotoneX } from "d3"
 import { useEffect, useId, useMemo, useRef, useState } from "react"
 import { formatClock, formatDayLong, formatDayShort, formatMonthYYYY, parseStamp } from "~/lib/format"
@@ -83,12 +83,11 @@ function tickIndices(dates: ReadonlyArray<string>, interval: Interval, maxTicks:
 
 function tooltipLabel(date: string, interval: Interval, withYear: boolean, index: number, total: number, realtime: boolean, locale: string) {
   if (interval === "month") return formatMonthYYYY(date, locale)
-  if (interval === "week") return locale === "en" ? `Week of ${formatDayShort(date, withYear, locale)}` : `${formatDayShort(date, withYear, locale)} 当周`
+  if (interval === "week") return translate(locale as Locale, "{0} 当周", {0: formatDayShort(date, withYear, locale)})
   if (interval === "day") return formatDayLong(date, withYear, locale)
   if (interval === "minute" && realtime) {
     const ago = total - index
-    if (locale !== "en") return `${ago} 分钟前`
-    return ago === 1 ? "1 minute ago" : `${ago} minutes ago`
+    return translate(locale as Locale, ago === 1 ? "1 分钟前" : "{0} 分钟前", {0: ago})
   }
   if (interval === "hour" || interval === "minute") {
     return `${formatDayLong(date, withYear, locale)}, ${formatClock(date, interval === "minute")}`
@@ -340,7 +339,7 @@ export function TrendChart({
             <div className="traffic-tooltip-date">{tooltipLabel(selected.date, interval, withYear, hover.index, points.length, realtime, locale)}</div>
             <dl className="traffic-tooltip-metrics">{shown.map(({key, label}) => <div key={key} data-metric={key}>
               <dt><span className="traffic-series-dot" aria-hidden="true" />{t(label)}</dt>
-              <dd>{selected.values[key].toLocaleString(locale)}</dd>
+              <dd>{selected.values[key].toLocaleString(intlLocale(locale))}</dd>
             </div>)}</dl>
             {canZoom ? <>
               <hr className="my-1 border-gray-600" />

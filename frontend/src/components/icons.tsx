@@ -142,7 +142,7 @@ export function CountryFlag({ code, className = "", shape = "square" }: { code: 
   )
 }
 
-const rowIconClassName = "mr-2 h-4 w-4 shrink-0"
+const rowIconClassName = "me-2 h-4 w-4 shrink-0"
 
 // These original marks are too dark against a dark report row. A neutral
 // surface preserves their official colors and their 16px footprint.
@@ -213,6 +213,6 @@ export function RowIcon({ kind, name }: { kind?: RowIconKind, name: string }) {
   if (kind === "country") return <CountryFlag code={name} />
   if (kind === "browser") return <BrowserIcon name={name} />
   if (kind === "os") return <OsIcon name={name} />
-  if (kind === "device") return <span className="mr-1.5"><DeviceIcon name={name} /></span>
+  if (kind === "device") return <span className="me-1.5"><DeviceIcon name={name} /></span>
   return null
 }

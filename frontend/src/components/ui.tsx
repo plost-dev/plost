@@ -45,7 +45,7 @@ export function Card({
         aria-pressed={selected}
         disabled={!onSelect}
         onClick={onSelect}
-        className={`squircle -mx-2 flex w-full flex-col gap-y-1 rounded-md p-2 text-left ${onSelect ? "cursor-pointer hover:bg-gray-100/80" : "cursor-default"}`}
+        className={`squircle -mx-2 flex w-full flex-col gap-y-1 rounded-md p-2 text-start ${onSelect ? "cursor-pointer hover:bg-gray-100/80" : "cursor-default"}`}
       >
         <div className={`flex w-fit text-xs uppercase whitespace-nowrap ${selected ? "font-bold tracking-[-.01em] text-gray-900" : "font-semibold text-gray-500 group-hover:text-gray-900"}`}>
           {t(label || "")}
@@ -55,9 +55,9 @@ export function Card({
             {text ?? `${numberShort(value)}${suffix}`}
           </p>
           {d ? (
-            <span className="metric-change ml-2 text-xs font-medium text-gray-500">
+            <span className="metric-change ms-2 text-xs font-medium text-gray-500">
               {d.diff !== 0 ? (
-                <UIIcon name={d.diff > 0 ? "arrow-up-right" : "arrow-down-right"} className={`mb-0.5 mr-0.5 inline-block size-2.5 ${up ? "text-green-500" : down ? "text-red-500" : "text-gray-400"}`} />
+                <UIIcon name={d.diff > 0 ? "arrow-up-right" : "arrow-down-right"} className={`mb-0.5 me-0.5 inline-block size-2.5 ${up ? "text-green-500" : down ? "text-red-500" : "text-gray-400"}`} />
               ) : null}
               {Math.abs(d.pct)}%
             </span>
@@ -181,9 +181,9 @@ export function List({
       <div className="flex w-full items-center pt-3 text-xs font-medium text-gray-500" style={{ height: ROW_HEIGHT }}>
         <div className="w-full min-w-0 grow truncate">{t(label || DIM_LABEL[kind || ""] || title || "")}</div>
         {bundlePct ? (
-          <div className={`${valueWidth} shrink-0 text-right`}>{t(valueLabel)}</div>
+          <div className={`${valueWidth} shrink-0 text-end`}>{t(valueLabel)}</div>
         ) : extraCols.map((col) => (
-          <div key={col.key} className={`${col.width || "w-16 min-w-16 md:w-[5.5rem] md:min-w-[5.5rem]"} shrink-0 text-right`}>
+          <div key={col.key} className={`${col.width || "w-16 min-w-16 md:w-[5.5rem] md:min-w-[5.5rem]"} shrink-0 text-end`}>
             {t(col.label)}
           </div>
         ))}
@@ -204,7 +204,7 @@ export function List({
               >
                 <div className={`w-full min-w-0 grow ${expanded ? "" : "md:truncate"}`}>
                   <div className="relative h-full w-full">
-                    <div className={`squircle absolute top-0 left-0 h-full rounded-sm ${bar}`} style={{ width: `${width}%` }} />
+                    <div className={`squircle absolute top-0 start-0 h-full rounded-sm ${bar}`} style={{ width: `${width}%` }} />
                     <div className={`relative z-9 px-2 py-1.5 text-sm ${expanded ? "[overflow-wrap:anywhere]" : ""}`}>
                       <div className="flex w-full items-center justify-start gap-x-1.5">
                         <span className={`flex w-full min-w-0 max-w-full items-center gap-x-2 ${expanded || kind === "language" ? "" : "overflow-hidden"}`}>
@@ -228,18 +228,18 @@ export function List({
                   </div>
                 </div>
                 {bundlePct ? (
-                  <div className={`${valueWidth} shrink-0 overflow-hidden text-right text-sm font-medium text-gray-800`}>
+                  <div className={`${valueWidth} shrink-0 overflow-hidden text-end text-sm font-medium text-gray-800`}>
                     <div className="flex w-full">
                       <div className={!showPercent ? "w-full" : expanded ? "w-1/2" : "w-full md:w-1/2"}>
-                        <span className={`block w-full tabular-nums ${expanded || !showPercent ? "" : "transition-all duration-150 md:translate-x-[100%] md:group-hover/report:translate-x-0"}`}>{numberShort(r.value)}</span>
+                        <span className={`block w-full tabular-nums ${expanded || !showPercent ? "" : "report-slide transition-all duration-150"}`}>{numberShort(r.value)}</span>
                       </div>
                       {showPercent ? <div className={expanded ? "w-1/2" : "hidden w-1/2 md:block"}>
-                        <span className={`block w-full text-gray-500 tabular-nums ${expanded ? "" : "translate-x-[100%] opacity-0 transition-all duration-150 md:group-hover/report:translate-x-0 md:group-hover/report:opacity-100"}`}>{percentShort(pct)}</span>
+                        <span className={`block w-full text-gray-500 tabular-nums ${expanded ? "" : "report-slide opacity-0 transition-all duration-150 md:group-hover/report:opacity-100"}`}>{percentShort(pct)}</span>
                       </div> : null}
                     </div>
                   </div>
                 ) : extraCols.map((col) => (
-                  <div key={col.key} className={`${col.width || "w-16 min-w-16 md:w-[5.5rem] md:min-w-[5.5rem]"} shrink-0 text-right text-sm font-medium text-gray-800 tabular-nums`}>
+                  <div key={col.key} className={`${col.width || "w-16 min-w-16 md:w-[5.5rem] md:min-w-[5.5rem]"} shrink-0 text-end text-sm font-medium text-gray-800 tabular-nums`}>
                     {col.format ? col.format(r.metrics?.[col.key] ?? r.value, r) : numberShort(r.metrics?.[col.key] ?? r.value)}
                   </div>
                 ))}
@@ -420,21 +420,21 @@ export function ReportCard({
                         aria-expanded={open === reportTab.id}
                         onClick={() => setOpen(open === reportTab.id ? null : reportTab.id)}
                       >
-                        <span className={`truncate text-left text-xs uppercase ${selected ? "font-bold tracking-[-.01em] text-gray-900" : "font-semibold text-gray-500 group-hover/tab:text-gray-800"}`}>
+                        <span className={`truncate text-start text-xs uppercase ${selected ? "font-bold tracking-[-.01em] text-gray-900" : "font-semibold text-gray-500 group-hover/tab:text-gray-800"}`}>
                           {t(label || "")}
                         </span>
-                        <UIIcon name="chevron-down" className="ui-chevron ml-1" />
+                        <UIIcon name="chevron-down" className="ui-chevron ms-1" />
                       </button>
                     </div>
                     {open === reportTab.id ? (
-                      <div className="squircle report-menu absolute top-full left-0 z-20 mt-2 min-w-56 origin-top-left rounded-md bg-white p-1 font-medium text-gray-800 shadow-lg ring-1 ring-black/5">
+                      <div className="squircle report-menu absolute top-full start-0 z-20 mt-2 min-w-56 origin-top-left rtl:origin-top-right rounded-md bg-white p-1 font-medium text-gray-800 shadow-lg ring-1 ring-black/5">
                         {reportTab.dropdown.map((d) => (
                           <button
                             key={d.id}
                             type="button"
                             data-selected={d.selected || d.id === active}
                             aria-pressed={Boolean(d.selected || d.id === active)}
-                            className="squircle control-menu-item flex w-full items-center justify-between rounded-md px-4 py-2.5 text-left text-sm hover:bg-gray-100"
+                            className="squircle control-menu-item flex w-full items-center justify-between rounded-md px-4 py-2.5 text-start text-sm hover:bg-gray-100"
                             onClick={() => {
                               if (d.onSelect) d.onSelect()
                               else onChange?.(d.id)
@@ -458,7 +458,7 @@ export function ReportCard({
                     aria-pressed={selected}
                     onClick={() => onChange?.(reportTab.id)}
                   >
-                    <span className={`truncate text-left text-xs uppercase ${selected ? "font-bold tracking-[-.01em] text-gray-900" : "font-semibold text-gray-500 group-hover/tab:text-gray-800"}`}>
+                    <span className={`truncate text-start text-xs uppercase ${selected ? "font-bold tracking-[-.01em] text-gray-900" : "font-semibold text-gray-500 group-hover/tab:text-gray-800"}`}>
                       {t(reportTab.label)}
                     </span>
                   </button>
@@ -522,7 +522,7 @@ export function ReportMenu({
         <UIIcon name="ellipsis-vertical" className="size-[1.125rem]" />
       </button>
       {open ? (
-        <div className="squircle absolute top-full right-0 z-20 mt-2 min-w-48 origin-top-right rounded-md bg-white p-1 font-medium text-gray-800 shadow-lg ring-1 ring-black/5">
+        <div className="squircle absolute top-full end-0 z-20 mt-2 min-w-48 origin-top-right rounded-md bg-white p-1 font-medium text-gray-800 shadow-lg ring-1 ring-black/5">
           <p className="whitespace-nowrap px-4 py-2.5 text-xs font-medium text-gray-500 uppercase">{t(title || "")}</p>
           {options.map((o) => (
             <button
@@ -530,7 +530,7 @@ export function ReportMenu({
               type="button"
               data-selected={o.id === value}
               aria-pressed={o.id === value}
-              className="squircle control-menu-item flex w-full items-center justify-between rounded-md px-4 py-2.5 text-left text-sm hover:bg-gray-100"
+              className="squircle control-menu-item flex w-full items-center justify-between rounded-md px-4 py-2.5 text-start text-sm hover:bg-gray-100"
               onClick={() => { onChange(o.id); setOpen(false) }}
             >
               {t(o.label)}

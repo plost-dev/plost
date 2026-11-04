@@ -56,7 +56,7 @@ export function GoogleVisitorMap({ apiKey, styleId, rows, live, points = [], sho
       setHovered({ country, x: Math.max(8, Math.min(x + 12, element.clientWidth - 184)), y: Math.max(8, Math.min(y + 12, element.clientHeight - 100)) })
     void (async () => {
       try {
-        const [maps, features] = await Promise.all([loadGoogleMaps(apiKey, locale === "en" ? "en" : "zh-CN"), loadWorldMap()]) as [Maps, WorldJsonCountryData[]]
+        const [maps, features] = await Promise.all([loadGoogleMaps(apiKey, locale), loadWorldMap()]) as [Maps, WorldJsonCountryData[]]
         if (disposed) return
         clearTimeout(timer)
         const map = new maps.Map(element, {
@@ -148,7 +148,7 @@ export function GoogleVisitorMap({ apiKey, styleId, rows, live, points = [], sho
   return <div className="relative">
     <div className="squircle map-stage mapbox-stage google-map-stage" data-show-flags={showFlags}>
       <div ref={container} className="mapbox-viewport" aria-label={t("访客分布")} />
-      <div className="squircle map-controls absolute top-2.5 right-2.5 z-10 flex overflow-hidden border border-gray-200 bg-white/90 shadow-sm backdrop-blur-sm">
+      <div className="squircle map-controls absolute top-2.5 end-2.5 z-10 flex overflow-hidden border border-gray-200 bg-white/90 shadow-sm backdrop-blur-sm">
         <button type="button" className="squircle px-2.5 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40" disabled={!loaded} aria-label={t("放大")} onClick={() => mapRef.current?.setZoom((mapRef.current.getZoom() || 2) + 1)}><UIIcon name="plus" className="size-3" /></button>
         <button type="button" className="squircle border-l border-gray-200 px-2.5 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40" disabled={!loaded} aria-label={t("缩小")} onClick={() => mapRef.current?.setZoom((mapRef.current.getZoom() || 2) - 1)}><UIIcon name="minus" className="size-3" /></button>
         <button type="button" className="squircle border-l border-gray-200 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-40" disabled={!loaded} onClick={() => { mapRef.current?.setCenter(HOME.center); mapRef.current?.setZoom(HOME.zoom) }}>{t("重置")}</button>

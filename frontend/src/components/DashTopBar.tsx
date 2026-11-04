@@ -146,7 +146,7 @@ export function DashTopBar({
           <span className={`health-inline-state is-${healthState}`}><i/>{httpLabel}</span>
         </span> : null}
       </div>
-      <div className="dash-actions relative ml-auto flex shrink-0 items-center gap-x-1 md:gap-x-2.5" ref={box}>
+      <div className="dash-actions relative ms-auto flex shrink-0 items-center gap-x-1 md:gap-x-2.5" ref={box}>
         {!readonly ? <Link to="/sites/$domain/activity" params={{domain}} search={{window:"24h"}} className="squircle activity-entry">{t("活动日志")}</Link> : null}
         <div>
           <button
@@ -160,7 +160,7 @@ export function DashTopBar({
             <UIIcon name="chevron-down" className="ui-chevron" />
           </button>
           {open === "filter" ? (
-            <div className="squircle dashboard-popover absolute right-0 z-20 mt-2 w-72 origin-top-right rounded-md bg-white p-1 font-medium text-gray-800 shadow-lg ring-1 ring-black/5">
+            <div className="squircle dashboard-popover absolute end-0 z-20 mt-2 w-72 origin-top-right rounded-md bg-white p-1 font-medium text-gray-800 shadow-lg ring-1 ring-black/5">
               <div className="grid grid-cols-2 gap-0.5 p-1">
                 {FILTERS.map((f) => (
                   <button
@@ -168,7 +168,7 @@ export function DashTopBar({
                     type="button"
                     aria-pressed={filterKey === f.key}
                     data-selected={filterKey === f.key}
-                    className="squircle control-menu-item rounded-md px-3 py-2 text-left text-sm hover:bg-gray-100"
+                    className="squircle control-menu-item rounded-md px-3 py-2 text-start text-sm hover:bg-gray-100"
                     onClick={() => setFilterKey(f.key)}
                   >
                     {t(f.label)}
@@ -193,7 +193,7 @@ export function DashTopBar({
             <UIIcon name="chevron-down" className="ui-chevron" />
           </button>
           {open === "period" ? (
-            <div className="squircle dashboard-popover absolute right-0 z-20 mt-2 w-56 origin-top-right rounded-md bg-white p-1 font-medium text-gray-800 shadow-lg ring-1 ring-black/5">
+            <div className="squircle dashboard-popover absolute end-0 z-20 mt-2 w-56 origin-top-right rounded-md bg-white p-1 font-medium text-gray-800 shadow-lg ring-1 ring-black/5">
               {custom ? (
                 <form className="space-y-2 p-2" onSubmit={event=>{event.preventDefault();if(!isDateRange(customFrom,customTo))return;onPeriod({period:"custom",from:customFrom,to:customTo});setOpen(null);setCustom(false)}}>
                   <label className="block text-xs">{t("开始日期")}<input required aria-label={t("开始日期")} className="squircle input mt-1" type="date" value={customFrom} onInput={e=>setCustomFrom(e.currentTarget.value)} onChange={e=>setCustomFrom(e.target.value)} /></label>
@@ -210,7 +210,7 @@ export function DashTopBar({
                       type="button"
                       aria-pressed={search.period === id}
                       data-selected={search.period === id}
-                      className="squircle control-menu-item flex w-full items-center justify-between rounded-md px-4 py-2.5 text-left text-sm leading-tight hover:bg-gray-100 hover:text-gray-900"
+                      className="squircle control-menu-item flex w-full items-center justify-between rounded-md px-4 py-2.5 text-start text-sm leading-tight hover:bg-gray-100 hover:text-gray-900"
                       onClick={() => {
                         if (id === "custom") { setCustom(true); return }
                         onPeriod({ period: id })
@@ -239,12 +239,12 @@ export function DashTopBar({
               <UIIcon name="ellipsis-vertical" className="size-5" />
             </button>
             {open === "more" ? (
-              <div className="squircle dashboard-popover absolute right-0 z-20 mt-2 w-72 rounded-md bg-white p-1 font-medium text-gray-800 shadow-lg ring-1 ring-black/5">
+              <div className="squircle dashboard-popover absolute end-0 z-20 mt-2 w-72 rounded-md bg-white p-1 font-medium text-gray-800 shadow-lg ring-1 ring-black/5">
                 {(() => {
                   const options = availableIntervals(search.period, { from: search.from, to: search.to })
                   if (options.length <= 1) return null
                   return (
-                    <div className="flex w-full items-center justify-between gap-x-2 py-1 pr-2 pl-4">
+                    <div className="flex w-full items-center justify-between gap-x-2 py-1 pe-2 ps-4">
                       <span className="shrink-0 text-sm font-medium text-gray-700">{t("图表间隔")}</span>
                       <div className="squircle segmented-control flex rounded-md bg-gray-100">
                         {options.map((id) => (
@@ -267,7 +267,7 @@ export function DashTopBar({
                 })()}
 
                 {onChartType ? (
-                  <div className="flex w-full items-center justify-between gap-x-2 py-1 pr-2 pl-4">
+                  <div className="flex w-full items-center justify-between gap-x-2 py-1 pe-2 ps-4">
                     <span className="shrink-0 text-sm font-medium text-gray-700">{t("图表类型")}</span>
                     <div className="squircle segmented-control flex rounded-md bg-gray-100">
                       {CHART_TYPES.map((id) => (
@@ -286,7 +286,7 @@ export function DashTopBar({
                 ) : null}
 
                 {onToggleSeries ? (
-                  <div className="flex w-full items-center justify-between gap-x-2 py-1 pr-2 pl-4">
+                  <div className="flex w-full items-center justify-between gap-x-2 py-1 pe-2 ps-4">
                     <span className="shrink-0 text-sm font-medium text-gray-700">{t("显示数据")}</span>
                     <div className="squircle segmented-control series-toggle flex rounded-md bg-gray-100">
                       {TRAFFIC_METRICS.map(({ key, label }) => {

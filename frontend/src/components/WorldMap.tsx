@@ -459,12 +459,12 @@ function WorldMap({
     <div className="relative w-full">
       <div className="squircle map-stage relative overflow-hidden" data-show-flags={showFlags}>
         {focusCode ? (
-          <button type="button" className="squircle map-back absolute top-2.5 left-2.5 z-10" onClick={onBack} title={t("返回世界地图")}>
+          <button type="button" className="squircle map-back absolute top-2.5 start-2.5 z-10" onClick={onBack} title={t("返回世界地图")}>
             <UIIcon name="globe" className="size-3.5"/><span>{t("全球")}</span><span aria-hidden="true">/</span>
             <CountryFlag code={focusCode}/><strong>{countryName(focusCode, locale)}</strong>
           </button>
         ) : null}
-        <div className="squircle map-controls absolute top-2.5 right-2.5 z-10 flex overflow-hidden border border-gray-200 bg-white/90 shadow-sm backdrop-blur-sm">
+        <div className="squircle map-controls absolute top-2.5 end-2.5 z-10 flex overflow-hidden border border-gray-200 bg-white/90 shadow-sm backdrop-blur-sm">
           <button type="button" disabled={!map} className="squircle px-2.5 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40" onClick={() => zoomBy(1.35)} aria-label={t("放大")}><UIIcon name="plus" className="size-3"/></button>
           <button type="button" disabled={!map} className="squircle border-l border-gray-200 px-2.5 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-40" onClick={() => zoomBy(1 / 1.35)} aria-label={t("缩小")}><UIIcon name="minus" className="size-3"/></button>
           <button type="button" disabled={!map} className="squircle border-l border-gray-200 px-2 py-1 text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-40" onClick={resetZoom}>{t("重置")}</button>
@@ -479,7 +479,7 @@ function WorldMap({
             {loadFailed ? <>{t("地图加载失败")}<button type="button" className="squircle control-compact underline" onClick={() => setAttempt((value) => value + 1)}>{t("重试")}</button></> : t("正在加载地图…")}
           </div>
         ) : focusCode && !regionValues.size ? (
-          <div className="map-empty-note absolute bottom-2.5 left-2.5 z-10" role="status">{t("这段时间还没有记录到省/州")}</div>
+          <div className="map-empty-note absolute bottom-2.5 start-2.5 z-10" role="status">{t("这段时间还没有记录到省/州")}</div>
         ) : null}
       </div>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-400">

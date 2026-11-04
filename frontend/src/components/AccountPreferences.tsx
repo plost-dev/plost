@@ -5,7 +5,7 @@ import { useEffect, useState } from "react"
 import { Field, FormActions, SettingsForm } from "~/components/SettingsForm"
 import { Tile } from "~/components/ui"
 import { updateProfileFn } from "~/lib/actions"
-import { useT } from "~/lib/i18n"
+import { LOCALES, isLocale, useT } from "~/lib/i18n"
 import { showToast } from "~/lib/toast"
 
 function resizeAvatar(file: File): Promise<string> {
@@ -75,11 +75,11 @@ export function AccountPreferences({ user, onSaved }: {
     {avatar ? <button type="button" className="settings-avatar-remove" disabled={processing} title={t("profile.remove_avatar")} aria-label={t("profile.remove_avatar")} onClick={()=>void saveAvatar("")}><UIIcon name="xmark" /></button> : null}
   </div>
   return <Tile icon="user" title={t("个人资料")} actions={avatarPicker}>
-    <SettingsForm className="preferences-form" onSubmit={async event=>{event.preventDefault();await updateProfileFn({data:{name,locale:language}});setLocale(language);onSaved();showToast("设置已保存")}}>
+    <SettingsForm className="preferences-form" onSubmit={async event=>{event.preventDefault();await updateProfileFn({data:{name,locale:language}});await setLocale(language);onSaved();showToast("设置已保存")}}>
       {avatarError ? <p role="alert" className="mb-3 text-sm text-red-600">{t(avatarError)}</p> : null}
       <Field label={t("profile.nickname_label")}><input className="squircle input" required value={name} onChange={event=>setName(event.target.value)} /></Field>
       <Field label={t("邮箱")}><input className="squircle input bg-gray-50" value={user.email} disabled /></Field>
-      <Field label={t("界面语言")}><select className="squircle input" value={language} onChange={event=>setLanguage(event.target.value === "en" ? "en" : "zh-CN")}><option value="zh-CN">简体中文</option><option value="en">English</option></select></Field>
+      <Field label={t("界面语言")}><select className="squircle input" value={language} onChange={event=>{if(isLocale(event.target.value))setLanguage(event.target.value)}}>{LOCALES.map(item=><option key={item.code} value={item.code}>{item.name}</option>)}</select></Field>
       <FormActions><ActionButton className="btn btn-primary" type="submit" disabled={processing}>{t("保存设置")}</ActionButton></FormActions>
     </SettingsForm>
   </Tile>

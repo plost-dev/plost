@@ -6,7 +6,9 @@ import { GithubGlyph, LanguageGlyph, MoonGlyph, SunGlyph } from "./FooterGlyphs"
 import { logoutFn, trafficPulseFn, updateProfileFn } from "~/lib/actions"
 import { clearSettingsCache } from "~/lib/settings-cache"
 import { numberShort } from "~/lib/format"
-import { useT } from "~/lib/i18n"
+import { LOCALES, useT, type Locale } from "~/lib/i18n"
+import { CountryFlag } from "./icons"
+import { UIIcon } from "./UIIcon"
 import { createThemeUpdate } from "~/lib/theme-update"
 import { showToast } from "~/lib/toast"
 
@@ -219,29 +221,53 @@ function FooterTheme({ user }: { user: NonNullable<ShellUser> }) {
   return <ThemeSwitch theme={theme} disabled={change?.pending} onChange={next => { void update.change(user.email, theme, next) }} />
 }
 
-/** Switches between the two interface languages. A signed-in person keeps the choice on the account; otherwise this browser does. */
+/** Opens the language menu. A signed-in person keeps the choice on the account; otherwise this browser does. */
 function FooterLanguage({ user }: { user?: ShellUser }) {
-  const { locale, setLocale } = useT()
+  const { locale, setLocale, t } = useT()
   const router = useRouter()
+  const [open, setOpen] = useState(false)
   const [pending, setPending] = useState(false)
-  const next = locale === "en" ? "zh-CN" : "en"
-  const label = next === "en" ? "Switch to English" : "切换到简体中文"
-  return <button type="button" className="squircle site-footer-tool" disabled={pending} aria-label={label} title={label}
-    onClick={async () => {
-      setPending(true)
-      try {
-        if (user) await updateProfileFn({ data: { locale: next } })
-        else localStorage.setItem("plost:locale", next)
-        setLocale(next)
-        if (user) await router.invalidate()
-      } catch {
-        showToast("保存失败", "error")
-      } finally {
-        setPending(false)
-      }
-    }}>
-    <LanguageGlyph />
-  </button>
+  const boxRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onClick = (event: MouseEvent) => { if (!boxRef.current?.contains(event.target as Node)) setOpen(false) }
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { setOpen(false); triggerRef.current?.focus() } }
+    window.addEventListener("mousedown", onClick)
+    window.addEventListener("keydown", onKey)
+    boxRef.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus()
+    return () => { window.removeEventListener("mousedown", onClick); window.removeEventListener("keydown", onKey) }
+  }, [open])
+  const choose = async (next: Locale) => {
+    setOpen(false)
+    if (next === locale) return
+    setPending(true)
+    try {
+      if (user) await updateProfileFn({ data: { locale: next } })
+      else localStorage.setItem("plost:locale", next)
+      await setLocale(next)
+      if (user) await router.invalidate()
+    } catch {
+      showToast("保存失败", "error")
+    } finally {
+      setPending(false)
+    }
+  }
+  const label = t("切换语言")
+  return <div className="site-footer-language" ref={boxRef}>
+    <button type="button" ref={triggerRef} className="squircle site-footer-tool" disabled={pending} aria-label={label} title={label}
+      aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(value => !value)}>
+      <LanguageGlyph />
+    </button>
+    {open ? <div className="squircle language-menu" role="menu" aria-label={label}>
+      {LOCALES.map(item => <button key={item.code} type="button" role="menuitemradio" aria-checked={item.code === locale}
+        className={`squircle language-menu-item${item.code === locale ? " is-active" : ""}`} onClick={() => void choose(item.code)}>
+        <CountryFlag code={item.flag} shape="rect" className="language-menu-flag" />
+        <span className="language-menu-name" lang={item.code}>{item.name}</span>
+        {item.code === locale ? <UIIcon name="check" className="language-menu-check" /> : null}
+      </button>)}
+    </div> : null}
+  </div>
 }
 
 function SiteHeader({ user, search }: { user?: ShellUser, search?: React.ReactNode }) {
@@ -345,7 +371,7 @@ function UserMenu({
           <div className="site-header-menu-line" />
           <button
             type="button"
-            className="squircle site-header-menu-item w-full text-left"
+            className="squircle site-header-menu-item w-full text-start"
             onClick={async () => {
               await logoutFn()
               clearSettingsCache()

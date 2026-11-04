@@ -3,7 +3,7 @@ import "~/styles/backup-settings.css"
 import { readSettings, useCachedState } from "~/lib/settings-cache"
 import { geoipSettingsFn, saveGeoIPSettingsFn, updateGeoIPFn, type GeoIPSettings } from "~/lib/geoip-actions"
 import { formatTimestamp } from "~/lib/format"
-import { useT } from "~/lib/i18n"
+import { useT, intlLocale } from "~/lib/i18n"
 import { showToast } from "~/lib/toast"
 import { ActionButton } from "./ActionButton"
 import { Tile } from "./ui"
@@ -37,7 +37,7 @@ function ChinaCityTile({ data }: { data: GeoIPSettings }) {
   const { t, locale } = useT()
   const release = data.cnVersion
   const stats = data.cnStats
-  const number = (n: number) => n.toLocaleString(locale === "en" ? "en-US" : "zh-CN")
+  const number = (n: number) => n.toLocaleString(intlLocale(locale))
   return <Tile icon="map" title="中国访客的省份和城市" titleAddon={release
     ? <GeoIPBadge text={t("ip2region {0} · 更新于 {1}", { 0: release.version, 1: formatTimestamp(release.updatedAt * 1000, locale) })} />
     : null}>

@@ -4,7 +4,7 @@ import { createPortal } from "react-dom"
 import { recentVisitorsFn } from "~/lib/actions"
 import { countryName } from "~/lib/countries"
 import { isDirectSource } from "~/lib/source-icons"
-import { useT } from "~/lib/i18n"
+import { useT, intlLocale } from "~/lib/i18n"
 import { ActionButton } from "./ActionButton"
 import { CountryFlag } from "./icons"
 import { UIIcon } from "./UIIcon"
@@ -34,7 +34,7 @@ export function RecentVisitors({domain,onClose}:{domain:string;onClose:()=>void}
     const timer=setInterval(()=>{if(document.visibilityState==="visible")void load()},30000)
     return()=>{disposed=true;clearInterval(timer)}
   },[domain,refresh])
-  const format=(value:string)=>new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "zh-CN",{timeZone:data?.timezone || "UTC",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).format(new Date(value))
+  const format=(value:string)=>new Intl.DateTimeFormat(intlLocale(locale),{timeZone:data?.timezone || "UTC",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).format(new Date(value))
   const rows=data?.rows.filter(row=>!onlyActive || row.active) || []
   return createPortal(<dialog ref={dialog} className="squircle recent-visitors-dialog" aria-labelledby="recent-visitors-title" onCancel={onClose} onClick={event=>{if(event.target===event.currentTarget)onClose()}}>
     <header><div className="flex min-w-0 items-center gap-2"><h2 id="recent-visitors-title">{t("最近访客")}</h2><HelpHint><p>{t("近 5 分钟有事件上报视为活跃，不代表持续连接在线。")}</p><p>{t("全站最近访客，不受统计页日期和筛选影响；每 30 秒刷新。")}</p><p>{t("匿名标识用于区分访客，不包含姓名或原始 IP。")}</p></HelpHint></div><ActionButton className="ui-icon-button" aria-label={t("关闭")} onClick={onClose}><UIIcon name="close"/></ActionButton></header>

@@ -7,7 +7,7 @@ import { Field, SettingsForm } from "./SettingsForm"
 import { Toggle } from "./Toggle"
 import { UIIcon } from "./UIIcon"
 import { formatTimestamp } from "~/lib/format"
-import { useT } from "~/lib/i18n"
+import { useT, isChinese } from "~/lib/i18n"
 import { cachedSettings, readSettings, useCachedState } from "~/lib/settings-cache"
 import { rpc } from "~/lib/rpc"
 import { showToast } from "~/lib/toast"
@@ -49,7 +49,7 @@ export function BackupSchedulePanel() {
   const [busy, setBusy] = useState("")
 
   // Stored errors can join two messages with "：", so each part is translated on its own.
-  const message = (text: string) => text.split("：").map(part => t(part)).join(locale === "en" ? ": " : "：")
+  const message = (text: string) => text.split("：").map(part => t(part)).join(isChinese(locale) ? "：" : ": ")
 
   const loadLocal = useCallback(() => readSettings<BackupFile[]>("backupLocal").then(setLocal, () => undefined), [setLocal])
   useEffect(() => {

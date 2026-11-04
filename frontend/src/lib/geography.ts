@@ -1,10 +1,13 @@
 import subdivisions from "../assets/subdivisions.json"
 import { countryName } from "./countries"
+import { isChinese, toTraditional, translate, type Locale } from "./i18n"
 import { Converter } from "opencc-js/t2cn"
 
 const names: Record<string, string[]> = subdivisions
 const aliases = new Map<string, string>()
 const simplifiedChinese = Converter({from: "t", to: "cn"})
+/** Chinese place names in the script of the interface: simplified, or traditional for zh-TW. */
+const chineseScript = (locale: string, value: string) => locale === "zh-TW" ? toTraditional(simplifiedChinese(value)) : simplifiedChinese(value)
 const clean = (value: string) => simplifiedChinese(value).normalize("NFKC").trim().toLowerCase()
 
 function alias(country: string, value: string) {
@@ -34,21 +37,21 @@ export function geographyLabel(kind: "region" | "city", name: string, country: s
   const nation = (country || explicitCountry || "").trim().toUpperCase()
   const code = kind === "region" ? subdivisionCode(nation, name) : ""
   const translations = code ? names[code.replace("-", "").toLowerCase()] : undefined
-  const unknown = locale === "en" ? (kind === "city" ? "Unknown city" : "Unknown region") : (kind === "city" ? "未知城市" : "未知地区")
+  const unknown = translate(locale as Locale, kind === "city" ? "未知城市" : "未知地区")
   const raw = name.trim()
   // A city without a Chinese name keeps its own (English) name rather than a placeholder that hides which city it is.
-  if (kind === "city" && locale !== "en" && /\p{L}/u.test(raw.replace(/\p{Script=Han}/gu,""))) {
+  if (kind === "city" && isChinese(locale) && /\p{L}/u.test(raw.replace(/\p{Script=Han}/gu,""))) {
     return nation ? `${countryName(nation, locale)} · ${raw}` : raw
   }
-  const text = translations?.[locale === "en" ? 0 : 1] || translations?.[0]
+  const text = translations?.[isChinese(locale) ? 1 : 0] || translations?.[0]
     || (!raw || /^\d+$/.test(raw) || /^\(?none\)?$/i.test(raw) || /^[A-Z]{2}[-_][A-Z0-9]{1,4}$/.test(raw) ? unknown : raw)
   const fullName = nation ? `${countryName(nation, locale)} · ${text}` : text
-  return locale === "en" ? fullName : simplifiedChinese(fullName)
+  return isChinese(locale) ? chineseScript(locale, fullName) : fullName
 }
 
 /** A province's own name without its country, for the map: CLDR's translation, else the names the map carries. */
 export function regionName(code: string, english: string, chinese: string, locale: string): string {
   const translations = code ? names[code.replace("-", "").toLowerCase()] : undefined
-  if (locale === "en") return translations?.[0] || english || code
-  return simplifiedChinese(translations?.[1] || chinese || translations?.[0] || english || code)
+  if (!isChinese(locale)) return translations?.[0] || english || code
+  return chineseScript(locale, translations?.[1] || chinese || translations?.[0] || english || code)
 }

@@ -7,7 +7,9 @@
     "build": "vite build",
     "typecheck": "tsc --noEmit",
     "reference": "vite --config reference.config.ts",
-    "check:unused": "tsc --noEmit --noUnusedLocals --noUnusedParameters"
+    "check:unused": "tsc --noEmit --noUnusedLocals --noUnusedParameters",
+    "check:locales": "bun scripts/check-locales.ts",
+    "locales:zh-tw": "bun scripts/build-zh-tw.ts"
   },
   "dependencies": {
     "@simplewebauthn/browser": "14.0.0",

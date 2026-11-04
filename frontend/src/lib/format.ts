@@ -1,3 +1,4 @@
+import { intlLocale } from "./i18n"
 const THOUSAND = 1000
 const HUNDRED_THOUSAND = 100000
 const MILLION = 1000000
@@ -35,14 +36,19 @@ export function parseStamp(date: string) {
   return new Date(y, (m || 1) - 1, day || 1)
 }
 
+const isChineseLocale = (locale: string) => locale === "zh-CN" || locale === "zh-TW"
+const intlDate = (locale: string, d: Date, options: Intl.DateTimeFormatOptions) => new Intl.DateTimeFormat(intlLocale(locale), options).format(d)
+
 export function formatDayShort(date: string, withYear = false, locale = "en") {
   const d = parseStamp(date)
+  if (locale !== "en" && !isChineseLocale(locale)) return intlDate(locale, d, { day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}) })
   const label = locale === "en" ? `${d.getDate()} ${MONTHS_EN[d.getMonth()]}` : `${d.getMonth() + 1}月${d.getDate()}日`
   return withYear ? (locale === "en" ? `${label} ${d.getFullYear()}` : `${d.getFullYear()}年${label}`) : label
 }
 
 export function formatDayLong(date: string, withYear = false, locale = "zh-CN") {
   const d = parseStamp(date)
+  if (locale !== "en" && !isChineseLocale(locale)) return intlDate(locale, d, { weekday: "long", day: "numeric", month: "short", ...(withYear ? { year: "numeric" } : {}) })
   const weekday = locale === "en" ? new Intl.DateTimeFormat("en", { weekday: "long" }).format(d) : WEEKDAYS[d.getDay()]
   const day = locale === "en" ? `${weekday}, ${d.getDate()} ${MONTHS_EN[d.getMonth()]}` : `${d.getMonth() + 1}月${d.getDate()}日 ${weekday}`
   return withYear ? `${day} ${d.getFullYear()}` : day
@@ -50,6 +56,7 @@ export function formatDayLong(date: string, withYear = false, locale = "zh-CN") 
 
 export function formatMonthYYYY(date: string, locale = "en") {
   const d = parseStamp(date)
+  if (locale !== "en" && !isChineseLocale(locale)) return intlDate(locale, d, { month: "long", year: "numeric" })
   return locale === "en" ? `${MONTHS_EN[d.getMonth()]} ${d.getFullYear()}` : `${d.getFullYear()}年${d.getMonth() + 1}月`
 }
 
@@ -74,5 +81,5 @@ export function formatDuration(sec: number) {
 export function formatTimestamp(value: string | number, locale = "zh-CN") {
   const date = new Date(value)
   if (!Number.isFinite(date.getTime())) return "—"
-  return new Intl.DateTimeFormat(locale, { timeZone: "UTC", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).format(date) + " UTC"
+  return new Intl.DateTimeFormat(locale === "zh-CN" ? locale : intlLocale(locale), { timeZone: "UTC", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" }).format(date) + " UTC"
 }

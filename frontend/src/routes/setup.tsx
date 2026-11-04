@@ -17,8 +17,7 @@ export const Route = createFileRoute("/setup")({
 })
 
 function SetupPage() {
-  const { locale, t } = useT()
-  const c = (zh: string, en: string) => locale === "en" ? en : zh
+  const { t } = useT()
   const router = useRouter()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -32,8 +31,8 @@ function SetupPage() {
         <div className="auth-panel">
           <div className="auth-brand"><Link to="/" aria-label="Plost"><BrandMark /></Link></div>
           <header className="flex flex-col gap-y-2 text-center">
-            <h1 className="auth-heading">{c("创建管理员", "Create an administrator")}</h1>
-            <p className="text-pretty text-sm leading-6 text-gray-500">{c("创建此实例的管理员账号。完成后将关闭公开注册。", "Create the administrator account for this instance. Public registration will then close.")}</p>
+            <h1 className="auth-heading">{t("创建管理员")}</h1>
+            <p className="text-pretty text-sm leading-6 text-gray-500">{t("创建此实例的管理员账号。完成后将关闭公开注册。")}</p>
           </header>
           <form
             data-radius="large" className="squircle ui-surface auth-card flex w-full flex-col gap-y-5 p-6"
@@ -46,7 +45,7 @@ function SetupPage() {
                 await router.invalidate()
                 await router.navigate({to: "/dashboard", replace: true})
               } catch (failure) {
-                setError(failure instanceof Error ? failure.message : c("创建管理员失败，请重试。", "Unable to create the administrator. Please try again."))
+                setError(failure instanceof Error ? failure.message : t("创建管理员失败，请重试。"))
               } finally {
                 setPending(false)
               }
@@ -63,7 +62,7 @@ function SetupPage() {
             </label>
             {error ? <p role="alert" className="text-sm text-red-500">{t(error)}</p> : null}
             <ActionButton className="btn btn-primary w-full"  disabled={pending} type="submit">
-              {pending ? t("创建中…") : c("创建管理员", "Create administrator")}
+              {pending ? t("创建中…") : t("创建管理员")}
             </ActionButton>
           </form>
         </div>

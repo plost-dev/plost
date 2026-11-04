@@ -1,3 +1,4 @@
+import { translate, type Locale } from "./i18n"
 const zh: Record<string, string> = {
   CN: "中国", US: "美国", JP: "日本", KR: "韩国", GB: "英国", DE: "德国", FR: "法国",
   RU: "俄罗斯", IN: "印度", SG: "新加坡", HK: "中国香港", TW: "中国台湾", AU: "澳大利亚",
@@ -14,7 +15,9 @@ const zh: Record<string, string> = {
 
 export function countryName(code: string, locale = "zh-CN") {
   const key = (code || "").trim().toUpperCase()
-  if (!key || key === "(NONE)") return locale === "en" ? "Unknown" : "未知"
-  if (locale === "en" && /^[A-Z]{2}$/.test(key)) return new Intl.DisplayNames(["en"], { type: "region" }).of(key) || key
+  if (!key || key === "(NONE)") return translate(locale as Locale, "未知")
+  if (locale !== "zh-CN" && /^[A-Z]{2}$/.test(key)) {
+    try { return new Intl.DisplayNames([locale], { type: "region" }).of(key) || key } catch { return key }
+  }
   return zh[key] || (/^[A-Z]{2}$/.test(key) ? new Intl.DisplayNames(["zh-CN"], { type: "region" }).of(key) : undefined) || key
 }

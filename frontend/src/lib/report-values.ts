@@ -1,5 +1,5 @@
 import { countryName } from "./countries"
-import { translate, type Locale } from "./i18n"
+import { isChinese, toTraditionalFor, translate, type Locale } from "./i18n"
 import { languageCode, languageName } from "./languages"
 import { campaignTag, isDirectSource } from "./source-icons"
 import { geographyLabel } from "./geography"
@@ -93,7 +93,7 @@ export function browserDisplayName(name: string): string {
 export function reportValueLabel(kind: string | undefined, name: string, locale: Locale, label?: string, country?: string): string {
   if (kind === "language") return languageName(name, locale)
   if (kind === "country") return countryName(name, locale)
-  if (kind === "region" || kind === "city") return geographyLabel(kind, kind === "city" && locale === "en" ? name : label || name, country || "", locale)
+  if (kind === "region" || kind === "city") return geographyLabel(kind, kind === "city" && !isChinese(locale) ? name : label || name, country || "", locale)
   if (kind === "source" && isDirectSource(name)) return translate(locale, "直接访问")
   const tag = kind === "source" || kind === "ai" ? campaignTag(name) : null
   if (tag !== null) return translate(locale, "{0}（推广链接）", {0: tag})
@@ -105,7 +105,7 @@ export function reportValueLabel(kind: string | undefined, name: string, locale:
   }
   if (kind === "browser") {
     const shown = browserDisplayName(label || name)
-    return BROWSER_LABELS[shown] || (locale === "en" ? shown : BROWSER_NAMES_ZH[shown]) || shown
+    return BROWSER_LABELS[shown] || (isChinese(locale) ? BROWSER_NAMES_ZH[shown] && toTraditionalFor(locale, BROWSER_NAMES_ZH[shown]) : shown) || shown
   }
   return label || name
 }

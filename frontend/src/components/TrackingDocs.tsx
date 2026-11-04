@@ -4,8 +4,7 @@ import { TrackingSnippet } from "./TrackingSnippet"
 import { useT } from "~/lib/i18n"
 
 export function TrackingDocs({ domain }: { domain: string }) {
-  const { locale } = useT()
-  const en = locale === "en"
+  const { t } = useT()
   const [openAll, setOpenAll] = useState<boolean | null>(null)
 
   const toggleAll = () => {
@@ -16,22 +15,22 @@ export function TrackingDocs({ domain }: { domain: string }) {
   useEffect(() => { setBaseUrl(window.location.origin) }, [])
 
   return (
-    <section id="api-docs" className="api-usage-docs" aria-label={en ? "Tracking documentation" : "埋点使用文档"}>
+    <section id="api-docs" className="api-usage-docs" aria-label={t("埋点使用文档")}>
       <div className="api-docs-header">
         <div>
           <h3>
             <UIIcon name="code" />
-            {en ? "Developer Documentation & Usage Guide" : "开发者使用指南与接口文档"}
+            {t("开发者使用指南与接口文档")}
           </h3>
         </div>
         <button
           type="button"
           className="squircle api-docs-toggle-btn"
           onClick={toggleAll}
-          title={openAll === true ? (en ? "Collapse all sections" : "收起所有折叠") : (en ? "Expand all sections" : "展开所有折叠")}
+          title={openAll === true ? (t("收起所有折叠")) : (t("展开所有折叠"))}
         >
           
-          <span>{openAll === true ? (en ? "Collapse all" : "全部折叠") : (en ? "Expand all" : "全部展开")}</span>
+          <span>{openAll === true ? (t("全部折叠")) : (t("全部展开"))}</span>
         </button>
       </div>
 
@@ -41,75 +40,73 @@ export function TrackingDocs({ domain }: { domain: string }) {
           <summary className="api-doc-summary">
             <div className="api-doc-summary-title">
               <UIIcon name="cloud" />
-              <span>{en ? "1. HTTP Event Ingestion Endpoint (POST /api/event)" : "1. HTTP 事件数据采集端点 (POST /api/event)"}</span>
+              <span>{t("1. HTTP 事件数据采集端点 (POST /api/event)")}</span>
             </div>
-            <span className="squircle api-doc-badge">{en ? "Ingestion API" : "采集接口"}</span>
+            <span className="squircle api-doc-badge">{t("采集接口")}</span>
           </summary>
           <div className="api-doc-content">
             <p>
-              {en
-                ? "Ingest pageviews and custom conversion events directly from backend services, mobile apps (iOS / Android), mini-programs, CLI tools, or serverless functions without a browser:"
-                : "支持从后端服务、移动 App、微信小程序、命令行脚本或无前端浏览器环境中直接向 Plost 上报页面访问与业务事件："}
+              {t("支持从后端服务、移动 App、微信小程序、命令行脚本或无前端浏览器环境中直接向 Plost 上报页面访问与业务事件：")}
             </p>
             <div className="squircle api-endpoint-badge">
               <span className="squircle method-post">POST</span>
               <code>/api/event</code>
-              <span className="endpoint-desc">{en ? "Buffered ingestion with batched writes" : "缓冲接收，按批写入"}</span>
+              <span className="endpoint-desc">{t("缓冲接收，按批写入")}</span>
             </div>
 
-            <h4>{en ? "Request Payload Format (JSON)" : "请求体参数格式 (JSON)"}</h4>
+            <h4>{t("请求体参数格式 (JSON)")}</h4>
             <div className="squircle api-doc-table">
               <table>
                 <thead>
                   <tr>
-                    <th>{en ? "Field" : "字段"}</th>
-                    <th>{en ? "Type" : "类型"}</th>
-                    <th>{en ? "Required" : "必须"}</th>
-                    <th>{en ? "Description" : "说明"}</th>
+                    <th>{t("字段")}</th>
+                    <th>{t("类型")}</th>
+                    <th>{t("必须")}</th>
+                    <th>{t("说明")}</th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td><code className="squircle">d</code> / <code className="squircle">domain</code></td>
                     <td>string</td>
-                    <td><span className="squircle tag-required">{en ? "Required" : "必须"}</span></td>
-                    <td>{en ? "Target site domain registered in Plost (e.g. demo.local.test)" : "在 Plost 中添加的站点域名（如 demo.local.test）"}</td>
+                    <td><span className="squircle tag-required">{t("必须")}</span></td>
+                    <td>{t("在 Plost 中添加的站点域名（如 demo.local.test）")}</td>
                   </tr>
                   <tr>
                     <td><code className="squircle">n</code> / <code className="squircle">name</code></td>
                     <td>string</td>
-                    <td><span className="squircle tag-required">{en ? "Required" : "必须"}</span></td>
-                    <td>{en ? "Event name ('pageview' for page visits, or custom action like 'Signup')" : "事件名称（基础浏览填 'pageview'，自定义行为填如 'Signup'）"}</td>
+                    <td><span className="squircle tag-required">{t("必须")}</span></td>
+                    <td>{t("事件名称（基础浏览填 'pageview'，自定义行为填如 'Signup'）")}</td>
                   </tr>
                   <tr>
                     <td><code className="squircle">u</code> / <code className="squircle">url</code></td>
                     <td>string</td>
-                    <td><span className="squircle tag-required">{en ? "Required" : "必须"}</span></td>
-                    <td>{en ? "Full URL of the tracked resource (e.g. https://example.com/pricing)" : "当前页面完整 URL（如 https://example.com/pricing）"}</td>
+                    <td><span className="squircle tag-required">{t("必须")}</span></td>
+                    <td>{t("当前页面完整 URL（如 https://example.com/pricing）")}</td>
                   </tr>
                   <tr>
                     <td><code className="squircle">r</code> / <code className="squircle">referrer</code></td>
                     <td>string</td>
-                    <td><span className="squircle tag-optional">{en ? "Optional" : "可选"}</span></td>
-                    <td>{en ? "Referrer URL (e.g. https://google.com)" : "访问来源 Referrer（如 https://google.com）"}</td>
+                    <td><span className="squircle tag-optional">{t("可选")}</span></td>
+                    <td>{t("访问来源 Referrer（如 https://google.com）")}</td>
                   </tr>
                   <tr>
                     <td><code className="squircle">w</code> / <code className="squircle">width</code></td>
                     <td>number</td>
-                    <td><span className="squircle tag-optional">{en ? "Optional" : "可选"}</span></td>
-                    <td>{en ? "Client viewport screen width in pixels (e.g. 1440)" : "客户端屏幕宽度像素（如 1440，用于识别移动/桌面设备）"}</td>
+                    <td><span className="squircle tag-optional">{t("可选")}</span></td>
+                    <td>{t("客户端屏幕宽度像素（如 1440，用于识别移动/桌面设备）")}</td>
                   </tr>
                   <tr>
                     <td><code className="squircle">p</code> / <code className="squircle">props</code></td>
                     <td>object</td>
-                    <td><span className="squircle tag-optional">{en ? "Optional" : "可选"}</span></td>
-                    <td>{en ? "Custom key-value metadata (e.g. {\"plan\": \"pro\", \"source\": \"hero\"})" : "自定义维度键值对（如 {\"plan\": \"pro\", \"source\": \"hero\"}）"}</td>
+                    <td><span className="squircle tag-optional">{t("可选")}</span></td>
+                    <td>{t("自定义维度键值对（如 {\"plan\": \"pro\", \"source\": \"hero\"}）")}</td>
                   </tr>
                 </tbody>
               </table>
             </div>
 
-            <h4>{en ? "cURL Code Example" : "cURL 上报调用示例"}</h4>
+            <h4>{t("cURL 上报调用示例")}</h4>
             <TrackingSnippet
               code={`curl -X POST ${baseUrl}/api/event \\
   -H "Content-Type: application/json" \\
@@ -125,9 +122,7 @@ export function TrackingDocs({ domain }: { domain: string }) {
               language="cURL"
             />
             <p className="api-note">
-              {en
-                ? "Valid events return HTTP 202 Accepted after their batch has committed to SQLite. Filtered bots and mismatched or unknown domains also return 202 without being recorded."
-                : "有效事件在批次提交到 SQLite 后返回 HTTP 202 Accepted。被过滤的机器人、域名不匹配或尚未添加的站点也会返回 202，但不会计入统计。"}
+              {t("有效事件在批次提交到 SQLite 后返回 HTTP 202 Accepted。被过滤的机器人、域名不匹配或尚未添加的站点也会返回 202，但不会计入统计。")}
             </p>
           </div>
         </details>
@@ -137,39 +132,31 @@ export function TrackingDocs({ domain }: { domain: string }) {
           <summary className="api-doc-summary">
             <div className="api-doc-summary-title">
               <UIIcon name="globe" />
-              <span>{en ? "2. Web Tracking Script & JavaScript API" : "2. 网页埋点脚本与 JavaScript API"}</span>
+              <span>{t("2. 网页埋点脚本与 JavaScript API")}</span>
             </div>
-            <span className="squircle api-doc-badge">{en ? "Frontend SDK" : "网页集成"}</span>
+            <span className="squircle api-doc-badge">{t("网页集成")}</span>
           </summary>
           <div className="api-doc-content">
             <p>
-              {en
-                ? "Embed the tracker once in your website <head>. The defer attribute downloads it alongside the page and runs it after HTML parsing. It records the first pageview and distinct path/query changes in single-page apps (SPA):"
-                : "将统计脚本放入网站的 <head> 标签内，只需添加一次。defer 让脚本随页面并行下载，在 HTML 解析完成后执行；自动记录首次浏览，以及单页应用（SPA）的路径或查询参数变化："}
+              {t("将统计脚本放入网站的 <head> 标签内，只需添加一次。defer 让脚本随页面并行下载，在 HTML 解析完成后执行；自动记录首次浏览，以及单页应用（SPA）的路径或查询参数变化：")}
             </p>
             <TrackingSnippet
               code={`<script defer data-domain="${domain}" src="${baseUrl}/script.js"></script>`}
               language="HTML"
             />
             <p className="api-note">
-              {en
-                ? "The script is cached for up to 5 minutes. A random anonymous visitor ID is persisted in localStorage without cookies; unavailable storage falls back to the legacy daily anonymous ID. Replacing history state without changing the URL, or changing only an anchor, does not add a pageview. SPA navigation preserves the document entry referrer for source attribution. Prerendered pages wait until activation; a browser back/forward cache restoration counts as another view. Visit duration is estimated from recorded pageviews, so time spent after the last pageview cannot be measured precisely."
-                : "脚本最多缓存 5 分钟。使用 localStorage 持久保存随机匿名访客 ID，不使用 Cookie；存储不可用时回退到原每日匿名标识。同一地址的历史状态更新和仅锚点变化不会重复计数；SPA 路由切换保留本次文档的入站来源，用于来源统计。预渲染页面在实际打开后才计数，浏览器从往返缓存恢复页面会记录一次新浏览。访问时长由已记录的页面浏览估算，最后一次浏览之后的停留时间无法精确测量。"}
+              {t("脚本最多缓存 5 分钟。使用 localStorage 持久保存随机匿名访客 ID，不使用 Cookie；存储不可用时回退到原每日匿名标识。同一地址的历史状态更新和仅锚点变化不会重复计数；SPA 路由切换保留本次文档的入站来源，用于来源统计。预渲染页面在实际打开后才计数，浏览器从往返缓存恢复页面会记录一次新浏览。访问时长由已记录的页面浏览估算，最后一次浏览之后的停留时间无法精确测量。")}
             </p>
             <p className="api-note">
-              {en
-                ? "Delivery uses a keepalive request, with Beacon as a fallback when fetch is unavailable. A definite full-buffer rejection can retry twice; uncertain network failures are not replayed to avoid double counting. Script blockers, privacy settings, offline or closed browsers and an interrupted server can still cause missing data; Valid events return HTTP 202 after their batch is committed; filtered requests do not count."
-                : "上报使用 keepalive 请求，不支持 fetch 时使用 Beacon。只有服务端明确表示缓冲区已满、尚未接收的事件才最多重试两次；网络结果不确定时不会重复补发，以免重复计数。广告拦截、隐私设置、断网、浏览器关闭和服务中断仍可能造成缺失，有效事件在批次提交后才返回 HTTP 202；被过滤的请求不计入统计。"}
+              {t("上报使用 keepalive 请求，不支持 fetch 时使用 Beacon。只有服务端明确表示缓冲区已满、尚未接收的事件才最多重试两次；网络结果不确定时不会重复补发，以免重复计数。广告拦截、隐私设置、断网、浏览器关闭和服务中断仍可能造成缺失，有效事件在批次提交后才返回 HTTP 202；被过滤的请求不计入统计。")}
             </p>
 
-            <h4>{en ? "Triggering Custom Events in JavaScript" : "在 JavaScript 中触发自定义事件"}</h4>
+            <h4>{t("在 JavaScript 中触发自定义事件")}</h4>
             <p>
-              {en
-                ? "Track custom actions from anywhere in your web app:"
-                : "在页面任意交互事件中调用 window.plost.track()："}
+              {t("在页面任意交互事件中调用 window.plost.track()：")}
             </p>
             <TrackingSnippet
-              code={`// 自定义事件上报
+              code={`// Track a custom event
 if (window.plost) {
   window.plost.track("Button Click");
 }`}

@@ -1,6 +1,6 @@
 import { Surface } from "./Surface"
 import { UIIcon } from "./UIIcon"
-import { useT } from "~/lib/i18n"
+import { useT, intlLocale } from "~/lib/i18n"
 import { expiryState } from "~/lib/site-check-view"
 import { formatTimestamp } from "~/lib/format"
 import type { SiteCheckReport } from "~/lib/site-checks"
@@ -14,7 +14,7 @@ function ExpiryCard({kind, date, error, stale, lastSuccessAt, now, registeredAt,
   const state = expiryState(date, now)
   const dateOnly = !!date && /^\d{4}-\d{2}-\d{2}$/.test(date)
   const tone = stale ? state.tone === "bad" ? "bad" : "warning" : error && kind === "certificate" ? "bad" : state.tone
-  const formatDate = (value?: string | null) => value ? new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "zh-CN", {timeZone: "UTC", year: "numeric", month: "short", day: "numeric"}).format(new Date(value)) : "—"
+  const formatDate = (value?: string | null) => value ? new Intl.DateTimeFormat(intlLocale(locale), {timeZone: "UTC", year: "numeric", month: "short", day: "numeric"}).format(new Date(value)) : "—"
   const validationLabel = validation === "DV" ? t("域名验证") : validation === "OV" ? t("组织验证") : validation === "EV" ? t("扩展验证") : ""
   return <Surface className={`health-card health-tone-${tone}`}>
     <div className="health-card-heading"><span>{t(kind === "domain" ? "域名到期" : "证书到期")}</span><UIIcon name={kind === "domain" ? "globe" : "shield"}/></div>

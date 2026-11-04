@@ -1,7 +1,48 @@
 import UI_EN from "./ui-en.json"
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react"
 
-export type Locale = "zh-CN" | "en"
+/** Interface languages, in the order the language menu shows them (two columns, row by row). */
+export const LOCALES = [
+  { code: "zh-CN", name: "简体中文", flag: "cn" },
+  { code: "zh-TW", name: "繁體中文", flag: "tw" },
+  { code: "en", name: "English", flag: "gb" },
+  { code: "ru", name: "Русский", flag: "ru" },
+  { code: "vi", name: "Tiếng Việt", flag: "vn" },
+  { code: "id", name: "Bahasa Indonesia", flag: "id" },
+  { code: "pt-BR", name: "Português (Brasil)", flag: "br" },
+  { code: "fa", name: "فارسی", flag: "ir" },
+  { code: "ar", name: "العربية", flag: "sa" },
+  { code: "ja", name: "日本語", flag: "jp" },
+  { code: "ko", name: "한국어", flag: "kr" },
+  { code: "th", name: "ไทย", flag: "th" },
+  { code: "es", name: "Español", flag: "es" },
+  { code: "fr", name: "Français", flag: "fr" },
+  { code: "de", name: "Deutsch", flag: "de" },
+  { code: "tr", name: "Türkçe", flag: "tr" },
+  { code: "ur", name: "اردو", flag: "pk" },
+  { code: "it", name: "Italiano", flag: "it" },
+  { code: "pl", name: "Polski", flag: "pl" },
+  { code: "nl", name: "Nederlands", flag: "nl" },
+] as const
+
+export type Locale = typeof LOCALES[number]["code"]
+const LOCALE_CODES: ReadonlySet<string> = new Set(LOCALES.map(item => item.code))
+const RTL_LOCALES: ReadonlySet<string> = new Set(["ar", "fa", "ur"])
+
+export function isRtl(locale: string) {
+  return RTL_LOCALES.has(locale)
+}
+
+/** Chinese locales keep the Chinese date style (11月4日) and full-width punctuation. */
+export function isChinese(locale: string) {
+  return locale === "zh-CN" || locale === "zh-TW"
+}
+
+/** The BCP 47 tag handed to Intl formatters; English keeps day-month order. Digits stay Western (0–9) in every
+ *  language, including Arabic, Persian and Urdu, so dates match the counters and charts next to them. */
+export function intlLocale(locale: string) {
+  return locale === "en" ? "en-GB" : `${locale}-u-nu-latn`
+}
 
 const ZH: Record<string, string> = {
   "nav.sites": "站点",
@@ -265,28 +306,62 @@ const EN: Record<string, string> = {
   "footer.today_views": "{n} views",
 }
 
-const DICT: Record<Locale, Record<string, string>> = { "zh-CN": ZH, en: EN }
-
 type Params = Record<string, string | number>
 export type Translator = (key: string, params?: Params) => string
-const translatedText: Record<string, string> = { ...Object.fromEntries(Object.entries(ZH).map(([key, value]) => [value, EN[key] || value])), ...UI_EN }
+const ENGLISH: Record<string, string> = { ...Object.fromEntries(Object.entries(ZH).map(([key, value]) => [value, EN[key] || value])), ...UI_EN }
+
+// Every other language is a JSON catalog keyed by the Simplified Chinese source text,
+// split into its own chunk and loaded before the first render in that language.
+const catalogLoaders = import.meta.glob<{ default: Record<string, string> }>("../locales/*.json")
+const catalogs: Partial<Record<Locale, Record<string, string>>> = {}
+
+// Place and browser names arrive in simplified Chinese; zh-TW converts them once its converter has loaded.
+let traditional: ((text: string) => string) | undefined
+
+export function toTraditional(text: string) {
+  return traditional ? traditional(text) : text
+}
+
+export function toTraditionalFor(locale: string, text: string) {
+  return locale === "zh-TW" ? toTraditional(text) : text
+}
+
+export async function loadLocale(locale: Locale): Promise<void> {
+  if (locale === "zh-TW" && !traditional) {
+    const { Converter } = await import("opencc-js/cn2t")
+    traditional = Converter({ from: "cn", to: "twp" })
+  }
+  if (locale === "zh-CN" || locale === "en" || catalogs[locale]) return
+  const load = catalogLoaders[`../locales/${locale}.json`]
+  if (load) catalogs[locale] = (await load()).default
+}
+
+const own = (map: Record<string, string> | undefined, key: string) => map && Object.hasOwn(map, key) ? map[key] : undefined
 
 export function translate(locale: Locale, key: string, params?: Params) {
-  const catalog = DICT[locale]
-  const own = (map: Record<string, string>) => Object.hasOwn(map, key) ? map[key] : undefined
-  let value = own(catalog) || (locale === "en" ? own(translatedText) : undefined) || own(ZH) || key
+  const source = own(ZH, key) ?? key
+  let value: string
+  if (locale === "zh-CN") value = source
+  else if (locale === "en") value = own(EN, key) ?? own(ENGLISH, source) ?? source
+  // A missing string falls back to English, except Traditional Chinese which reads the Chinese source better.
+  // A catalog may also hold a keyed entry (e.g. "nav.sites", plural) where one Chinese word needs two translations.
+  else value = own(catalogs[locale], key) ?? own(catalogs[locale], source) ?? (locale === "zh-TW" ? source : own(EN, key) ?? own(ENGLISH, source) ?? source)
   if (params) value = value.replace(/\{(\w+)\}/g, (match, name) => Object.hasOwn(params, name) ? String(params[name]) : match)
   return value
 }
 
-const I18nContext = createContext<{ locale: Locale, setLocale: (locale: Locale) => void, t: Translator }>({
-  locale: "zh-CN", setLocale: () => {}, t: (key, params) => translate("zh-CN", key, params),
+const I18nContext = createContext<{ locale: Locale, setLocale: (locale: Locale) => Promise<void>, t: Translator }>({
+  locale: "zh-CN", setLocale: async () => {}, t: (key, params) => translate("zh-CN", key, params),
 })
 
 export function I18nProvider({ locale: initialLocale, children }: { locale: Locale, children: ReactNode }) {
-  const [locale, setLocale] = useState(initialLocale)
-  useEffect(() => { setLocale(initialLocale) }, [initialLocale])
-  useEffect(() => { document.documentElement.lang = locale === "en" ? "en" : "zh-CN" }, [locale])
+  const [locale, setShown] = useState(initialLocale)
+  const setLocale = useCallback(async (next: Locale) => { await loadLocale(next); setShown(next) }, [])
+  useEffect(() => { void setLocale(initialLocale) }, [initialLocale, setLocale])
+  useEffect(() => {
+    document.documentElement.lang = locale
+    document.documentElement.dir = isRtl(locale) ? "rtl" : "ltr"
+  }, [locale])
   const t = useCallback<Translator>((key, params) => translate(locale, key, params), [locale])
   return <I18nContext.Provider value={{ locale, setLocale, t }}>{children}</I18nContext.Provider>
 }
@@ -295,6 +370,19 @@ export function useT() {
   return useContext(I18nContext)
 }
 
-export function isLocale(value: string | null | undefined): value is Locale {
-  return value === "zh-CN" || value === "en"
+/** The first browser language Plost speaks, for visitors who have not chosen one. */
+export function browserLocale(languages: readonly string[] = typeof navigator === "undefined" ? [] : navigator.languages): Locale {
+  for (const tag of languages) {
+    const lower = tag.toLowerCase()
+    if (lower.startsWith("zh")) return /^zh-(tw|hk|mo|hant)/.test(lower) ? "zh-TW" : "zh-CN"
+    if (lower.startsWith("pt")) return "pt-BR"
+    const base = lower.split("-")[0]
+    const match = LOCALES.find(item => item.code === base)
+    if (match) return match.code
+  }
+  return "zh-CN"
+}
+
+export function isLocale(value: unknown): value is Locale {
+  return typeof value === "string" && LOCALE_CODES.has(value)
 }

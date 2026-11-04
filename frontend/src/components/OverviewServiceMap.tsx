@@ -183,7 +183,7 @@ export function OverviewGoogleMap({ apiKey, places, replay, onFailure }: { apiKe
     window.gm_authFailure = () => failRef.current()
     void (async () => {
       try {
-        const maps = await loadGoogleMaps(apiKey, locale === "en" ? "en" : "zh-CN")
+        const maps = await loadGoogleMaps(apiKey, locale)
         if (disposed) return
         clearTimeout(timer)
         map = new maps.Map(element, {

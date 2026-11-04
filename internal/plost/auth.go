@@ -208,7 +208,7 @@ func (a *App) profile(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 	}
-	if in.Name == "" || len(in.Name) > 100 || !validEmail(in.Email) || (in.Locale != "zh-CN" && in.Locale != "en") || (in.Theme != "system" && in.Theme != "dark" && in.Theme != "light") {
+	if in.Name == "" || len(in.Name) > 100 || !validEmail(in.Email) || !uiLocales[in.Locale] || (in.Theme != "system" && in.Theme != "dark" && in.Theme != "light") {
 		return failure(400, "账号设置无效")
 	}
 	passwordChange := in.Password != ""
@@ -468,4 +468,10 @@ func (l *limiter) allow(scope, key string, max int, period time.Duration) bool {
 	v.count++
 	l.entries[k] = v
 	return v.count <= max
+}
+
+// uiLocales are the interface languages the frontend ships (frontend/src/lib/i18n.tsx LOCALES).
+var uiLocales = map[string]bool{
+	"zh-CN": true, "zh-TW": true, "en": true, "ru": true, "vi": true, "id": true, "pt-BR": true, "fa": true, "ar": true, "ja": true,
+	"ko": true, "th": true, "es": true, "fr": true, "de": true, "tr": true, "ur": true, "it": true, "pl": true, "nl": true,
 }

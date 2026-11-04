@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react"
-import { useT } from "~/lib/i18n"
+import { useT, intlLocale } from "~/lib/i18n"
 import { CountryFlag } from "./icons"
 import { UIIcon } from "./UIIcon"
 import { ReportValue } from "./ReportValue"
@@ -29,7 +29,7 @@ export function ActivityLog({rows, timezone, hasMore}: {rows: RecentEvent[]; tim
   const lastPage = Math.max(0, Math.ceil(filtered.length/20)-1)
   const currentPage = Math.min(page,lastPage)
   const visible = filtered.slice(currentPage*20,(currentPage+1)*20)
-  const dateFormat = new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "zh-CN", {timeZone:timezone,month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"})
+  const dateFormat = new Intl.DateTimeFormat(intlLocale(locale), {timeZone:timezone,month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"})
   return <Surface className="activity-log-panel">
     <div className="activity-log-tools">
       <div className="activity-type-tabs" role="group" aria-label={t("事件类型")}>

@@ -64,12 +64,12 @@ function DashboardPage() {
   return (
     <Shell user={me} headerSearch={
       <div className="management-search relative">
-        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-gray-800">
+        <div className="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-3 text-gray-800">
           <UIIcon name="search" className="size-4" />
         </div>
         <input
           ref={searchRef}
-          className="squircle input pl-9"
+          className="squircle input ps-9"
           aria-label={t("搜索站点")}
           placeholder={searching ? t("搜索站点") : t("按 / 搜索")}
           value={q}
@@ -122,9 +122,9 @@ function DashboardPage() {
                             <p className="management-site-online"><i/>{t("当前在线")} <RollingNumber text={String(site.live || 0)} /></p>
                             <p className="text-sm text-gray-900">
                               {site.change > 0 ? (
-                                <UIIcon name="arrow-up-right" className="mr-0.5 inline-block h-3 w-3 text-green-500" />
+                                <UIIcon name="arrow-up-right" className="me-0.5 inline-block h-3 w-3 text-green-500" />
                               ) : site.change < 0 ? (
-                                <UIIcon name="arrow-down-right" className="mr-0.5 inline-block h-3 w-3 text-red-500" />
+                                <UIIcon name="arrow-down-right" className="me-0.5 inline-block h-3 w-3 text-red-500" />
                               ) : null}
                               <RollingNumber text={`${Math.abs(site.change || 0)}%`} />
                             </p>
@@ -134,7 +134,7 @@ function DashboardPage() {
                     </div>
                   </Surface>
                 </Link>
-                <div className="site-card-menu absolute top-2 right-2">
+                <div className="site-card-menu absolute top-2 end-2">
                   <ActionLink to="/sites/$domain/settings" params={{ domain: site.domain }}
                     className="btn-ghost site-card-menu-trigger" aria-label={`${t("设置")} ${site.domain}`} title={t("设置")}>
                     <UIIcon name="settings" className="size-[18px]" />

@@ -1,16 +1,16 @@
-import type { Locale } from "./i18n"
+import { translate, type Locale } from "./i18n"
 
 const labels = {
-  sites: { "zh-CN": "站点", en: "Sites" },
-  settings: { "zh-CN": "设置", en: "Settings" },
-  addSite: { "zh-CN": "添加站点", en: "Add site" },
-  siteSettings: { "zh-CN": "站点设置", en: "Site settings" },
-  activity: { "zh-CN": "活动日志", en: "Activity log" },
-  login: { "zh-CN": "登录", en: "Log in" },
-  setup: { "zh-CN": "初始化", en: "Set up" },
-  share: { "zh-CN": "公开统计", en: "Shared statistics" },
-  api: { "zh-CN": "API 文档", en: "API reference" },
-  notFound: { "zh-CN": "页面不存在", en: "Page not found" },
+  sites: "nav.sites",
+  settings: "设置",
+  addSite: "添加站点",
+  siteSettings: "站点设置",
+  activity: "活动日志",
+  login: "登录",
+  setup: "初始化",
+  share: "公开统计",
+  api: "API 文档",
+  notFound: "页面不存在",
 } as const
 
 type PageLabel = keyof typeof labels
@@ -46,5 +46,5 @@ export function pageTitle(pathname: string, locale: Locale): string {
       else return `${domainLabel(site[1])} | Plost`
     }
   }
-  return `${labels[label][locale]} | Plost`
+  return `${translate(locale, labels[label])} | Plost`
 }

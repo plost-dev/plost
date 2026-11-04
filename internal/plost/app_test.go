@@ -644,6 +644,10 @@ func TestUISettingsAuthorizationAndShareVisibility(t *testing.T) {
 	x.call(t, "PUT", "/api/map-style", map[string]string{"styleId": "dark-v11"}, 200)
 	x.call(t, "PUT", "/api/map-style", map[string]string{"styleId": "invalid"}, 400)
 	x.call(t, "PUT", "/api/account", map[string]any{"name": "Owner", "email": "owner@example.test", "locale": "zh-CN", "theme": "system", "avatar": "data:image/svg+xml;base64,PHN2Zz4="}, 400)
+	for _, locale := range []string{"ja", "ar", "pt-BR", "zh-TW", "zh-CN"} {
+		x.call(t, "PUT", "/api/account", map[string]any{"name": "Owner", "email": "owner@example.test", "locale": locale, "theme": "system"}, 200)
+	}
+	x.call(t, "PUT", "/api/account", map[string]any{"name": "Owner", "email": "owner@example.test", "locale": "pt", "theme": "system"}, 400)
 	var share struct{ Token string }
 	json.Unmarshal(x.call(t, "POST", "/api/sites/example.com/shares", map[string]string{"name": "Test"}, 200), &share)
 	body := x.call(t, "GET", "/api/sites/example.com/settings", nil, 200)

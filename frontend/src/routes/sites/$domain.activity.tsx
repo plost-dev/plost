@@ -7,7 +7,7 @@ import { PageState } from "~/components/PageState"
 import { Shell } from "~/components/Shell"
 import { SiteSwitcher } from "~/components/SiteSwitcher"
 import { activityFn, meFn } from "~/lib/actions"
-import { useT } from "~/lib/i18n"
+import { useT, intlLocale } from "~/lib/i18n"
 import { useRouterAutoRefresh } from "~/lib/router-refresh"
 
 type Window = "30m" | "24h" | "7d"
@@ -39,7 +39,7 @@ function ActivityPage() {
       <label className="activity-auto"><input type="checkbox" checked={auto} onChange={event=>setAuto(event.target.checked)}/>{t("每 30 秒刷新")}</label>
       <ActionButton  disabled={busy} onClick={async()=>{setBusy(true);setError("");try{await router.invalidate()}catch{setError(t("刷新失败，请重试"))}finally{setBusy(false)}}}>{t(busy ? "刷新中…" : "刷新")}</ActionButton>
     </div></div>
-    <div className="activity-update"><span className={`activity-live-dot ${auto ? "is-live" : ""}`}/>{t(auto ? "自动刷新已开启" : "自动刷新已暂停")}<span>{t("更新于")} {new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "zh-CN",{timeZone:data.timezone,hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).format(new Date(data.fetchedAt))} · {data.timezone}</span></div>
+    <div className="activity-update"><span className={`activity-live-dot ${auto ? "is-live" : ""}`}/>{t(auto ? "自动刷新已开启" : "自动刷新已暂停")}<span>{t("更新于")} {new Intl.DateTimeFormat(intlLocale(locale),{timeZone:data.timezone,hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"}).format(new Date(data.fetchedAt))} · {data.timezone}</span></div>
     {error ? <p role="alert" className="squircle settings-feedback is-error">{error}</p> : null}
     <ActivityLog key={`${domain}-${range}`} rows={data.rows} timezone={data.timezone} hasMore={data.hasMore}/>
   </Shell>

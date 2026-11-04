@@ -33,5 +33,5 @@ html[data-theme="dark"] .search-integrations [role="alert"].text-red-500 { color
 }
 @media(max-width:639px) {
   .search-integration-heading { grid-template-columns:minmax(0,1fr); gap:12px; }
-  .search-integration-heading .integration-status { margin-left:30px; }
+  .search-integration-heading .integration-status { margin-inline-start:30px; }
 }

@@ -1,3 +1,4 @@
+import { translate, type Locale } from "./i18n"
 const NAMES: Record<string, string> = {
   zh: "中文", "zh-CN": "中文", "zh-Hans": "中文", "zh-TW": "中文（台湾）", "zh-Hant": "中文（繁体）", "zh-HK": "中文（香港）",
   en: "英语", "en-US": "英语", "en-GB": "英语（英国）", "en-AU": "英语（澳大利亚）",
@@ -46,7 +47,7 @@ export function languageFlag(code: string) {
 
 export function languageName(code: string, locale = "zh-CN") {
   const key = languageCode(code)
-  if (!key) return locale === "en" ? "Unknown" : "未知"
+  if (!key) return translate(locale as Locale, "未知")
   // DisplayNames does not accept Unicode/private-use extensions. Keep those in
   // the adjacent code, but use the base locale to describe the language.
   let base = key
@@ -54,8 +55,8 @@ export function languageName(code: string, locale = "zh-CN") {
   const short = base.split("-")[0]
   const exactName = Object.hasOwn(NAMES, base) ? NAMES[base] : undefined
   const shortName = Object.hasOwn(NAMES, short) ? NAMES[short] : undefined
-  if (locale === "en") {
-    try { return new Intl.DisplayNames(["en"], { type: "language" }).of(base) || base } catch { return base }
+  if (locale !== "zh-CN") {
+    try { return new Intl.DisplayNames([locale], { type: "language" }).of(base) || base } catch { return base }
   }
   if (exactName) return exactName
   // A short-name fallback would hide valid region/script qualifiers such as

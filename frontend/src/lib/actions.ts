@@ -1,11 +1,12 @@
 import type { OverviewPlace } from "~/components/OverviewGlobe"
+import type {Locale} from "./i18n"
 import {rpc} from "./rpc"
 import type {LivePoint} from "./live-arrivals"
 import type {Overview,SeriesBy,Row,RecentVisitor,RecentEvent} from "./ch"
 import type {DashSearch} from "./range"
 import type {SiteCheckReport} from "./site-checks"
 
-export type User={id:number;email:string;name:string;theme:"system"|"dark"|"light";locale:"zh-CN"|"en";avatar:string;totp:boolean;totp_enabled:boolean;isAdmin:boolean;gravatarUrl?:string}
+export type User={id:number;email:string;name:string;theme:"system"|"dark"|"light";locale:Locale;avatar:string;totp:boolean;totp_enabled:boolean;isAdmin:boolean;gravatarUrl?:string}
 export type Site={id:number;domain:string;name:string;timezone:string;public:boolean;createdAt:number}
 type Input<T>={data:T}
 type GoOverview={visitors:number;visits:number;pageviews:number;online:number;bounceRate:number;duration:number}

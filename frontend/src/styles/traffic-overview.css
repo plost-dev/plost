@@ -32,7 +32,7 @@ html .traffic-overview[data-chart="bar"] {
   min-height: 90px;
   padding: 14px 16px;
   gap: 10px;
-  text-align: left;
+  text-align:start;
 }
 .traffic-summary-label { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--color-gray-500); font-size: 12px; font-weight: 500; line-height: 18px; text-transform: uppercase; }
 .traffic-series-dot { display: inline-block; width: 8px; height: 8px; flex: none; border-radius: 50%; background: var(--traffic-visitors); }

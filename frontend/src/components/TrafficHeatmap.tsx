@@ -1,4 +1,4 @@
-import { useT } from "~/lib/i18n"
+import { intlLocale, useT } from "~/lib/i18n"
 import { useState, type CSSProperties, type KeyboardEvent } from "react"
 import { axisScale, formatAxisTick } from "~/lib/axis"
 
@@ -35,7 +35,7 @@ export function TrafficHeatmap({ cells, days, bare = false }: { cells: HeatCell[
     const short = `${Number(date.slice(5, 7))}/${Number(date.slice(8, 10))}`
     return index === today ? `${dayName(index)} ${short} · ${t("今天")}` : `${dayName(index)} ${short}`
   }
-  const cellLabel = (index: number, hour: number) => t("{0} {1} · {2} 访客", {0: dateLabel(index), 1: hourLabel(hour), 2: valueAt(index, hour).toLocaleString(locale)})
+  const cellLabel = (index: number, hour: number) => t("{0} {1} · {2} 访客", {0: dateLabel(index), 1: hourLabel(hour), 2: valueAt(index, hour).toLocaleString(intlLocale(locale))})
   function selectCell(index: number, hour: number) {
     setChosenDate(days[index]?.date ?? null)
     setSelected({ row: index, hour })
