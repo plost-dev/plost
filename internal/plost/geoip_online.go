@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/netip"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -19,6 +20,7 @@ import (
 
 const (
 	geoOnlineBase    = "https://geo.plost.io/v1/"
+	cnipBase         = "https://api.cnip.io/geoip/" // cities in mainland China, when that option is on
 	geoOnlineTimeout = 1500 * time.Millisecond
 	geoOnlineKeep    = 24 * time.Hour // how long an answer is reused
 	geoOnlineMiss    = time.Minute    // how long a failed lookup is not retried
@@ -38,6 +40,7 @@ type onlineGeo struct {
 type onlinePlace struct {
 	country  string
 	region   string // the province or state as the service names it ("Queensland", "江苏")
+	city     string // the city as the service names it ("Mountain View", "南京")
 	lat, lon float64
 	placed   bool // the answer had coordinates
 	until    time.Time
@@ -134,10 +137,11 @@ func (o *onlineGeo) ask(ip netip.Addr) (onlinePlace, bool) {
 		return onlinePlace{}, false
 	}
 	var answer struct {
-		Country   string   `json:"country_code"`
-		Region    string   `json:"region"`
-		Latitude  *float64 `json:"latitude"`
-		Longitude *float64 `json:"longitude"`
+		Country   string     `json:"country_code"`
+		Region    string     `json:"region"`
+		City      string     `json:"city"`
+		Latitude  *flexFloat `json:"latitude"`
+		Longitude *flexFloat `json:"longitude"`
 	}
 	if json.NewDecoder(io.LimitReader(resp.Body, geoOnlineBody)).Decode(&answer) != nil {
 		return onlinePlace{}, false
@@ -147,11 +151,27 @@ func (o *onlineGeo) ask(ip netip.Addr) (onlinePlace, bool) {
 		p.country = ""
 	} else {
 		p.region = short(strings.TrimSpace(answer.Region), 100)
+		p.city = short(strings.TrimSpace(answer.City), 100)
 	}
-	if lat, lon := answer.Latitude, answer.Longitude; lat != nil && lon != nil && *lat >= -90 && *lat <= 90 && *lon >= -180 && *lon <= 180 {
-		p.lat, p.lon, p.placed = roundCoord(*lat), roundCoord(*lon), true
+	if answer.Latitude != nil && answer.Longitude != nil {
+		if lat, lon := float64(*answer.Latitude), float64(*answer.Longitude); lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180 {
+			p.lat, p.lon, p.placed = roundCoord(lat), roundCoord(lon), true
+		}
 	}
 	return p, true
+}
+
+// flexFloat reads a coordinate given as a JSON number or as a string ("32.041544"), as api.cnip.io sends them.
+type flexFloat float64
+
+func (f *flexFloat) UnmarshalJSON(b []byte) error {
+	s := strings.Trim(string(b), `"`)
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return err
+	}
+	*f = flexFloat(v)
+	return nil
 }
 
 // clear forgets every answer, when the source changes away from online.

@@ -36,6 +36,13 @@ type RegionRow struct {
 	Name    string `json:"name"`
 	Value   int64  `json:"value"`
 }
+// CityRow is a city's visitors: its English name (the key), its Chinese name when one is known, and its country.
+type CityRow struct {
+	Country string `json:"country"`
+	Name    string `json:"name"`
+	Label   string `json:"label,omitempty"`
+	Value   int64  `json:"value"`
+}
 type Point struct {
 	At         int64   `json:"at"`
 	Visitors   int64   `json:"visitors"`
@@ -56,6 +63,8 @@ type Report struct {
 	// Regions counts visitors by province or state, for the map: an ISO 3166-2 code, or the name the online GeoIP
 	// service gave, under its country.
 	Regions   []RegionRow `json:"regions"`
+	// Cities counts visitors by city, where the GeoIP lookup named one (recorded since cities were added).
+	Cities []CityRow `json:"cities"`
 	Browsers  []Row       `json:"browsers"`
 	OS        []Row       `json:"os"`
 	Devices   []Row       `json:"devices"`
@@ -343,6 +352,10 @@ func (a *App) report(r *http.Request, site Site, readonly bool) (Report, error) 
 	if err != nil {
 		return result, err
 	}
+	result.Cities, err = a.cities(r.Context(), site.ID, rng, q)
+	if err != nil {
+		return result, err
+	}
 	result.Live, err = a.liveCountries(r.Context(), site.ID, q)
 	if err != nil {
 		return result, err
@@ -523,6 +536,26 @@ func (a *App) regions(ctx context.Context, site int64, r Range, q url.Values) ([
 	for rows.Next() {
 		var v RegionRow
 		if err := rows.Scan(&v.Country, &v.Name, &v.Value); err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
+// cities counts the visitors of each recorded city, the busiest first. A city is its country and English name, so
+// two towns of the same name in different countries stay apart; the Chinese name shown is the latest one recorded.
+func (a *App) cities(ctx context.Context, site int64, r Range, q url.Values) ([]CityRow, error) {
+	w, args := where(site, r, q)
+	rows, err := a.db.QueryContext(ctx, "SELECT country_code,city,max(city_zh),count(DISTINCT "+visitorSQL+") AS n FROM events_v2 WHERE "+w+" AND name='pageview' AND city<>'' AND country_code<>'' GROUP BY 1,2 ORDER BY n DESC,1,2 LIMIT 1000", args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []CityRow{}
+	for rows.Next() {
+		var v CityRow
+		if err := rows.Scan(&v.Country, &v.Name, &v.Label, &v.Value); err != nil {
 			return nil, err
 		}
 		out = append(out, v)

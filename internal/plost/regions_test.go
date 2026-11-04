@@ -20,7 +20,7 @@ func TestReportCountsVisitorsByRegion(t *testing.T) {
 	place := func(country, region string) mmdbtype.Map {
 		return mmdbtype.Map{"country": mmdbtype.Map{"iso_code": mmdbtype.String(country)}, "subdivisions": mmdbtype.Slice{mmdbtype.Map{"iso_code": mmdbtype.String(region)}}}
 	}
-	writeGeoDB(t, path, map[string]any{"203.0.113.0/26": place("CN", "GD"), "203.0.113.64/26": place("US", "NE"), "203.0.113.128/26": "JP", "203.0.113.192/26": place("DE", "BY"), "198.51.100.0/25": mmdbtype.Map{"country": mmdbtype.Map{"iso_code": mmdbtype.String("FR")}, "subdivisions": mmdbtype.Slice{mmdbtype.Map{"iso_code": mmdbtype.String("IDF")}, mmdbtype.Map{"iso_code": mmdbtype.String("75")}}}, "198.51.100.128/25": mmdbtype.Map{"country": mmdbtype.Map{"iso_code": mmdbtype.String("CZ")}, "subdivisions": mmdbtype.Slice{mmdbtype.Map{"iso_code": mmdbtype.String("42")}, mmdbtype.Map{"iso_code": mmdbtype.String("423")}}}}, time.Now())
+	writeGeoDB(t, path, map[string]any{"203.0.113.0/26": place("CN", "GD"), "203.0.113.64/26": mmdbtype.Map{"country": mmdbtype.Map{"iso_code": mmdbtype.String("US")}, "subdivisions": mmdbtype.Slice{mmdbtype.Map{"iso_code": mmdbtype.String("NE")}}, "city": mmdbtype.Map{"names": mmdbtype.Map{"en": mmdbtype.String("Omaha"), "zh-CN": mmdbtype.String("奥马哈")}}}, "203.0.113.128/26": "JP", "203.0.113.192/26": place("DE", "BY"), "198.51.100.0/25": mmdbtype.Map{"country": mmdbtype.Map{"iso_code": mmdbtype.String("FR")}, "subdivisions": mmdbtype.Slice{mmdbtype.Map{"iso_code": mmdbtype.String("IDF")}, mmdbtype.Map{"iso_code": mmdbtype.String("75")}}}, "198.51.100.128/25": mmdbtype.Map{"country": mmdbtype.Map{"iso_code": mmdbtype.String("CZ")}, "subdivisions": mmdbtype.Slice{mmdbtype.Map{"iso_code": mmdbtype.String("42")}, mmdbtype.Map{"iso_code": mmdbtype.String("423")}}}}, time.Now())
 	a, err := Open(Config{DataDir: t.TempDir(), Version: "test", GeoIPPath: path})
 	if err != nil {
 		t.Fatal(err)
@@ -59,6 +59,10 @@ func TestReportCountsVisitorsByRegion(t *testing.T) {
 	want := []RegionRow{{"CN", "CN-GD", 2}, {"CZ", "CZ-42", 1}, {"FR", "FR-75", 1}, {"US", "US-NE", 1}}
 	if fmt.Sprint(report.Regions) != fmt.Sprint(want) {
 		t.Fatalf("regions: %+v", report.Regions)
+	}
+	// Cities come from the database's names: English as the key, Chinese as the label.
+	if fmt.Sprint(report.Cities) != fmt.Sprint([]CityRow{{"US", "Omaha", "奥马哈", 1}}) {
+		t.Fatalf("cities: %+v", report.Cities)
 	}
 	// The visitors online now carry their province too; one placed only by country has an empty one.
 	if live := fmt.Sprint(report.LiveRegions); !strings.Contains(live, "{CN CN-GD 2}") || !strings.Contains(live, "{JP  1}") {

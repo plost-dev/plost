@@ -20,7 +20,7 @@ import (
 type Event struct {
 	SiteID                                                                                                                                                                                  int64
 	At                                                                                                                                                                                      int64
-	Name, Hostname, Path, Source, Referrer, UserID, SessionID, SessionVisitor, Country, Region, Browser, OS, Device, Language, Screen, Title, UTMSource, UTMMedium, UTMCampaign, Props, Via string
+	Name, Hostname, Path, Source, Referrer, UserID, SessionID, SessionVisitor, Country, Region, City, CityZh, Browser, OS, Device, Language, Screen, Title, UTMSource, UTMMedium, UTMCampaign, Props, Via string
 }
 type ingest struct {
 	event Event
@@ -310,7 +310,8 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 	if pathname == "" {
 		pathname = "/"
 	}
-	ev := Event{SiteID: site.ID, At: now.Unix(), Name: name, Hostname: canonicalHost(u.Hostname()), Path: short(pathname, 2048), Source: source, Referrer: short(ref, 2048), UserID: userID, SessionVisitor: sessionVisitor, Country: country, Region: a.requestRegion(r, country, now), Browser: browser, OS: osName, Device: device, Language: short(first(data, "l", "language"), 64), Screen: screen, Title: short(first(data, "t", "title"), 500), UTMSource: short(q.Get("utm_source"), 200), UTMMedium: short(q.Get("utm_medium"), 200), UTMCampaign: short(q.Get("utm_campaign"), 200), Props: string(propsJSON)}
+	place := a.requestPlace(r, country, now)
+	ev := Event{SiteID: site.ID, At: now.Unix(), Name: name, Hostname: canonicalHost(u.Hostname()), Path: short(pathname, 2048), Source: source, Referrer: short(ref, 2048), UserID: userID, SessionVisitor: sessionVisitor, Country: country, Region: place.region, City: place.city, CityZh: place.cityZh, Browser: browser, OS: osName, Device: device, Language: short(first(data, "l", "language"), 64), Screen: screen, Title: short(first(data, "t", "title"), 500), UTMSource: short(q.Get("utm_source"), 200), UTMMedium: short(q.Get("utm_medium"), 200), UTMCampaign: short(q.Get("utm_campaign"), 200), Props: string(propsJSON)}
 	if via := first(data, "x"); retryTransports[via] {
 		ev.Via = via
 	} else if r.URL.Path == "/api/send" {
@@ -420,7 +421,7 @@ func (a *App) persistBatch(batch []*ingest) error {
 		return err
 	}
 	defer tx.Rollback()
-	stmt, err := tx.PrepareContext(ctx, `INSERT INTO events_v2(site_id,timestamp,name,hostname,pathname,referrer_source,referrer,user_id,session_id,session_visitor_id,country_code,region,browser,os,device,language,screen,title,utm_source,utm_medium,utm_campaign,props,via) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+	stmt, err := tx.PrepareContext(ctx, `INSERT INTO events_v2(site_id,timestamp,name,hostname,pathname,referrer_source,referrer,user_id,session_id,session_visitor_id,country_code,region,city,city_zh,browser,os,device,language,screen,title,utm_source,utm_medium,utm_campaign,props,via) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
 	if err != nil {
 		return err
 	}
@@ -444,7 +445,7 @@ func (a *App) persistBatch(batch []*ingest) error {
 		if session == "" {
 			session = randomHex(16)
 		}
-		_, err = stmt.ExecContext(ctx, e.SiteID, e.At, e.Name, e.Hostname, e.Path, e.Source, e.Referrer, e.UserID, session, e.SessionVisitor, e.Country, e.Region, e.Browser, e.OS, e.Device, e.Language, e.Screen, e.Title, e.UTMSource, e.UTMMedium, e.UTMCampaign, e.Props, e.Via)
+		_, err = stmt.ExecContext(ctx, e.SiteID, e.At, e.Name, e.Hostname, e.Path, e.Source, e.Referrer, e.UserID, session, e.SessionVisitor, e.Country, e.Region, e.City, e.CityZh, e.Browser, e.OS, e.Device, e.Language, e.Screen, e.Title, e.UTMSource, e.UTMMedium, e.UTMCampaign, e.Props, e.Via)
 		if err != nil {
 			return err
 		}

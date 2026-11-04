@@ -96,6 +96,8 @@ type App struct {
 	geoAgain      atomic.Bool // Settings changed while it ran; run once more.
 	geoOnline     atomic.Bool // Addresses are looked up at geo.plost.io instead (geoip_online.go).
 	online        *onlineGeo
+	cnCity        atomic.Bool // Visitors in mainland China are placed by api.cnip.io (geoip_cn_city).
+	cnip          *onlineGeo
 	geoHTTP       *http.Client // Test seams: a local fake for the download servers.
 	geoMirrorURL  string
 	geoMaxMindURL string
@@ -184,6 +186,8 @@ func Open(cfg Config) (*App, error) {
 	a.outboundAllow = cfg.OutboundAllow
 	a.siteProbe = newSiteChecker(cfg.OutboundAllow)
 	a.online = newOnlineGeo(geoOnlineBase, newOnlineClient(cfg.OutboundAllow))
+	a.cnip = newOnlineGeo(cnipBase, a.online.client)
+	a.cnCity.Store(a.setting(context.Background(), "geoip_cn_city", "") == "1")
 	a.geoOnline.Store(cfg.GeoIPPath == "" && a.setting(context.Background(), "geoip_source", "plost") == "online")
 	// Google Maps counts as on only with a key, so the page policy never allows its hosts for nothing.
 	a.googleMaps.Store(cfg.GoogleMapsKey != "" && a.setting(context.Background(), "google_maps_enabled", "false") == "true")
@@ -290,7 +294,7 @@ func migrate(db *sql.DB) error {
 	if _, err := db.Exec(schema); err != nil {
 		return err
 	}
-	for _, column := range []struct{ table, name, kind string }{{"users", "avatar", "TEXT NOT NULL DEFAULT ''"}, {"shared_links", "slug", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "source_id", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "session_visitor_id", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "via", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "region", "TEXT NOT NULL DEFAULT ''"}} {
+	for _, column := range []struct{ table, name, kind string }{{"users", "avatar", "TEXT NOT NULL DEFAULT ''"}, {"shared_links", "slug", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "source_id", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "session_visitor_id", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "via", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "region", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "city", "TEXT NOT NULL DEFAULT ''"}, {"events_v2", "city_zh", "TEXT NOT NULL DEFAULT ''"}} {
 		var n int
 		if err := db.QueryRow("SELECT count(*) FROM pragma_table_info(?) WHERE name=?", column.table, column.name).Scan(&n); err != nil {
 			return err

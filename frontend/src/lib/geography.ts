@@ -36,8 +36,9 @@ export function geographyLabel(kind: "region" | "city", name: string, country: s
   const translations = code ? names[code.replace("-", "").toLowerCase()] : undefined
   const unknown = locale === "en" ? (kind === "city" ? "Unknown city" : "Unknown region") : (kind === "city" ? "未知城市" : "未知地区")
   const raw = name.trim()
+  // A city without a Chinese name keeps its own (English) name rather than a placeholder that hides which city it is.
   if (kind === "city" && locale !== "en" && /\p{L}/u.test(raw.replace(/\p{Script=Han}/gu,""))) {
-    return nation ? `${countryName(nation, locale)} · 暂无中文名称` : "暂无中文名称"
+    return nation ? `${countryName(nation, locale)} · ${raw}` : raw
   }
   const text = translations?.[locale === "en" ? 0 : 1] || translations?.[0]
     || (!raw || /^\d+$/.test(raw) || /^\(?none\)?$/i.test(raw) || /^[A-Z]{2}[-_][A-Z0-9]{1,4}$/.test(raw) ? unknown : raw)

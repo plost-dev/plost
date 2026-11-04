@@ -455,6 +455,7 @@ type geoView struct {
 	Editable bool     `json:"editable"` // the keys can be saved from this page (-env-file)
 	Updating bool     `json:"updating"` // a download is running
 	State    geoState `json:"state"`
+	CNCity   bool     `json:"cnCity"` // visitors in mainland China are placed by api.cnip.io
 	// With -geoip-db: when the file in use was built and when it last changed on disk.
 	FileBuiltAt   int64 `json:"fileBuiltAt,omitempty"`
 	FileChangedAt int64 `json:"fileChangedAt,omitempty"`
@@ -464,7 +465,8 @@ func (a *App) geoViewOf(ctx context.Context) geoView {
 	source, edition, state := a.geoSettings(ctx)
 	account, key := a.maxMindKeys()
 	view := geoView{Managed: a.geoManaged(), FlagPath: a.cfg.GeoIPPath, Loaded: a.geo.ready(), Source: source, Edition: edition,
-		Account: maskKey(account), Key: maskSecret(key), Editable: a.cfg.EnvFile != "", Updating: a.geoUpdating.Load(), State: state}
+		Account: maskKey(account), Key: maskSecret(key), Editable: a.cfg.EnvFile != "", Updating: a.geoUpdating.Load(), State: state,
+		CNCity: a.cnCity.Load()}
 	if !view.Managed && a.geo != nil {
 		if db := a.geo.db.Load(); db != nil {
 			view.FileBuiltAt, view.FileChangedAt = int64(db.reader.Metadata.BuildEpoch), db.sig.mod.Unix()
@@ -486,18 +488,36 @@ func (a *App) geoipGet(w http.ResponseWriter, r *http.Request) error {
 }
 
 // geoipPut saves the source, the edition or the MaxMind keys, then brings the database in line in the background.
+// The cnip.io option stands apart from the database and can be changed with -geoip-db too.
 func (a *App) geoipPut(w http.ResponseWriter, r *http.Request) error {
-	if !a.geoManaged() {
-		return failure(400, "IP 数据库由启动参数 -geoip-db 指定，请在服务器上更新该文件")
-	}
 	var in struct {
 		Source  *string `json:"source"`
 		Edition *string `json:"edition"`
 		Account *string `json:"account"`
 		Key     *string `json:"key"`
+		CNCity  *bool   `json:"cnCity"`
 	}
 	if err := readJSON(w, r, &in); err != nil {
 		return err
+	}
+	if in.CNCity != nil {
+		value := ""
+		if *in.CNCity {
+			value = "1"
+		}
+		if _, err := a.db.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES('geoip_cn_city',?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", value); err != nil {
+			return err
+		}
+		a.cnCity.Store(*in.CNCity)
+		if !*in.CNCity {
+			a.cnip.clear()
+		}
+		if in.Source == nil && in.Edition == nil && in.Account == nil && in.Key == nil {
+			return jsonResponse(w, a.geoViewOf(r.Context()))
+		}
+	}
+	if !a.geoManaged() {
+		return failure(400, "IP 数据库由启动参数 -geoip-db 指定，请在服务器上更新该文件")
 	}
 	if in.Account != nil || in.Key != nil {
 		if in.Account == nil || in.Key == nil {

@@ -143,6 +143,10 @@ type geoRecord struct {
 	Subdivisions []struct {
 		ISOCode string `maxminddb:"iso_code"`
 	} `maxminddb:"subdivisions"`
+	// Only City databases name the city, in several languages; "en" and "zh-CN" are the ones shown.
+	City struct {
+		Names map[string]string `maxminddb:"names"`
+	} `maxminddb:"city"`
 	// Only City databases have a location: the middle of the city or area the address belongs to.
 	Location struct {
 		Latitude  *float64 `maxminddb:"latitude"`
@@ -192,25 +196,32 @@ func (g *geoIP) country(ip netip.Addr, now time.Time) string {
 	return code
 }
 
+// geoPlace is where an address is, below its country: the province or state and the city, each "" when unknown.
+type geoPlace struct {
+	region         string // an ISO 3166-2 code ("CN-GD"), or the name an online service gives
+	city, cityZh string // the city's English name, and its Chinese name when one is known
+}
+
 // region returns the address's country and its province or state as an ISO 3166-2 code ("CN-GD", "US-NE", "FR-75"),
-// or "" for the region when the database has none (a Country database, or an address placed only by country).
-func (g *geoIP) region(ip netip.Addr, now time.Time) (country, region string) {
+// and its city, with "" for what the database does not have (a Country database, or an address placed only by
+// country).
+func (g *geoIP) region(ip netip.Addr, now time.Time) (country string, place geoPlace) {
 	g.refresh(now)
 	ip = ip.Unmap()
 	if !ip.IsValid() || !ip.IsGlobalUnicast() || ip.IsPrivate() {
-		return "", ""
+		return "", geoPlace{}
 	}
 	db := g.db.Load()
 	if db == nil {
-		return "", ""
+		return "", geoPlace{}
 	}
 	var rec geoRecord
 	if err := db.reader.Lookup(ip).Decode(&rec); err != nil {
-		return "", ""
+		return "", geoPlace{}
 	}
 	country = strings.ToUpper(rec.Country.ISOCode)
 	if !countryPattern.MatchString(country) {
-		return "", ""
+		return "", geoPlace{}
 	}
 	if n := len(rec.Subdivisions); n > 0 {
 		level := rec.Subdivisions[0]
@@ -218,10 +229,15 @@ func (g *geoIP) region(ip netip.Addr, now time.Time) (country, region string) {
 			level = rec.Subdivisions[n-1]
 		}
 		if code := strings.ToUpper(level.ISOCode); regionCodePattern.MatchString(code) {
-			region = country + "-" + code
+			place.region = country + "-" + code
 		}
 	}
-	return country, region
+	place.city = short(strings.TrimSpace(rec.City.Names["en"]), 100)
+	place.cityZh = short(strings.TrimSpace(rec.City.Names["zh-CN"]), 100)
+	if place.city == "" {
+		place.city = place.cityZh
+	}
+	return country, place
 }
 
 // secondLevelMaps are the countries the visitor map divides into their smaller units (Natural Earth's provinces
@@ -231,27 +247,57 @@ var secondLevelMaps = map[string]bool{"FR": true, "GB": true, "IT": true, "ES": 
 
 var regionCodePattern = regexp.MustCompile(`^[A-Z0-9]{1,3}$`)
 
-// requestRegion names the province or state of the visitor in country (the one requestCountry chose): its ISO
-// 3166-2 code from a City database, or the name the online service gives, which the page matches to a code. A
-// lookup that places the address in another country than the CDN said gives no region, rather than a wrong one.
-func (a *App) requestRegion(r *http.Request, country string, now time.Time) string {
-	if country == "" || !a.placesKnown() || !a.visitorKnown(r) {
-		return ""
+// requestPlace names the province or state and the city of the visitor in country (the one requestCountry chose):
+// the region as an ISO 3166-2 code from a City database, or the name the online service gives, which the page
+// matches to a code. A lookup that places the address in another country than the CDN said gives nothing, rather
+// than a wrong place. With the cnip.io option on, visitors in mainland China are placed by api.cnip.io instead,
+// which knows Chinese cities far better than GeoLite2; the others keep the database.
+func (a *App) requestPlace(r *http.Request, country string, now time.Time) geoPlace {
+	if country == "" || !a.visitorKnown(r) {
+		return geoPlace{}
 	}
 	ip, _ := a.visitorAddr(r)
 	if !ip.IsValid() {
-		return ""
+		return geoPlace{}
+	}
+	if country == "CN" && a.cnCity.Load() {
+		if p := a.cnip.place(ip, now); p.country == "CN" && p.city != "" {
+			return geoPlace{region: chinaRegionCode(p.region), city: p.city, cityZh: p.city}
+		}
+	}
+	if !a.placesKnown() {
+		return geoPlace{}
 	}
 	if a.geoOnline.Load() {
 		if p := a.online.place(ip, now); p.country == country {
-			return p.region
+			return geoPlace{region: p.region, city: p.city, cityZh: p.city}
 		}
-		return ""
+		return geoPlace{}
 	}
-	if c, region := a.geo.region(ip, now); c == country {
-		return region
+	if c, place := a.geo.region(ip, now); c == country {
+		return place
 	}
-	return ""
+	return geoPlace{}
+}
+
+// chinaRegionCode turns the province cnip.io names ("江苏", "广西壮族自治区") into its ISO 3166-2 code, the form a
+// City database stores, so both sources fall into the same rows; an unknown name is kept as it is.
+func chinaRegionCode(name string) string {
+	name = strings.TrimSpace(name)
+	for _, suffix := range []string{"维吾尔自治区", "壮族自治区", "回族自治区", "自治区", "特别行政区", "省", "市"} {
+		name = strings.TrimSuffix(name, suffix)
+	}
+	if code, ok := chinaProvinces[name]; ok {
+		return "CN-" + code
+	}
+	return short(name, 100)
+}
+
+var chinaProvinces = map[string]string{
+	"北京": "BJ", "天津": "TJ", "河北": "HE", "山西": "SX", "内蒙古": "NM", "辽宁": "LN", "吉林": "JL", "黑龙江": "HL",
+	"上海": "SH", "江苏": "JS", "浙江": "ZJ", "安徽": "AH", "福建": "FJ", "江西": "JX", "山东": "SD", "河南": "HA",
+	"湖北": "HB", "湖南": "HN", "广东": "GD", "广西": "GX", "海南": "HI", "重庆": "CQ", "四川": "SC", "贵州": "GZ",
+	"云南": "YN", "西藏": "XZ", "陕西": "SN", "甘肃": "GS", "青海": "QH", "宁夏": "NX", "新疆": "XJ",
 }
 
 // requestCountry names the visitor's country: a CDN's country header when one counts (visitorCountryHeader),

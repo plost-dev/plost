@@ -121,3 +121,86 @@ func TestCollectionUsesTheOnlineServiceWhenChosen(t *testing.T) {
 		t.Fatal("online lookups should stop")
 	}
 }
+
+// With the cnip.io option on, a visitor in mainland China gets the province and city api.cnip.io gives (its
+// coordinates come as strings), the province stored as the ISO code a City database would give; the report counts
+// them by city. Other countries are not sent to cnip.io.
+func TestChinaVisitorsArePlacedByCnip(t *testing.T) {
+	var asked atomic.Int32
+	cnip := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		asked.Add(1)
+		w.Write([]byte(`{"ip":"203.0.113.5","isp":"电信","country_code":"CN","country":"中国","region":"江苏","province":"江苏","city":"南京","latitude":"32.041544","longitude":"118.767413"}`))
+	}))
+	t.Cleanup(cnip.Close)
+	a, err := Open(Config{DataDir: t.TempDir(), Version: "test", TrustProxy: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a.cnip = newOnlineGeo(cnip.URL+"/geoip/", cnip.Client())
+	server := httptest.NewServer(a.Handler())
+	t.Cleanup(func() { server.Close(); a.Close() })
+	jar, _ := cookiejar.New(nil)
+	x := &testApp{a, server, &http.Client{Jar: jar, Timeout: 15 * time.Second}}
+	x.setup(t)
+	x.addSite(t, "example.com")
+	send := func(visitor, country string) {
+		b, _ := json.Marshal(map[string]any{"d": "example.com", "u": "https://example.com/", "v": visitor, "n": "pageview"})
+		req, _ := http.NewRequest("POST", server.URL+"/api/event", bytes.NewReader(b))
+		req.Header.Set("User-Agent", testChrome)
+		req.Header.Set("Origin", "https://example.com")
+		req.Header.Set("X-Forwarded-For", "203.0.113.5")
+		req.Header.Set("CF-IPCountry", country)
+		resp := mustDo(t, x.client, req)
+		io.Copy(io.Discard, resp.Body)
+		resp.Body.Close()
+	}
+	wait := func(want int) {
+		var n int
+		for i := 0; i < 500 && n < want; i++ {
+			a.db.QueryRow("SELECT count(*) FROM events_v2").Scan(&n)
+			time.Sleep(10 * time.Millisecond)
+		}
+		if n != want {
+			t.Fatalf("events = %d, want %d", n, want)
+		}
+	}
+
+	send("browser-aaaaaaaa", "CN") // option off: nothing is asked
+	wait(1)
+	if asked.Load() != 0 {
+		t.Fatal("cnip.io was asked while the option is off")
+	}
+	var view geoView
+	json.Unmarshal(x.call(t, "PUT", "/api/geoip", map[string]any{"cnCity": true}, 200), &view)
+	if !view.CNCity || !a.cnCity.Load() {
+		t.Fatalf("the option did not turn on: %+v", view)
+	}
+	send("browser-bbbbbbbb", "CN")
+	send("browser-cccccccc", "US") // another country keeps the database (none here): no lookup
+	wait(3)
+	if asked.Load() != 1 {
+		t.Fatalf("cnip.io lookups = %d, want 1", asked.Load())
+	}
+	var region, city, cityZh string
+	a.db.QueryRow("SELECT region,city,city_zh FROM events_v2 WHERE user_id LIKE '%bbbbbbbb%' OR country_code='CN' ORDER BY id DESC LIMIT 1").Scan(&region, &city, &cityZh)
+	if region != "CN-JS" || city != "南京" || cityZh != "南京" {
+		t.Fatalf("stored place = %q %q %q", region, city, cityZh)
+	}
+	var report Report
+	json.Unmarshal(x.call(t, "GET", "/api/sites/example.com/report?period=today", nil, 200), &report)
+	if len(report.Cities) != 1 || report.Cities[0] != (CityRow{Country: "CN", Name: "南京", Label: "南京", Value: 1}) {
+		t.Fatalf("cities = %+v", report.Cities)
+	}
+	x.call(t, "PUT", "/api/geoip", map[string]any{"cnCity": false}, 200)
+	if a.cnCity.Load() {
+		t.Fatal("the option did not turn off")
+	}
+}
+
+func TestChinaRegionCode(t *testing.T) {
+	for name, want := range map[string]string{"江苏": "CN-JS", "江苏省": "CN-JS", "广西壮族自治区": "CN-GX", "北京市": "CN-BJ", "新疆维吾尔自治区": "CN-XJ", "河南": "CN-HA", "未知": "未知"} {
+		if got := chinaRegionCode(name); got != want {
+			t.Errorf("chinaRegionCode(%q) = %q, want %q", name, got, want)
+		}
+	}
+}

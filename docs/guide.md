@@ -60,6 +60,7 @@ go build -trimpath -ldflags='-s -w' -o plost ./cmd/plost
 
 - **CDN 的国家头**（Cloudflare 的 `CF-IPCountry`、CloudFront 的 `CloudFront-Viewer-Country`）：有就优先采用。声明了 `-trusted-proxies` 时，和 `-client-ip-header` 一样只在请求经过受信任的 CDN 时采用；只用旧的 `-trust-proxy` 时，沿用以前的规则直接相信本机反代转来的头。
 - **本机的 GeoIP 库**：没有 Cloudflare（例如域名直接解析到源站）时，用本机的 MaxMind GeoLite2 数据库判断国家。默认不用任何配置：Plost 启动后自己从 Plost 镜像 `https://ipdata.plost.io/` 下载 GeoLite2-City（约 50 MB，还能让实时访客地图显示到城市，经纬度四舍五入到两位小数，约 1 公里），之后每天检查一次新版本。在「设置 → IP 数据库」里可以改成 GeoLite2-Country（约 3 MB，只有国家），也可以改用自己的 MaxMind 账号直接从 MaxMind 下载（账号 ID 和 License Key 写入 `-env-file` 指定的 env 文件，即 `PLOST_MAXMIND_ACCOUNT_ID`、`PLOST_MAXMIND_LICENSE_KEY`，不存数据库），或者选「在线查询」：本机不存库，每位访客的 IP 发送到 Plost 的 `https://geo.plost.io/v1/<IP>` 查询（中国大陆和港澳台用 ip2region，其他地区用 MaxMind；该服务不记录查询的 IP），结果在内存里保留一天，查询超过 1.5 秒或失败时这条访问不记国家；也可以关闭。每次下载先核对发布的 SHA-256，再解压并校验整个数据库，确认是所选的库后才改名替换正在使用的文件；旧版本和没下载完的文件随即删除，数据目录的 `geoip/` 下始终只有一个 `GeoLite2.mmdb`。下载失败时继续用原来的库，一小时后重试。下载只连接公网地址，规则与站点检查相同。想自己管理库文件时，用 `-geoip-db /路径/GeoLite2-City.mmdb` 指定，Plost 就不再下载，改为每分钟查看这个文件，替换成新文件后自动换用（更新工具须“写好新文件再改名覆盖”，不要原地改写；启动时打不开会拒绝启动）。只有拿得到访客 IP 时才会查（与访客哈希同一条件），CDN 的国家头可用时优先用它。
+- **省份和城市**：GeoLite2-City 和在线查询会同时记下访客的省/州和城市（城市按英文名归类，有中文名时显示中文），在统计页「地区」「城市」里查看；城市从升级到带城市统计的版本之后开始记录，之前的访问没有。中国大陆访客的省份和城市在 GeoLite2 里常常缺失，可以在「设置 → IP 数据库」打开「用 cnip.io 查询中国大陆访客的省份和城市」（默认关闭）：国家为中国的访客 IP 会发送到 `https://api.cnip.io/geoip/<IP>` 查询，其他国家仍用上面的数据来源；结果在内存里保留一天，查询超过 1.5 秒或失败时改用 IP 数据库。用 `-geoip-db` 自管库文件时也可以打开。
 
 除「在线查询」外，查询都在本机完成：只下载数据库文件，不会把访客 IP 发给 Plost 镜像、MaxMind 或其他第三方。已经存下来的事件不会补查国家，因为原始 IP 从不保存。
 

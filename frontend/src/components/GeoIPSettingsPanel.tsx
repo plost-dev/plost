@@ -8,6 +8,7 @@ import { ActionButton } from "./ActionButton"
 import { Field, FormActions, SettingsForm } from "./SettingsForm"
 import { SettingsTips } from "./SettingsTips"
 import { Tile } from "./ui"
+import { Toggle } from "./Toggle"
 
 const SOURCES: { id: GeoIPSource; label: string }[] = [
   { id: "plost", label: "Plost 镜像（ipdata.plost.io，无需账号）" },
@@ -34,6 +35,22 @@ function versionOfTime(seconds?: number) {
   return seconds ? new Date(seconds * 1000).toISOString().slice(0, 10) : "—"
 }
 
+/** Visitors in mainland China placed by api.cnip.io, which names their province and city far better than GeoLite2. */
+function ChinaCityTile({ data, onChange }: { data: GeoIPSettings, onChange: (next: GeoIPSettings) => void }) {
+  const { t } = useT()
+  const [pending, setPending] = useState(false)
+  async function change(cnCity: boolean) {
+    setPending(true)
+    try { onChange(await saveGeoIPSettingsFn({ cnCity })) }
+    catch (error) { showToast(error instanceof Error ? error.message : "保存失败", "error") }
+    finally { setPending(false) }
+  }
+  return <Tile icon="map" title="中国访客的省份和城市">
+    <Toggle checked={data.cnCity} disabled={pending} onChange={next => void change(next)}>{t("用 cnip.io 查询中国大陆访客的省份和城市")}</Toggle>
+    <p className="mt-4 text-sm leading-6 text-gray-600">{t("开启后，国家为中国的访客 IP 会发送到 api.cnip.io 查询省份和城市，其他国家仍用 IP 数据库；同一个 IP 的结果在内存里保留一天。查询超过 1.5 秒或失败时，改用 IP 数据库。城市从开启之后开始记录。")}</p>
+  </Tile>
+}
+
 /** Settings → IP 数据库: where the GeoLite2 database comes from, which one, and how its updates are going. */
 export function GeoIPSettingsPage() {
   const { t, locale } = useT()
@@ -58,6 +75,7 @@ export function GeoIPSettingsPage() {
         <div><dt>{t("文件更新时间")}</dt><dd>{data.fileChangedAt ? formatTimestamp(data.fileChangedAt * 1000, locale) : "—"}</dd></div>
       </dl>
     </Tile>}
+    <ChinaCityTile data={data} onChange={setData} />
     <SettingsTips tips={[
       "IP 数据库用来判断访客所在的国家；GeoLite2-City 还能让实时访客地图显示到城市。经过 Cloudflare 时优先使用它给出的国家。",
       "Plost 每天对照数据来源的版本号检查一次，版本不同才下载；下载后先核对 SHA-256、再校验整个数据库，通过后才替换正在使用的库，并删除旧版本和未完成的下载。",

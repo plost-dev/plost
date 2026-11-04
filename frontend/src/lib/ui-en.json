@@ -1437,5 +1437,8 @@
   "计划备份密码需要 12 到 256 个字节": "The backup password must be 12 to 256 bytes",
   "计划备份密码不能包含引号、反斜杠、$ 或换行，首尾也不能是空格": "The backup password cannot contain quotes, backslashes, $ or line breaks, or start or end with a space",
   "请先填写计划备份密码，自动备份需要它加密文件": "Enter a backup password first; scheduled backups are encrypted with it",
-  "请先在备份设置里填写计划备份密码": "Enter a backup password in the backup settings first"
+  "请先在备份设置里填写计划备份密码": "Enter a backup password in the backup settings first",
+  "中国访客的省份和城市": "Provinces and cities of visitors in China",
+  "用 cnip.io 查询中国大陆访客的省份和城市": "Look up provinces and cities of visitors in mainland China at cnip.io",
+  "开启后，国家为中国的访客 IP 会发送到 api.cnip.io 查询省份和城市，其他国家仍用 IP 数据库；同一个 IP 的结果在内存里保留一天。查询超过 1.5 秒或失败时，改用 IP 数据库。城市从开启之后开始记录。": "When on, the address of each visitor in China is sent to api.cnip.io to find their province and city; other countries still use the IP database. An answer is kept in memory for a day. A lookup slower than 1.5 seconds, or one that fails, falls back to the IP database. Cities are recorded from when this is turned on."
 }
