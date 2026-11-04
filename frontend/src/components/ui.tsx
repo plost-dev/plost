@@ -143,6 +143,7 @@ export type ListColumn = {
 
 export function List({
   title,
+  label,
   rows,
   onPick,
   kind,
@@ -159,6 +160,8 @@ export function List({
   emptyMessage = "暂无数据",
 }: {
   title?: string
+  /** Column heading; overrides the default label for `kind`. */
+  label?: string
   rows: ListRow[]
   onPick?: (name: string) => void
   kind?: ListKind
@@ -199,7 +202,7 @@ export function List({
   ) : (
     <div className={`flex flex-col ${expanded ? "" : "h-full"}`} style={extraCols.length ? {minWidth: 160 + extraCols.length * 72} : undefined}>
       <div className="flex w-full items-center pt-3 text-xs font-medium text-gray-500" style={{ height: ROW_HEIGHT }}>
-        <div className="w-full min-w-0 grow truncate">{t(DIM_LABEL[kind || ""] || title || "")}</div>
+        <div className="w-full min-w-0 grow truncate">{t(label || DIM_LABEL[kind || ""] || title || "")}</div>
         {bundlePct ? (
           <div className={`${valueWidth} shrink-0 text-right`}>{t(valueLabel)}</div>
         ) : extraCols.map((col) => (
@@ -295,6 +298,7 @@ function MoreLinkIcon() {
 export type DetailsSpec = {
   title: string
   kind?: ListKind
+  label?: string
   rows: ListRow[]
   columns?: ListColumn[]
   description?: string
@@ -354,7 +358,7 @@ function DetailsModal({
               className="squircle input mb-2 placeholder:text-gray-400"
             />
             <div className="report-details-scroll min-h-0 min-w-0 flex-1 overflow-auto">
-              <List plain expanded maxItems={0} kind={spec.kind} rows={filtered} referenceRows={spec.rows} columns={spec.columns} valueLabel={spec.valueLabel} percentageTotal={spec.percentageTotal} showPercent={spec.showPercent} emptyMessage={spec.emptyMessage} onPick={spec.onPick ? (name) => { spec.onPick?.(name); onClose() } : undefined} />
+              <List plain expanded maxItems={0} kind={spec.kind} label={spec.label} rows={filtered} referenceRows={spec.rows} columns={spec.columns} valueLabel={spec.valueLabel} percentageTotal={spec.percentageTotal} showPercent={spec.showPercent} emptyMessage={spec.emptyMessage} onPick={spec.onPick ? (name) => { spec.onPick?.(name); onClose() } : undefined} />
             </div>
           </div>
     </dialog>,
