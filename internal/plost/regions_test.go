@@ -8,6 +8,7 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -58,6 +59,10 @@ func TestReportCountsVisitorsByRegion(t *testing.T) {
 	want := []RegionRow{{"CN", "CN-GD", 2}, {"CZ", "CZ-42", 1}, {"FR", "FR-75", 1}, {"US", "US-NE", 1}}
 	if fmt.Sprint(report.Regions) != fmt.Sprint(want) {
 		t.Fatalf("regions: %+v", report.Regions)
+	}
+	// The visitors online now carry their province too; one placed only by country has an empty one.
+	if live := fmt.Sprint(report.LiveRegions); !strings.Contains(live, "{CN CN-GD 2}") || !strings.Contains(live, "{JP  1}") {
+		t.Fatalf("live regions: %v", live)
 	}
 	json.Unmarshal(x.call(t, "GET", "/api/sites/example.com/report?period=today&country=US", nil, 200), &report)
 	if len(report.Regions) != 1 || report.Regions[0].Name != "US-NE" {

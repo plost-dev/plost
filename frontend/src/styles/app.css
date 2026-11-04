@@ -564,6 +564,7 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   fill: var(--map-live);
   stroke: #fff;
   stroke-width: 1.2;
+  vector-effect: non-scaling-stroke;
 }
 
 .live-dot-pulse {
@@ -579,6 +580,7 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   fill: none;
   stroke: var(--map-live);
   stroke-width: 2;
+  vector-effect: non-scaling-stroke;
   opacity: 0;
   transform-box: fill-box;
   transform-origin: center;

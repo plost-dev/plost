@@ -65,9 +65,12 @@ type Report struct {
 	Readonly  bool        `json:"readonly"`
 	// Live counts the visitors online now (the last five minutes, like Overview.Online) by country, for the map, and
 	// LivePoints places them where a City GeoIP database could (livepoints.go).
-	Live       []Row          `json:"live"`
-	LivePoints []LivePoint    `json:"livePoints"`
-	Details    map[string]any `json:"details,omitempty"`
+	Live []Row `json:"live"`
+	// LiveRegions counts the same visitors by province or state where one was recorded, so the map can place those it
+	// has no city for at their province instead of the middle of their country.
+	LiveRegions []RegionRow    `json:"liveRegions"`
+	LivePoints  []LivePoint    `json:"livePoints"`
+	Details     map[string]any `json:"details,omitempty"`
 }
 
 func parseRange(q url.Values, zone string) (Range, error) {
@@ -329,6 +332,10 @@ func (a *App) report(r *http.Request, site Site, readonly bool) (Report, error) 
 	if err != nil {
 		return result, err
 	}
+	result.LiveRegions, err = a.liveRegions(r.Context(), site.ID, q)
+	if err != nil {
+		return result, err
+	}
 	result.LivePoints = a.live.points(site.ID, time.Now(), strings.ToUpper(q.Get("country")))
 	if q.Get("ui") == "1" {
 		result.Details, err = a.reportDetails(r.Context(), site, rng, q)
@@ -493,6 +500,27 @@ func (a *App) openapi(w http.ResponseWriter, r *http.Request) {
 func (a *App) regions(ctx context.Context, site int64, r Range, q url.Values) ([]RegionRow, error) {
 	w, args := where(site, r, q)
 	rows, err := a.db.QueryContext(ctx, "SELECT country_code,region,count(DISTINCT "+visitorSQL+") AS n FROM events_v2 WHERE "+w+" AND name='pageview' AND region<>'' AND country_code<>'' GROUP BY 1,2 ORDER BY n DESC,1,2 LIMIT 1000", args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []RegionRow{}
+	for rows.Next() {
+		var v RegionRow
+		if err := rows.Scan(&v.Country, &v.Name, &v.Value); err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
+}
+
+// liveRegions counts the visitors of the last five minutes by country and province, with the report's filters; the
+// region is empty for visitors without one.
+func (a *App) liveRegions(ctx context.Context, site int64, q url.Values) ([]RegionRow, error) {
+	live := Range{From: time.Now().Add(-5 * time.Minute), To: time.Now().Add(time.Second)}
+	w, args := where(site, live, q)
+	rows, err := a.db.QueryContext(ctx, "SELECT country_code,region,count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+w+" AND country_code<>'' GROUP BY 1,2 ORDER BY 3 DESC LIMIT 1000", args...)
 	if err != nil {
 		return nil, err
 	}

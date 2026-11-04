@@ -19,6 +19,10 @@ export type RegionMap = {
   centroids: Map<string, [number, number]>
   /** Finds the province a report row names: an ISO 3166-2 code, or a name from the online GeoIP service. */
   regionCode: (country: string, name: string) => string
+  /** The middle of a province's main part, by its ISO 3166-2 code. */
+  regionCenter: (code: string) => [number, number] | undefined
+  /** The province of a country that holds a place, or "" when none does. */
+  regionAt: (country: string, lon: number, lat: number) => string
 }
 
 let mapPromise: Promise<RegionMap> | undefined
@@ -76,7 +80,28 @@ function buildRegionMap(topology: Topology): RegionMap {
     if (/^[A-Z]{2}-[A-Z0-9]{1,3}$/.test(value)) return value
     return names.get(nameKey(country, name)) || names.get(nameKey(country, name.replace(CHINESE_SUFFIX, ""))) || subdivisionCode(country, name)
   }
-  return { regions, countries, regionLines, centroids, regionCode }
+  const byCode = new Map<string, RegionFeature[]>()
+  const ofCountry = new Map<string, RegionFeature[]>()
+  for (const region of regions) {
+    const { c, i } = region.properties
+    if (i) byCode.set(i, [...byCode.get(i) || [], region])
+    if (c) ofCountry.set(c, [...ofCountry.get(c) || [], region])
+  }
+  const centers = new Map<string, [number, number] | undefined>()
+  const regionCenter = (code: string) => {
+    if (!centers.has(code)) {
+      const parts = byCode.get(code) || []
+      const largest = parts.flatMap(part => part.geometry.type === "Polygon" ? [part.geometry.coordinates] : part.geometry.coordinates)
+        .map(coordinates => ({ coordinates, area: d3.geoArea({ type: "Polygon", coordinates }) }))
+        .sort((a, b) => b.area - a.area)[0]
+      const c = largest ? d3.geoCentroid({ type: "Polygon", coordinates: largest.coordinates }) : undefined
+      centers.set(code, c && Number.isFinite(c[0]) && Number.isFinite(c[1]) ? c : undefined)
+    }
+    return centers.get(code)
+  }
+  const regionAt = (country: string, lon: number, lat: number) =>
+    (ofCountry.get(country) || []).find(region => region.properties.i && d3.geoContains(region as never, [lon, lat]))?.properties.i || ""
+  return { regions, countries, regionLines, centroids, regionCode, regionCenter, regionAt }
 }
 
 const CHINESE_SUFFIX = /(?:壮族自治区|回族自治区|维吾尔自治区|自治区|特别行政区|省|市)$/
