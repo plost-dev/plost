@@ -1,5 +1,5 @@
 import { Navigate, createFileRoute, redirect, useRouter, type SearchSchemaInput } from "@tanstack/react-router"
-import { useRef } from "react"
+import { useEffect, useRef } from "react"
 import { AnalyticsDashboard } from "~/components/AnalyticsDashboard"
 import { AnalyticsDashboardSkeleton } from "~/components/DashboardSkeleton"
 import { PageState } from "~/components/PageState"
@@ -37,22 +37,37 @@ function Dashboard() {
   return <DashboardContent key={domain} domain={domain} />
 }
 
+type Report = Awaited<ReturnType<typeof dashboardFn>>
+// Reports shown in the last two minutes, by site and request. Going back to one (the world after opening a country,
+// the previous period) shows it at once while the fresh report loads, instead of a dimmed page.
+const RECENT_MS = 120_000
+const recent = new Map<string, { at: number, value: Report }>()
+
 function DashboardContent({ domain }: { domain: string }) {
   const { me, data } = Route.useLoaderData()
   const search = Route.useSearch()
   const router = useRouter()
-  const view = useSettled(data, JSON.stringify(search))
+  const key = JSON.stringify(search)
+  const view = useSettled(data, key)
+  const shown = view.result?.ok && !view.switching ? view.result.value : null
+  useEffect(() => {
+    if (!shown) return
+    recent.set(domain + key, { at: Date.now(), value: shown })
+    for (const [k, entry] of recent) if (Date.now() - entry.at > RECENT_MS) recent.delete(k)
+  }, [shown, domain, key])
+  const remembered = view.switching ? recent.get(domain + key) : undefined
+  const cached = remembered && Date.now() - remembered.at < RECENT_MS ? remembered.value : null
   const loading = useRef(false)
   loading.current = view.pending
   // The live visitor count and today's totals follow quickly; the other pages keep the slower default.
   useRouterAutoRefresh({ intervalMs: 10_000, skip: () => loading.current })
   const onSearch = (next: DashSearch) => { void router.navigate({to: "/sites/$domain", params: {domain}, search: next}) }
-  const { result } = view
+  const result = cached ? { ok: true as const, value: cached } : view.result
   if (result && !result.ok) return <PageState title="页面出错" description={result.message} />
   if (result?.ok && !me && !result.value.site.public) return <Navigate to="/login" />
   return <Shell user={me} layout="analytics">
     {result?.ok
-      ? <AnalyticsDashboard data={result.value} domain={domain} search={search} loading={view.switching}
+      ? <AnalyticsDashboard data={result.value} domain={domain} search={search} loading={view.switching && !cached}
         readonly={!result.value.access.member} canManage={result.value.access.canManage} onSearch={onSearch} />
       : <AnalyticsDashboardSkeleton domain={domain} search={search} readonly={!me} onSearch={onSearch} />}
   </Shell>

@@ -99,8 +99,17 @@ function buildRegionMap(topology: Topology): RegionMap {
     }
     return centers.get(code)
   }
-  const regionAt = (country: string, lon: number, lat: number) =>
-    (ofCountry.get(country) || []).find(region => region.properties.i && d3.geoContains(region as never, [lon, lat]))?.properties.i || ""
+  // Places come rounded to two decimals and repeat on every refresh, so each is looked up once.
+  const found = new Map<string, string>()
+  const regionAt = (country: string, lon: number, lat: number) => {
+    const key = `${country}:${lon}:${lat}`
+    let code = found.get(key)
+    if (code === undefined) {
+      code = (ofCountry.get(country) || []).find(region => region.properties.i && d3.geoContains(region as never, [lon, lat]))?.properties.i || ""
+      found.set(key, code)
+    }
+    return code
+  }
   return { regions, countries, regionLines, centroids, regionCode, regionCenter, regionAt }
 }
 

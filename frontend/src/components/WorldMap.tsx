@@ -22,9 +22,31 @@ const OCEAN = "var(--map-ocean)"
 const EMPTY_FILL = "var(--map-empty)"
 const BORDER = "var(--map-border)"
 const COLOR_STOPS = [1, 2, 3, 4].map(index => `--map-accent-${index}`)
+/** How close two places may come on screen, in map units at zoom 1, before their dots become one. */
+const CLUSTER_RADIUS = 22
+/** Below this zoom the world map shows one dot per country. */
+const COUNTRY_DOTS_BELOW = 2
+
+/** A place visitors are online at: a city the server placed them in (point), or a province's or country's middle. */
+type Place = { lon: number, lat: number, count: number, country: string, point?: string }
+
+// The outlines of a view are worked out once: the world, or one opened country. Going back and forth between them, or
+// any refresh of the numbers, reuses them instead of projecting thousands of shapes again.
+const pathCache = new Map<string, WeakMap<object, string>>()
+function cachedPath(view: string, path: d3.GeoPath) {
+  let known = pathCache.get(view)
+  if (!known) pathCache.set(view, known = new WeakMap())
+  return (feature: object) => {
+    let d = known.get(feature)
+    if (d === undefined) known.set(feature, d = path(feature as never) || "")
+    return d
+  }
+}
 
 /** A report row of the "regions" kind: code is the country, name the province (an ISO 3166-2 code, or a name). */
 export type RegionRow = { name: string, value: number, code?: string }
+/** Visitors online now in a province (name: an ISO 3166-2 code or a name, "" when none was recorded). */
+export type LiveRegion = { country: string, name: string, value: number }
 
 type CountryData = {
   name: string
@@ -56,17 +78,23 @@ function countryProjection(shape: CountryShape, regions: RegionFeature[]) {
   return d3.geoMercator().rotate([-lon, 0]).fitExtent(extent, main as never)
 }
 
+// One empty list for absent props, so a re-render (a tooltip moving) does not look like new data.
+const NONE: never[] = []
+
 function WorldMap({
   rows,
-  regions = [],
+  regions = NONE,
   focus = "",
-  live = [],
-  points = [],
+  live = NONE,
+  liveRegions = NONE,
+  points = NONE,
   showFlags = true,
   onCountryClick,
   onBack,
 }: {
   rows: Array<{ name: string, value: number, label?: string }>
+  /** The visitors online now by country and province, for placing those without a city. */
+  liveRegions?: LiveRegion[]
   /** Visitors by province, shown when a country is open. */
   regions?: RegionRow[]
   /** The country the report is filtered to: the map opens it and colours its provinces. */
@@ -80,7 +108,6 @@ function WorldMap({
   const { t, locale } = useT()
   const svgRef = useRef<SVGSVGElement | null>(null)
   const zoomRef = useRef<d3.ZoomBehavior<SVGSVGElement, unknown> | null>(null)
-  const shownRef = useRef<string | null>(null)
   const [map, setMap] = useState<RegionMap | null>(null)
   const [loadFailed, setLoadFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -117,6 +144,7 @@ function WorldMap({
     return { regionMax: Math.max(0, ...regionValues.values()), regionValues }
   }, [shape, map, regions])
 
+  // Visitors online that have no city place, by country.
   const liveByCode = useMemo(() => {
     const counts = new Map<string, number>()
     for (const item of live) {
@@ -127,6 +155,45 @@ function WorldMap({
   }, [live])
   const arrivals = useLiveArrivals(live)
   const pointArrivals = usePointArrivals(points)
+
+  // Where the visitors online now are: at their city when the server placed them, otherwise at their province when one
+  // was recorded, and only failing both at the middle of their country.
+  const places = useMemo<Place[]>(() => {
+    if (!map) return []
+    const out: Place[] = []
+    const placedIn = new Map<string, number>()
+    for (const p of points) {
+      const country = iso2(p.country)
+      out.push({ lon: p.lon, lat: p.lat, count: p.count, country, point: pointKey(p) })
+      const region = map.regionAt(country, p.lon, p.lat)
+      if (region) placedIn.set(region, (placedIn.get(region) || 0) + p.count)
+    }
+    const left = new Map(liveByCode)
+    for (const row of liveRegions) {
+      const country = iso2(row.country), want = left.get(country) || 0
+      if (!want || !row.name) continue
+      const code = map.regionCode(country, row.name)
+      const center = code ? map.regionCenter(code) : undefined
+      if (!center) continue
+      // Those already shown at a city of this province are not counted twice.
+      const placed = placedIn.get(code) || 0
+      placedIn.set(code, Math.max(0, placed - row.value))
+      const n = Math.min(want, Math.max(0, row.value - placed))
+      if (!n) continue
+      out.push({ lon: center[0], lat: center[1], count: n, country })
+      left.set(country, want - n)
+    }
+    for (const [country, n] of left) {
+      const center = map.centroids.get(country)
+      if (n > 0 && center) out.push({ lon: center[0], lat: center[1], count: n, country })
+    }
+    return out
+  }, [map, points, liveByCode, liveRegions])
+
+  // The layers read what they show from here, so new numbers repaint them without drawing the map again.
+  const latest = useRef({ dataByCode, maxValue, regionValues, regionMax, places, arrivals, pointArrivals, onCountryClick, locale, t })
+  latest.current = { dataByCode, maxValue, regionValues, regionMax, places, arrivals, pointArrivals, onCountryClick, locale, t }
+  const layers = useRef<{ repaint: () => void, drawDots: () => void } | null>(null)
 
   useEffect(() => {
     let active = true
@@ -150,20 +217,18 @@ function WorldMap({
     return () => { active = false; observer?.disconnect() }
   }, [attempt])
 
+  // The geography: drawn when the map loads and when a country opens or closes, never for a refresh of the numbers.
   useEffect(() => {
     const el = svgRef.current
     if (!el || !map) return
     const svg = d3.select(el)
     svg.selectAll("*").remove()
     const view = shape ? shape.properties.code : ""
-    // Opening or leaving a country starts from its whole frame; a refresh of the numbers keeps the user's zoom.
-    const keepZoom = shownRef.current === view
-    shownRef.current = view
+    setTooltip({ x: 0, y: 0, hovered: null })
 
-    const root = svg.append("g").attr("class", "map-root").attr("transform", keepZoom ? d3.zoomTransform(el).toString() : null)
+    const root = svg.append("g").attr("class", "map-root")
     const projection = shape ? countryProjection(shape, map.regions) : worldProjection()
-    if (!keepZoom) setTooltip({ x: 0, y: 0, hovered: null })
-    const path = d3.geoPath().projection(projection)
+    const path = cachedPath(view, d3.geoPath().projection(projection))
 
     root.append("rect")
       .attr("width", WIDE_WIDTH)
@@ -171,12 +236,10 @@ function WorldMap({
       .attr("fill", OCEAN)
       .attr("pointer-events", "none")
 
-    // D3 interpolates actual colors, not CSS variables. Repaint on preference
-    // changes without rebuilding geography or resetting the user's zoom.
-    const colorScale = d3.scaleSqrt().domain([0, (shape ? regionMax : maxValue) || 1]).range([0.12, 1]).clamp(true)
     let ramp = (_: number) => EMPTY_FILL
     let hovered: string | null = null
-    const valueOf = (key: string) => shape ? regionValues.get(key) || 0 : dataByCode.get(key)?.visitors || 0
+    const valueOf = (key: string) => shape ? latest.current.regionValues.get(key) || 0 : latest.current.dataByCode.get(key)?.visitors || 0
+    let colorScale = d3.scaleSqrt().domain([0, 1]).range([0.12, 1]).clamp(true)
     // The area under the pointer is shown a shade darker rather than outlined: the map is already coloured, and a
     // thick outline only crowds the borders around it.
     const fillOf = (key: string) => {
@@ -198,7 +261,7 @@ function WorldMap({
       .attr("stroke-width", 0.7)
       .attr("vector-effect", "non-scaling-stroke")
       .attr("stroke-linejoin", "round")
-      .attr("d", path as never)
+      .attr("d", path)
       .attr("opacity", shape ? 0.55 : null)
     // Provinces: the open country's own areas, each coloured by its visitors.
     const provinces = shape ? root.append("g").attr("class", "regions")
@@ -211,23 +274,13 @@ function WorldMap({
       .attr("stroke-width", 0.6)
       .attr("vector-effect", "non-scaling-stroke")
       .attr("stroke-linejoin", "round")
-      .attr("d", path as never) : null
+      .attr("d", path) : null
     // On the world map the province lines are drawn finer than the borders, for detail without clutter.
-    if (!shape) root.append("path").datum(map.regionLines).attr("class", "region-lines").attr("d", path as never)
+    if (!shape) root.append("path").datum(map.regionLines).attr("class", "region-lines").attr("d", path)
       .attr("fill", "none").attr("stroke", BORDER).attr("stroke-width", 0.35).attr("stroke-opacity", 0.8)
       .attr("vector-effect", "non-scaling-stroke").attr("pointer-events", "none")
-
-    const applyColors = () => {
-      const styles = getComputedStyle(el)
-      ramp = d3.interpolateRgbBasis(COLOR_STOPS.map(token => styles.getPropertyValue(token).trim()))
-      if (shape) {
-        countries.attr("fill", EMPTY_FILL)
-        provinces?.attr("fill", r => fillOf(r.properties.i))
-      } else countries.attr("fill", c => fillOf(c.properties.code))
-    }
-    applyColors()
-    const paletteObserver = new MutationObserver(applyColors)
-    paletteObserver.observe(document.documentElement, {attributes: true, attributeFilter: ["data-accent", "data-theme"]})
+    const flags = root.append("g").attr("class", "country-flags")
+    const dots = root.append("g").attr("class", "live-dots").attr("pointer-events", "none")
 
     // key colours the area; tip names what the tooltip shows (a country code, or "region:" and the province's names).
     const enter = (key: string, tip: string) => function (this: SVGPathElement, event: MouseEvent) {
@@ -245,23 +298,18 @@ function WorldMap({
       hovered = null
       d3.select(this).attr("fill", fillOf(key))
     }
+    const clickable = (code: string) => !!latest.current.dataByCode.get(code)?.visitors && !!latest.current.onCountryClick
     if (provinces) {
       provinces
-        .attr("aria-label", r => regionValues.get(r.properties.i) ? `${regionName(r.properties.i, r.properties.n, r.properties.z, locale)} · ${numberShort(regionValues.get(r.properties.i) || 0)} ${t("访客")}` : null)
         .on("mouseover", function (event, r) { enter(r.properties.i, `region:${r.properties.i}|${r.properties.n}|${r.properties.z}`).call(this, event) })
         .on("mousemove", move)
         .on("mouseout", function (_, r) { leave(r.properties.i).call(this) })
     } else {
-      const clickable = (code: string) => !!dataByCode.get(code)?.visitors && !!onCountryClick
       countries
-        .attr("cursor", c => clickable(c.properties.code) ? "pointer" : "default")
-        .attr("tabindex", c => clickable(c.properties.code) ? 0 : null)
-        .attr("role", c => clickable(c.properties.code) ? "button" : null)
-        .attr("aria-label", c => {const row=dataByCode.get(c.properties.code);return row ? `${row.name} · ${numberShort(row.visitors)} ${t("访客")}` : null})
         .on("keydown", (event, c) => {
           if (event.key !== "Enter" && event.key !== " ") return
           event.preventDefault()
-          if (clickable(c.properties.code)) onCountryClick?.(c.properties.code)
+          if (clickable(c.properties.code)) latest.current.onCountryClick?.(c.properties.code)
         })
         // A click opens the country without focusing its shape, which would leave a focus frame round it.
         .on("mousedown.focus", (event: MouseEvent) => event.preventDefault())
@@ -270,73 +318,111 @@ function WorldMap({
         .on("mouseout", function (_, c) { leave(c.properties.code).call(this) })
         .on("click", (event, c) => {
           if (event.defaultPrevented) return
-          if (clickable(c.properties.code)) onCountryClick?.(c.properties.code)
+          if (clickable(c.properties.code)) latest.current.onCountryClick?.(c.properties.code)
         })
+    }
 
-      const flags = root.append("g").attr("class", "country-flags")
+    // The zoom the dots and flags were last drawn for; they keep their size on screen.
+    let scale = 1
+    const sizeFlags = () => flags.selectAll<SVGGElement, [number, number]>("g").attr("transform", xy => `translate(${xy[0]},${xy[1]}) scale(${1 / scale})`)
+
+    // Colours, labels and flags follow the numbers.
+    const repaint = () => {
+      const { dataByCode, maxValue, regionValues, regionMax, locale, t } = latest.current
+      ramp = d3.interpolateRgbBasis(COLOR_STOPS.map(token => getComputedStyle(el).getPropertyValue(token).trim()))
+      colorScale = d3.scaleSqrt().domain([0, (shape ? regionMax : maxValue) || 1]).range([0.12, 1]).clamp(true)
+      if (provinces) {
+        countries.attr("fill", EMPTY_FILL)
+        provinces.attr("fill", r => fillOf(r.properties.i))
+          .attr("aria-label", r => regionValues.get(r.properties.i) ? `${regionName(r.properties.i, r.properties.n, r.properties.z, locale)} · ${numberShort(regionValues.get(r.properties.i) || 0)} ${t("访客")}` : null)
+        return
+      }
+      countries.attr("fill", c => fillOf(c.properties.code))
+        .attr("cursor", c => clickable(c.properties.code) ? "pointer" : "default")
+        .attr("tabindex", c => clickable(c.properties.code) ? 0 : null)
+        .attr("role", c => clickable(c.properties.code) ? "button" : null)
+        .attr("aria-label", c => {const row=dataByCode.get(c.properties.code);return row ? `${row.name} · ${numberShort(row.visitors)} ${t("访客")}` : null})
+      flags.selectAll("*").remove()
       for (const row of dataByCode.values()) {
-        if (!row.visitors) continue
-        const center = map.centroids.get(row.code)
+        const center = row.visitors ? map.centroids.get(row.code) : undefined
         const xy = center ? projection(center) : null
         if (!xy) continue
-        const marker = flags.append("g").attr("transform", `translate(${xy[0]},${xy[1]})`).attr("cursor", "pointer")
-        marker.attr("aria-hidden", "true")
+        const marker = flags.append("g").datum(xy).attr("transform", `translate(${xy[0]},${xy[1]}) scale(${1 / scale})`).attr("cursor", "pointer").attr("aria-hidden", "true")
         marker.append("image").attr("href", `/images/flags/1x1/${row.code.toLowerCase()}.svg`).attr("x", -12).attr("y", -12).attr("width", 24).attr("height", 24)
         marker.append("title").text(`${row.name} · ${row.visitors}`)
-        marker.on("click", () => onCountryClick?.(row.code))
+        marker.on("click", () => latest.current.onCountryClick?.(row.code))
       }
     }
 
-    const dots = root.append("g").attr("class", "live-dots").attr("pointer-events", "none")
-    const inView = (code: string) => !shape || code === shape.properties.code
-    for (const [code, count] of liveByCode) {
-      const ll = inView(code) ? map.centroids.get(code) : undefined
-      const xy = ll ? projection(ll) : null
-      if (!xy) continue
-      const n = Math.min(count, 8)
-      for (let i = 0; i < n; i++) {
-        const angle = (i / n) * Math.PI * 2
-        const dist = n === 1 ? 0 : 3.2 + i * 0.7
-        const x = xy[0] + Math.cos(angle) * dist
-        const y = xy[1] + Math.sin(angle) * dist
-        dots.append("circle").attr("class", "live-dot-pulse").attr("cx", x).attr("cy", y).attr("r", 9)
-        dots.append("circle").attr("class", "live-dot").attr("cx", x).attr("cy", y).attr("r", 3.6)
+    // Visitors online. On the whole world each country is one dot, at its busiest place and sized by everyone online
+    // there; zoomed in, or with a country open, each city or province has its own, and places that would still overlap
+    // on screen share one. Dots keep their size on screen at any zoom.
+    const drawDots = () => {
+      const { places, arrivals, pointArrivals } = latest.current
+      dots.selectAll("*").remove()
+      const reach = CLUSTER_RADIUS / scale
+      const clusters: Array<{ x: number, y: number, count: number, arriving: boolean, country: string }> = []
+      for (const place of [...places].sort((a, b) => b.count - a.count)) {
+        if (shape && place.country !== view) continue
+        const xy = projection([place.lon, place.lat])
+        if (!xy) continue
+        const arriving = place.point ? pointArrivals.has(place.point) : arrivals.has(place.country)
+        // Joined to the busiest dot nearby (or of the country, on the whole world), which stays where it is.
+        const byCountry = !shape && scale < COUNTRY_DOTS_BELOW
+        const near = clusters.find(c => byCountry ? c.country === place.country : Math.hypot(c.x - xy[0], c.y - xy[1]) < reach)
+        if (near) {
+          near.count += place.count
+          near.arriving ||= arriving
+        } else clusters.push({ x: xy[0], y: xy[1], count: place.count, arriving, country: place.country })
+      }
+      for (const c of clusters) {
+        const r = pointRadius(c.count) / scale
+        dots.append("circle").attr("class", "live-dot-pulse").attr("cx", c.x).attr("cy", c.y).attr("r", r * 2.4)
+        dots.append("circle").attr("class", "live-dot").attr("cx", c.x).attr("cy", c.y).attr("r", r)
+        if (c.arriving) for (const delay of [0, 0.6, 1.2]) dots.append("circle").attr("class", "live-dot-arrival").attr("cx", c.x).attr("cy", c.y).attr("r", 16 / scale).style("animation-delay", `${delay}s`)
       }
     }
-    // Visitors placed by city: one dot per place, a little larger for more visitors there.
-    for (const point of points) {
-      if (!inView(iso2(point.country))) continue
-      const xy = projection([point.lon, point.lat])
-      if (!xy) continue
-      const r = pointRadius(point.count)
-      dots.append("circle").attr("class", "live-dot-pulse").attr("cx", xy[0]).attr("cy", xy[1]).attr("r", r * 2.4)
-      dots.append("circle").attr("class", "live-dot").attr("cx", xy[0]).attr("cy", xy[1]).attr("r", r)
-      if (pointArrivals.has(pointKey(point))) for (const delay of [0, 0.6, 1.2]) dots.append("circle").attr("class", "live-dot-arrival").attr("cx", xy[0]).attr("cy", xy[1]).attr("r", 16).style("animation-delay", `${delay}s`)
-    }
-    // A country that just gained a visitor sends out a few wide rings.
-    for (const code of arrivals) {
-      const ll = inView(iso2(code)) ? map.centroids.get(iso2(code)) : undefined
-      const xy = ll ? projection(ll) : null
-      if (!xy) continue
-      for (const delay of [0, 0.6, 1.2]) dots.append("circle").attr("class", "live-dot-arrival").attr("cx", xy[0]).attr("cy", xy[1]).attr("r", 16).style("animation-delay", `${delay}s`)
-    }
+
+    repaint()
+    drawDots()
+    layers.current = { repaint, drawDots }
+    const paletteObserver = new MutationObserver(repaint)
+    paletteObserver.observe(document.documentElement, {attributes: true, attributeFilter: ["data-accent", "data-theme"]})
 
     const zoom = d3.zoom<SVGSVGElement, unknown>()
       .scaleExtent(shape ? [0.6, 12] : [0.45, 12])
       .on("zoom", (ev) => {
         root.attr("transform", ev.transform.toString())
+        // Regroup the dots once the zoom has changed enough to matter, not on every frame of it.
+        if (Math.abs(Math.log(ev.transform.k / scale)) > 0.15 || (ev.transform.k < COUNTRY_DOTS_BELOW) !== (scale < COUNTRY_DOTS_BELOW)) {
+          scale = ev.transform.k
+          drawDots()
+          sizeFlags()
+        }
+      })
+      .on("end", (ev) => {
+        if (ev.transform.k !== scale) {
+          scale = ev.transform.k
+          drawDots()
+          sizeFlags()
+        }
       })
     zoomRef.current = zoom
     svg.call(zoom)
-    if (!keepZoom) svg.call(zoom.transform, d3.zoomIdentity)
+    // Opening or leaving a country starts from its whole frame.
+    svg.call(zoom.transform, d3.zoomIdentity)
 
     return () => {
       paletteObserver.disconnect()
+      layers.current = null
       zoomRef.current = null
       svg.on(".zoom", null)
       svg.selectAll("*").remove()
     }
-  }, [map, shape, maxValue, dataByCode, regionMax, regionValues, liveByCode, arrivals, points, pointArrivals, onCountryClick, locale, t])
+  }, [map, shape])
+
+  useEffect(() => { layers.current?.repaint() }, [dataByCode, maxValue, regionValues, regionMax, locale, t])
+  useEffect(() => { layers.current?.drawDots() }, [places, arrivals, pointArrivals])
 
   function zoomBy(k: number) {
     const el = svgRef.current
@@ -441,6 +527,7 @@ export function MapCard({
   focus = "",
   live = [],
   livePoints = [],
+  liveRegions = [],
   liveCount = 0,
   onViewVisitors,
   onCountryClick,
@@ -454,6 +541,7 @@ export function MapCard({
   onBack?: () => void
   live?: Array<{ country: string }>
   livePoints?: LivePoint[]
+  liveRegions?: LiveRegion[]
   liveCount?: number
   onViewVisitors?: () => void
   onCountryClick?: (code: string) => void
@@ -490,7 +578,7 @@ export function MapCard({
               </label>
           </div>
           {/* Visitors placed by city get their own dots; the rest stay at their country. */}
-          <VisitorMap key={googleMapsKey || mapboxToken} token={mapboxToken} googleKey={googleMapsKey} rows={rows} regions={regions} focus={focus} live={unplacedLive(live, livePoints)} points={livePoints} showFlags={showFlags} onCountryClick={onCountryClick} onBack={onBack} />
+          <VisitorMap key={googleMapsKey || mapboxToken} token={mapboxToken} googleKey={googleMapsKey} rows={rows} regions={regions} focus={focus} live={unplacedLive(live, livePoints)} points={livePoints} liveRegions={liveRegions} showFlags={showFlags} onCountryClick={onCountryClick} onBack={onBack} />
 
         </Surface>
       </div>
