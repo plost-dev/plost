@@ -1517,9 +1517,9 @@ select:disabled { opacity:.65; cursor:not-allowed; }
 /* A short confirmation in the middle of the window. It ignores clicks, so nothing under it is blocked. */
 /* Just below the top bar (4.25rem), centred across the page. */
 .toast-region { position: fixed; inset: 0 0 auto; z-index: 200; display: flex; justify-content: center; padding: calc(4.25rem + 12px) 16px 0; pointer-events: none; }
-.toast { --sq-r: 18px; display: flex; align-items: center; gap: 12px; max-width: min(28rem, 100%); padding: 14px 22px 14px 16px; background: var(--color-gray-900); color: var(--surface); box-shadow: 0 12px 40px rgb(0 0 0 / .22), 0 2px 8px rgb(0 0 0 / .12); font-size: 15px; font-weight: 500; line-height: 22px; animation: toast-life both ease; }
-.toast-icon { flex: none; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: var(--color-green-600); color: #fff; font-size: 12px; }
-.toast-icon svg { width: 14px; height: 14px; }
+.toast { --sq-r: 18px; display: flex; align-items: center; gap: 12px; max-width: min(28rem, 100%); padding: 12px 20px 12px 14px; background: var(--color-gray-900); color: var(--surface); box-shadow: 0 12px 40px rgb(0 0 0 / .22), 0 2px 8px rgb(0 0 0 / .12); font-size: 14px; font-weight: 500; line-height: 20px; animation: toast-life both ease; }
+.toast-icon { flex: none; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--color-green-600); color: #fff; font-size: 12px; }
+.toast-icon svg { width: 13px; height: 13px; }
 .toast.is-error .toast-icon { background: var(--color-red-500); }
 .toast-text { min-width: 0; overflow-wrap: anywhere; }
 @keyframes toast-life { 0% { opacity: 0; transform: translateY(-10px); } 8% { opacity: 1; transform: none; } 88% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
