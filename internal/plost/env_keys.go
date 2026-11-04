@@ -8,8 +8,7 @@ import (
 )
 
 // The environment variables that hold the keys, normally set in the service's env file. None is ever kept in the
-// database, so the keys survive a database restore or a new data directory. The two map keys and the MaxMind keys
-// (geoip_update.go) can also be saved on the settings page, which writes them into that env file (-env-file).
+// database, so the keys survive a database restore or a new data directory. The two map keys can also be saved on the settings page, which writes them into that env file (-env-file).
 const (
 	EnvMapboxToken     = "PLOST_MAPBOX_TOKEN"
 	EnvGoogleMapsKey   = "PLOST_GOOGLE_MAPS_KEY"
@@ -24,12 +23,7 @@ func EnvKeys(cfg *Config) error {
 	get := func(name string) string { return strings.TrimSpace(os.Getenv(name)) }
 	cfg.MapboxToken, cfg.GoogleMapsKey = get(EnvMapboxToken), get(EnvGoogleMapsKey)
 	cfg.BackupAccessKey, cfg.BackupSecretKey, cfg.BackupPassword = get(EnvBackupAccessKey), get(EnvBackupSecretKey), os.Getenv(EnvBackupPassword)
-	cfg.MaxMindAccount, cfg.MaxMindKey = get(EnvMaxMindAccount), get(EnvMaxMindKey)
 	switch {
-	case cfg.MaxMindAccount != "" && !maxMindAccountForm.MatchString(cfg.MaxMindAccount):
-		return fmt.Errorf("%s must be the MaxMind account ID, digits only", EnvMaxMindAccount)
-	case cfg.MaxMindKey != "" && !maxMindKeyForm.MatchString(cfg.MaxMindKey):
-		return fmt.Errorf("%s must be a MaxMind licence key: 16 to 64 letters, digits or underscores", EnvMaxMindKey)
 	case cfg.MapboxToken != "" && !validMapKey(EnvMapboxToken, cfg.MapboxToken):
 		return fmt.Errorf("%s must be a Mapbox public token starting with pk.", EnvMapboxToken)
 	case cfg.GoogleMapsKey != "" && !validMapKey(EnvGoogleMapsKey, cfg.GoogleMapsKey):

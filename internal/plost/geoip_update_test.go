@@ -58,14 +58,13 @@ func geoArchive(t *testing.T, dbType, folder, country string) []byte {
 	return out.Bytes()
 }
 
-// geoMirror serves archives the way ipdata.plost.io and MaxMind do, and counts the archive downloads.
+// geoMirror serves archives the way ipdata.plost.io does, and counts the archive downloads.
 type geoMirror struct {
 	mu        sync.Mutex
 	files     map[string][]byte     // edition -> archive
 	sums      map[string]string     // edition -> published checksum, when it should differ from the archive's
 	versions  map[string]geoRelease // the Plost mirror's version.json; empty: the mirror has none
 	downloads atomic.Int32
-	auth      string // MaxMind: the expected "account:key"
 	srv       *httptest.Server
 }
 
@@ -82,13 +81,6 @@ func newGeoMirror(t *testing.T) *geoMirror {
 			}
 			json.NewEncoder(w).Encode(m.versions)
 			return
-		}
-		if strings.HasSuffix(name, "/download") { // MaxMind: /<edition>/download?suffix=…
-			if user, pass, ok := r.BasicAuth(); !ok || user+":"+pass != m.auth {
-				http.Error(w, "unauthorized", 401)
-				return
-			}
-			name = strings.TrimSuffix(name, "/download") + "." + r.URL.Query().Get("suffix")
 		}
 		edition, isSum := strings.TrimSuffix(strings.TrimSuffix(name, ".sha256"), ".tar.gz"), strings.HasSuffix(name, ".sha256")
 		body, ok := m.files[edition]
@@ -122,7 +114,6 @@ func geoTestApp(t *testing.T, m *geoMirror) *testApp {
 	x := newTestApp(t)
 	x.app.geoHTTP = m.srv.Client()
 	x.app.geoMirrorURL = m.srv.URL + "/"
-	x.app.geoMaxMindURL = m.srv.URL + "/"
 	return x
 }
 
@@ -223,11 +214,10 @@ func TestGeoIPRejectsBadDownloadsAndKeepsTheOldDatabase(t *testing.T) {
 	}
 }
 
-func TestGeoIPSettingsSwitchEditionTurnOffAndUseMaxMind(t *testing.T) {
+func TestGeoIPSettingsSwitchEditionFallBackToMirrorAndTurnOff(t *testing.T) {
 	m := newGeoMirror(t)
 	m.set("GeoLite2-City", geoArchive(t, "GeoLite2-City", "GeoLite2-City_20261001", "GB"), "")
 	m.set("GeoLite2-Country", geoArchive(t, "GeoLite2-Country", "GeoLite2-Country_20261001", "FR"), "")
-	m.auth = "123456:abcdefghijklmnop_mmk"
 	x := geoTestApp(t, m)
 	x.setup(t)
 	a := x.app
@@ -252,30 +242,22 @@ func TestGeoIPSettingsSwitchEditionTurnOffAndUseMaxMind(t *testing.T) {
 		t.Fatalf("switching edition left %v", files)
 	}
 
-	// MaxMind needs both keys; a wrong key is reported as such.
+	// Downloads come only from the mirror: MaxMind keys are no longer taken, and an instance that chose its own
+	// MaxMind account before falls back to the mirror.
 	x.call(t, "PUT", "/api/geoip", map[string]any{"source": "maxmind"}, 400)
-	x.call(t, "PUT", "/api/geoip", map[string]any{"account": "123456", "key": "short"}, 400)
-	x.call(t, "PUT", "/api/geoip", map[string]any{"source": "maxmind", "account": "123456", "key": "wrongwrongwrong_mmk"}, 200)
+	x.call(t, "PUT", "/api/geoip", map[string]any{"account": "123456", "key": "abcdefghijklmnop_mmk"}, 400)
+	if b, _ := os.ReadFile(env); strings.Contains(string(b), "MAXMIND") {
+		t.Fatalf("env file: %q", b)
+	}
+	if _, err := a.db.Exec("INSERT INTO settings(key,value) VALUES('geoip_source','maxmind') ON CONFLICT(key) DO UPDATE SET value=excluded.value"); err != nil {
+		t.Fatal(err)
+	}
+	x.call(t, "PUT", "/api/geoip", map[string]any{"edition": "GeoLite2-City"}, 200)
 	wait()
 	var view geoView
-	json.Unmarshal(x.call(t, "GET", "/api/geoip", nil, 200), &view)
-	if !strings.Contains(view.State.Error, "License Key") || view.Key == "" || strings.Contains(view.Key, "wrongwrong") {
-		t.Fatalf("view = %+v", view)
-	}
-	x.call(t, "PUT", "/api/geoip", map[string]any{"account": "123456", "key": "abcdefghijklmnop_mmk", "edition": "GeoLite2-City"}, 200)
-	wait()
-	view = geoView{}
 	json.Unmarshal(x.call(t, "POST", "/api/geoip/update", nil, 200), &view)
-	if view.State.Source != "maxmind" || view.State.Error != "" || a.geo.country(geoTestAddr, time.Now()) != "GB" {
-		t.Fatalf("after MaxMind download: %+v", view)
-	}
-	if b, _ := os.ReadFile(env); !strings.Contains(string(b), EnvMaxMindKey+"=abcdefghijklmnop_mmk") {
-		t.Fatal("the licence key was not written to the env file")
-	}
-	var stored int
-	a.db.QueryRow("SELECT count(*) FROM settings WHERE value LIKE '%abcdefghijklmnop%'").Scan(&stored)
-	if stored != 0 {
-		t.Fatal("the licence key must not be kept in the database")
+	if view.Source != "plost" || view.State.Source != "plost" || view.State.Error != "" || a.geo.country(geoTestAddr, time.Now()) != "GB" {
+		t.Fatalf("after the fallback to the mirror: %+v", view)
 	}
 
 	// Off removes the database.

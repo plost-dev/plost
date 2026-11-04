@@ -24,18 +24,13 @@ import (
 )
 
 // The settings page can keep a GeoLite2 database up to date by itself, so a deployer need not run geoipupdate:
-// it downloads either from the Plost mirror (ipdata.plost.io, no account needed) or from MaxMind with the
-// deployer's own account. A download is checked against its published SHA-256, unpacked, opened and verified
+// it downloads from the Plost mirror (ipdata.plost.io, no account needed). A download is checked against its published SHA-256, unpacked, opened and verified
 // before it is renamed over the database in use; the previous version and every leftover download are then
 // deleted, so the data directory holds one database at a time. -geoip-db turns all of this off: the file it
 // names is the deployer's to update.
 
 const (
-	EnvMaxMindAccount = "PLOST_MAXMIND_ACCOUNT_ID"
-	EnvMaxMindKey     = "PLOST_MAXMIND_LICENSE_KEY"
-
-	geoMirrorBase  = "https://ipdata.plost.io/"
-	geoMaxMindBase = "https://download.maxmind.com/geoip/databases/"
+	geoMirrorBase = "https://ipdata.plost.io/"
 
 	geoCheckDaily   = 24 * time.Hour // how often a working database is checked for a new version
 	geoRetryAfter   = time.Hour      // how soon a failed check is tried again
@@ -48,11 +43,9 @@ const (
 var geoFirstCheck = 20 * time.Second
 
 var (
-	geoEditions        = map[string]bool{"GeoLite2-City": true, "GeoLite2-Country": true}
-	geoSources         = map[string]bool{"plost": true, "maxmind": true, "online": true, "off": true}
-	maxMindAccountForm = regexp.MustCompile(`^[0-9]{1,10}$`)
-	maxMindKeyForm     = regexp.MustCompile(`^[A-Za-z0-9_]{16,64}$`)
-	sha256Form         = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	geoEditions = map[string]bool{"GeoLite2-City": true, "GeoLite2-Country": true}
+	geoSources  = map[string]bool{"plost": true, "online": true, "off": true}
+	sha256Form  = regexp.MustCompile(`^[0-9a-f]{64}$`)
 )
 
 // geoState is what the settings page shows about the downloaded database, kept in settings.geoip_state.
@@ -76,13 +69,8 @@ func (a *App) geoDir() string { return filepath.Join(a.cfg.DataDir, "geoip") }
 
 func (a *App) geoFile() string { return filepath.Join(a.geoDir(), "GeoLite2.mmdb") }
 
-func (a *App) maxMindKeys() (account, key string) {
-	a.keysMu.RLock()
-	defer a.keysMu.RUnlock()
-	return a.cfg.MaxMindAccount, a.cfg.MaxMindKey
-}
-
-// geoSettings reads the chosen source and edition. Without a choice the Plost mirror's City database is used, so a
+// geoSettings reads the chosen source and edition. An instance that used its own MaxMind account before falls back
+// to the mirror. Without a choice the Plost mirror's City database is used, so a
 // new instance places its visitors without any setup.
 func (a *App) geoSettings(ctx context.Context) (source, edition string, state geoState) {
 	source = a.setting(ctx, "geoip_source", "plost")
@@ -181,16 +169,8 @@ func (a *App) runGeoUpdate(ctx context.Context) (geoState, error) {
 	return next, nil
 }
 
-// geoURLs names the archive and its checksum for the source.
+// geoURLs names the archive and its checksum on the mirror.
 func (a *App) geoURLs(source, edition string) (archive, sum string) {
-	if source == "maxmind" {
-		base := a.geoMaxMindURL
-		if base == "" {
-			base = geoMaxMindBase
-		}
-		archive = base + edition + "/download?suffix=tar.gz"
-		return archive, archive + ".sha256"
-	}
 	base := a.geoMirrorURL
 	if base == "" {
 		base = geoMirrorBase
@@ -214,21 +194,13 @@ func (a *App) geoClient() *http.Client {
 	}}
 }
 
-// geoGet fetches a URL from the source. MaxMind wants the account and licence key; it answers with a redirect to
-// its storage, and the client drops the credentials on the way there because the host differs.
+// geoGet fetches a URL from the mirror.
 func (a *App) geoGet(ctx context.Context, source, url string) (*http.Response, error) {
 	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("User-Agent", "Plost/"+a.cfg.Version)
-	if source == "maxmind" {
-		account, key := a.maxMindKeys()
-		if account == "" || key == "" {
-			return nil, errors.New("请先填写并保存 MaxMind 账号 ID 和 License Key")
-		}
-		req.SetBasicAuth(account, key)
-	}
 	resp, err := a.geoClient().Do(req)
 	if err != nil {
 		if errors.Is(err, errNotPublic) {
@@ -241,8 +213,6 @@ func (a *App) geoGet(ctx context.Context, source, url string) (*http.Response, e
 	}
 	resp.Body.Close()
 	switch {
-	case source == "maxmind" && resp.StatusCode == http.StatusUnauthorized:
-		return nil, errors.New("MaxMind 账号 ID 或 License Key 不正确")
 	case resp.StatusCode == http.StatusTooManyRequests:
 		return nil, errors.New("下载次数过多，请稍后再试")
 	}
@@ -259,8 +229,7 @@ type geoRelease struct {
 
 var geoVersionForm = regexp.MustCompile(`^[0-9]{8}$`)
 
-// geoLatest asks the source for its newest release. The Plost mirror lists every edition in version.json; MaxMind,
-// or a mirror without that file, publishes a checksum line that names the archive after its build date.
+// geoLatest asks the mirror for its newest release. It lists every edition in version.json; a mirror without that file publishes a checksum line that names the archive after its build date.
 func (a *App) geoLatest(ctx context.Context, source, edition string) (geoRelease, error) {
 	if source == "plost" {
 		base := a.geoMirrorURL
@@ -448,11 +417,8 @@ type geoView struct {
 	Managed  bool     `json:"managed"`  // false: -geoip-db names the database and this page only reports it
 	FlagPath string   `json:"flagPath"` // the -geoip-db file
 	Loaded   bool     `json:"loaded"`   // a database is in use
-	Source   string   `json:"source"`   // plost, maxmind, online or off
+	Source   string   `json:"source"`   // plost, online or off
 	Edition  string   `json:"edition"`  // GeoLite2-City or GeoLite2-Country
-	Account  string   `json:"account"`  // the MaxMind account ID, shown by its start
-	Key      string   `json:"key"`      // the MaxMind licence key, shown by its start
-	Editable bool     `json:"editable"` // the keys can be saved from this page (-env-file)
 	Updating bool     `json:"updating"` // a download is running
 	State    geoState `json:"state"`
 	CNCity   bool     `json:"cnCity"` // visitors in mainland China are placed by api.cnip.io
@@ -463,9 +429,8 @@ type geoView struct {
 
 func (a *App) geoViewOf(ctx context.Context) geoView {
 	source, edition, state := a.geoSettings(ctx)
-	account, key := a.maxMindKeys()
 	view := geoView{Managed: a.geoManaged(), FlagPath: a.cfg.GeoIPPath, Loaded: a.geo.ready(), Source: source, Edition: edition,
-		Account: maskKey(account), Key: maskSecret(key), Editable: a.cfg.EnvFile != "", Updating: a.geoUpdating.Load(), State: state,
+		Updating: a.geoUpdating.Load(), State: state,
 		CNCity: a.cnCity.Load()}
 	if !view.Managed && a.geo != nil {
 		if db := a.geo.db.Load(); db != nil {
@@ -475,26 +440,16 @@ func (a *App) geoViewOf(ctx context.Context) geoView {
 	return view
 }
 
-// maskSecret shows only the first four characters of the licence key, which unlike a map token is secret.
-func maskSecret(value string) string {
-	if len(value) < 8 {
-		return maskKey(value)
-	}
-	return value[:4] + strings.Repeat("•", 8)
-}
-
 func (a *App) geoipGet(w http.ResponseWriter, r *http.Request) error {
 	return jsonResponse(w, a.geoViewOf(r.Context()))
 }
 
-// geoipPut saves the source, the edition or the MaxMind keys, then brings the database in line in the background.
+// geoipPut saves the source or the edition, then brings the database in line in the background.
 // The cnip.io option stands apart from the database and can be changed with -geoip-db too.
 func (a *App) geoipPut(w http.ResponseWriter, r *http.Request) error {
 	var in struct {
 		Source  *string `json:"source"`
 		Edition *string `json:"edition"`
-		Account *string `json:"account"`
-		Key     *string `json:"key"`
 		CNCity  *bool   `json:"cnCity"`
 	}
 	if err := readJSON(w, r, &in); err != nil {
@@ -512,20 +467,12 @@ func (a *App) geoipPut(w http.ResponseWriter, r *http.Request) error {
 		if !*in.CNCity {
 			a.cnip.clear()
 		}
-		if in.Source == nil && in.Edition == nil && in.Account == nil && in.Key == nil {
+		if in.Source == nil && in.Edition == nil {
 			return jsonResponse(w, a.geoViewOf(r.Context()))
 		}
 	}
 	if !a.geoManaged() {
 		return failure(400, "IP 数据库由启动参数 -geoip-db 指定，请在服务器上更新该文件")
-	}
-	if in.Account != nil || in.Key != nil {
-		if in.Account == nil || in.Key == nil {
-			return failure(400, "请同时填写 MaxMind 账号 ID 和 License Key")
-		}
-		if err := a.saveMaxMindKeys(strings.TrimSpace(*in.Account), strings.TrimSpace(*in.Key)); err != nil {
-			return err
-		}
 	}
 	source, edition, _ := a.geoSettings(r.Context())
 	if in.Source != nil {
@@ -539,9 +486,6 @@ func (a *App) geoipPut(w http.ResponseWriter, r *http.Request) error {
 			return failure(400, "未知的 IP 数据库类型")
 		}
 		edition = *in.Edition
-	}
-	if account, key := a.maxMindKeys(); source == "maxmind" && (account == "" || key == "") {
-		return failure(400, "请先填写并保存 MaxMind 账号 ID 和 License Key")
 	}
 	for k, v := range map[string]string{"geoip_source": source, "geoip_edition": edition} {
 		if _, err := a.db.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", k, v); err != nil {
@@ -599,26 +543,4 @@ func (a *App) startGeoUpdate() {
 			}
 		}
 	}()
-}
-
-func (a *App) saveMaxMindKeys(account, key string) error {
-	if a.cfg.EnvFile == "" {
-		return failure(400, "启动 Plost 时没有指定 env 文件（-env-file），请直接在 env 文件里修改 "+EnvMaxMindAccount+" 和 "+EnvMaxMindKey)
-	}
-	if !maxMindAccountForm.MatchString(account) {
-		return failure(400, "MaxMind 账号 ID 是一串数字")
-	}
-	if !maxMindKeyForm.MatchString(key) {
-		return failure(400, "请填写 MaxMind 后台生成的 License Key")
-	}
-	a.keysMu.Lock()
-	defer a.keysMu.Unlock()
-	if err := writeEnvKey(a.cfg.EnvFile, EnvMaxMindAccount, account); err != nil {
-		return failure(500, "写入 env 文件失败："+err.Error())
-	}
-	if err := writeEnvKey(a.cfg.EnvFile, EnvMaxMindKey, key); err != nil {
-		return failure(500, "写入 env 文件失败："+err.Error())
-	}
-	a.cfg.MaxMindAccount, a.cfg.MaxMindKey = account, key
-	return nil
 }

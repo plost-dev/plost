@@ -1390,6 +1390,8 @@
   "文件大小": "File size",
   "正在更新…": "Updating…",
   "未使用": "Not in use",
+  "更新于 {0}": "Updated {0}",
+  "更新": "Update",
   "尚未下载": "Not downloaded yet",
   "检查更新": "Check for updates",
   "打开 MaxMind 获取 License Key": "Get a license key from MaxMind",

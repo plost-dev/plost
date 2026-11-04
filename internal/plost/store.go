@@ -44,13 +44,11 @@ type Config struct {
 	// restore or a new data directory cannot lose them: the visitor map's MapboxToken (PLOST_MAPBOX_TOKEN)
 	// and GoogleMapsKey (PLOST_GOOGLE_MAPS_KEY), and the cloud backup's BackupAccessKey
 	// (PLOST_BACKUP_ACCESS_KEY), BackupSecretKey (PLOST_BACKUP_SECRET_KEY) and BackupPassword
-	// (PLOST_BACKUP_PASSWORD), and the GeoLite2 download's MaxMindAccount (PLOST_MAXMIND_ACCOUNT_ID) and
-	// MaxMindKey (PLOST_MAXMIND_LICENSE_KEY).
+	// (PLOST_BACKUP_PASSWORD).
 	MapboxToken, GoogleMapsKey                       string
-	MaxMindAccount, MaxMindKey                       string
 	BackupAccessKey, BackupSecretKey, BackupPassword string
 	// EnvFile is the env file the service starts with (-env-file); when set, the settings page may save the
-	// map keys and the MaxMind keys into it.
+	// map keys into it.
 	EnvFile string
 }
 
@@ -92,15 +90,14 @@ type App struct {
 	siteProbe     siteChecker // Network probes behind the site check; tests replace them.
 	outboundAllow []netip.Prefix
 
-	geoUpdating   atomic.Bool // A GeoLite2 download is running (geoip_update.go).
-	geoAgain      atomic.Bool // Settings changed while it ran; run once more.
-	geoOnline     atomic.Bool // Addresses are looked up at geo.plost.io instead (geoip_online.go).
-	online        *onlineGeo
-	cnCity        atomic.Bool // Visitors in mainland China are placed by api.cnip.io (geoip_cn_city).
-	cnip          *onlineGeo
-	geoHTTP       *http.Client // Test seams: a local fake for the download servers.
-	geoMirrorURL  string
-	geoMaxMindURL string
+	geoUpdating  atomic.Bool // A GeoLite2 download is running (geoip_update.go).
+	geoAgain     atomic.Bool // Settings changed while it ran; run once more.
+	geoOnline    atomic.Bool // Addresses are looked up at geo.plost.io instead (geoip_online.go).
+	online       *onlineGeo
+	cnCity       atomic.Bool // Visitors in mainland China are placed by api.cnip.io (geoip_cn_city).
+	cnip         *onlineGeo
+	geoHTTP      *http.Client // Test seams: a local fake for the download servers.
+	geoMirrorURL string
 }
 
 func Open(cfg Config) (*App, error) {
