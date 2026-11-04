@@ -248,6 +248,36 @@
       "brandUrl": "https://line.me/",
       "guidelines": null,
       "sha256": "b33b86ee7c335abcccb12c08188823d40eb3ddc9521362ac94d9d9c55077db68"
+    },
+    {
+      "slug": "xiaomi",
+      "file": "xiaomi.svg",
+      "source": "https://github.com/glincker/thesvg/blob/32a228fad39a1080417076bb32ca920cc24d3577/public/icons/xiaomi/default.svg",
+      "variant": "default",
+      "license": "CC0-1.0",
+      "brandUrl": "https://www.mi.com/",
+      "guidelines": null,
+      "sha256": "20fb26a3565ed90895c0f29ad006301a5dd9cede687b3ff4a27a0758ad0f9ede"
+    },
+    {
+      "slug": "vivo",
+      "file": "vivo.svg",
+      "source": "https://github.com/glincker/thesvg/blob/32a228fad39a1080417076bb32ca920cc24d3577/public/icons/vivo/default.svg",
+      "variant": "default",
+      "license": "CC0-1.0",
+      "brandUrl": "https://www.vivo.com/",
+      "guidelines": null,
+      "sha256": "a51642915344085261ade98d2b8e0372676fe75da00486de3d0ab6505498ef99"
+    },
+    {
+      "slug": "huawei",
+      "file": "huawei.svg",
+      "source": "https://github.com/glincker/thesvg/blob/32a228fad39a1080417076bb32ca920cc24d3577/public/icons/huawei/default.svg",
+      "variant": "default",
+      "license": "CC0-1.0",
+      "brandUrl": "https://www.huawei.com/",
+      "guidelines": null,
+      "sha256": "c5b0b049b2022d5b2391e34b7871d2580f97ad67dcae053499da49ff58ac27ac"
     }
   ]
 }

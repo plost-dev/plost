@@ -7,7 +7,6 @@ import { useT } from "~/lib/i18n"
 import { showToast } from "~/lib/toast"
 import { ActionButton } from "./ActionButton"
 import { Tile } from "./ui"
-import { Toggle } from "./Toggle"
 
 /** MaxMind's build date, 20261103, written as 2026-11-03. */
 function versionLabel(version?: string) {
@@ -32,23 +31,24 @@ function GeoIPBadge({ text, tone }: { text: string, tone?: "error" }) {
   return text ? <span className={`squircle settings-badge ${tone === "error" ? "is-error" : ""}`}>{text}</span> : null
 }
 
-/** Visitors in mainland China placed by api.cnip.io, which names their province and city far better than GeoLite2. */
-function ChinaCityTile({ data, onChange }: { data: GeoIPSettings, onChange: (next: GeoIPSettings) => void }) {
+/** Visitors in mainland China are always placed by api.cnip.io (ip2region, sponsored by cnip.io), which names their
+ *  province and city far better than GeoLite2. The card says so, shows the release and how much it has been used. */
+function ChinaCityTile({ data }: { data: GeoIPSettings }) {
   const { t, locale } = useT()
   const release = data.cnVersion
-  const [pending, setPending] = useState(false)
-  async function change(cnCity: boolean) {
-    setPending(true)
-    try { onChange(await saveGeoIPSettingsFn({ cnCity })) }
-    catch (error) { showToast(error instanceof Error ? error.message : "保存失败", "error") }
-    finally { setPending(false) }
-  }
-  return <Tile icon="map" title="中国访客的省份和城市"
-    titleAddon={<a className="settings-heading-link" href="https://cnip.io" target="_blank" rel="noreferrer">{t("打开 cnip.io")}</a>}>
-    <Toggle checked={data.cnCity} disabled={pending} onChange={next => void change(next)}>{t("用 cnip.io 查询中国大陆访客的省份和城市")}</Toggle>
-    <p className="geoip-cn-note">{release
-      ? t("采用 ip2region 付费版，每月更新 · 版本 {0} · 更新于 {1}", { 0: release.version, 1: formatTimestamp(release.updatedAt * 1000, locale) })
-      : t("采用 ip2region 付费版，每月更新")}</p>
+  const stats = data.cnStats
+  const number = (n: number) => n.toLocaleString(locale === "en" ? "en-US" : "zh-CN")
+  return <Tile icon="map" title="中国访客的省份和城市" titleAddon={release
+    ? <GeoIPBadge text={t("ip2region {0} · 更新于 {1}", { 0: release.version, 1: formatTimestamp(release.updatedAt * 1000, locale) })} />
+    : null}>
+    <p className="geoip-cn-note">{t("中国大陆访客的省份和城市使用 ip2region 付费版数据，每月更新，由 {0} 赞助。", { 0: "cnip.io" })}{" "}
+      <a className="settings-heading-link" href="https://cnip.io" target="_blank" rel="noreferrer">{t("打开 cnip.io")}</a></p>
+    {stats ? <dl className="squircle geoip-stats">
+      <div><dt>{t("查询 IP")}</dt><dd>{number(stats.calls)}</dd></div>
+      <div><dt>{t("定位到城市")}</dt><dd>{number(stats.located)}</dd></div>
+      <div><dt>{t("覆盖城市")}</dt><dd>{number(stats.cities)}</dd></div>
+    </dl> : null}
+    {stats?.since ? <p className="geoip-stats-since">{t("自 {0} 起统计；同一个 IP 一天内只查询一次。", { 0: formatTimestamp(stats.since * 1000, locale) })}</p> : null}
   </Tile>
 }
 
@@ -74,7 +74,7 @@ export function GeoIPSettingsPage() {
       : <GeoIPBadge text={t("未能加载")} tone="error" />}>
       <p className="text-sm leading-6 text-gray-600">{t("IP 数据库由启动参数 -geoip-db 指定：{0}。Plost 不会下载或更新它，请在服务器上自行更新该文件。", { 0: data.flagPath })}</p>
     </Tile>}
-    <ChinaCityTile data={data} onChange={setData} />
+    <ChinaCityTile data={data} />
   </>
 }
 

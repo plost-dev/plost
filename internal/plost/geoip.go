@@ -250,7 +250,7 @@ var regionCodePattern = regexp.MustCompile(`^[A-Z0-9]{1,3}$`)
 // requestPlace names the province or state and the city of the visitor in country (the one requestCountry chose):
 // the region as an ISO 3166-2 code from a City database, or the name the online service gives, which the page
 // matches to a code. A lookup that places the address in another country than the CDN said gives nothing, rather
-// than a wrong place. With the cnip.io option on, visitors in mainland China are placed by api.cnip.io instead,
+// than a wrong place. Visitors in mainland China are always placed by api.cnip.io (ip2region, sponsored by cnip.io),
 // which knows Chinese cities far better than GeoLite2; the others keep the database.
 func (a *App) requestPlace(r *http.Request, country string, now time.Time) geoPlace {
 	if country == "" || !a.visitorKnown(r) {
@@ -260,7 +260,7 @@ func (a *App) requestPlace(r *http.Request, country string, now time.Time) geoPl
 	if !ip.IsValid() {
 		return geoPlace{}
 	}
-	if country == "CN" && a.cnCity.Load() {
+	if country == "CN" {
 		if p := a.cnip.place(ip, now); p.country == "CN" && p.city != "" {
 			return geoPlace{region: chinaRegionCode(p.region), city: p.city, cityZh: p.city}
 		}

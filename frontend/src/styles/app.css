@@ -1541,4 +1541,10 @@ select:disabled { opacity:.65; cursor:not-allowed; }
 .geoip-edition-version { font-size:13px; font-weight:400; color:var(--color-gray-500); font-variant-numeric:tabular-nums; }
 .geoip-edition-row > .btn { flex:none; }
 /* The note under the mainland China option: which ip2region release cnip.io uses. */
-.geoip-cn-note { margin:12px 0 0; font-size:13px; line-height:20px; color:var(--color-gray-500); font-variant-numeric:tabular-nums; }
+.geoip-cn-note { margin:0; font-size:14px; line-height:22px; color:var(--color-gray-600); }
+.geoip-cn-note .settings-heading-link { margin-left:4px; }
+/* How much the cnip.io lookups have been used: three numbers in one tinted strip. */
+.geoip-stats { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; margin:16px 0 0; padding:16px 20px; --sq-r:14px; background:var(--color-gray-50); }
+.geoip-stats dt { font-size:12px; line-height:18px; color:var(--color-gray-500); }
+.geoip-stats dd { margin:4px 0 0; font-size:22px; line-height:28px; font-weight:600; color:var(--color-gray-900); font-variant-numeric:tabular-nums; }
+.geoip-stats-since { margin:8px 0 0; font-size:12px; line-height:18px; color:var(--color-gray-500); }

@@ -94,9 +94,9 @@ type App struct {
 	geoAgain     atomic.Bool // Settings changed while it ran; run once more.
 	geoOnline    atomic.Bool // Addresses are looked up at geo.plost.io instead (geoip_online.go).
 	online       *onlineGeo
-	cnCity       atomic.Bool // Visitors in mainland China are placed by api.cnip.io (geoip_cn_city).
 	cnip         *onlineGeo
 	cnipVersion  *cnipVersion // the ip2region release cnip.io is using, shown on the IP database page
+	cnipStats    *cnipStats   // how much the cnip.io lookups have been used, shown on the same page
 	geoHTTP      *http.Client // Test seams: a local fake for the download servers.
 	geoMirrorURL string
 }
@@ -186,11 +186,13 @@ func Open(cfg Config) (*App, error) {
 	a.online = newOnlineGeo(geoOnlineBase, newOnlineClient(cfg.OutboundAllow))
 	a.cnip = newOnlineGeo(cnipBase, a.online.client)
 	a.cnipVersion = newCNIPVersion(cnipVersionURL, a.online.client)
-	a.cnCity.Store(a.setting(context.Background(), "geoip_cn_city", "") == "1")
+	a.cnipStats = a.loadCNIPStats()
+	a.cnip.stats = a.cnipStats
 	a.geoOnline.Store(cfg.GeoIPPath == "" && a.setting(context.Background(), "geoip_source", "plost") == "online")
 	// Google Maps counts as on only with a key, so the page policy never allows its hosts for nothing.
 	a.googleMaps.Store(cfg.GoogleMapsKey != "" && a.setting(context.Background(), "google_maps_enabled", "false") == "true")
-	a.workers.Add(4)
+	a.workers.Add(5)
+	go a.cnipStatsLoop()
 	go a.ingestLoop()
 	go a.scheduleLoop()
 	go a.siteCheckLoop()

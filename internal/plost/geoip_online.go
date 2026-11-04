@@ -35,6 +35,7 @@ type onlineGeo struct {
 	mu     sync.Mutex
 	cache  map[netip.Addr]onlinePlace
 	flight map[netip.Addr]chan struct{}
+	stats  *cnipStats // counts the lookups, for api.cnip.io only
 }
 
 type onlinePlace struct {
@@ -93,6 +94,9 @@ func (o *onlineGeo) place(ip netip.Addr, now time.Time) onlinePlace {
 	o.mu.Unlock()
 
 	p, ok := o.ask(ip)
+	if o.stats != nil {
+		o.stats.record(p, ok)
+	}
 	if ok {
 		p.until = now.Add(geoOnlineKeep)
 	} else {

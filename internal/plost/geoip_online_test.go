@@ -137,6 +137,7 @@ func TestChinaVisitorsArePlacedByCnip(t *testing.T) {
 		t.Fatal(err)
 	}
 	a.cnip = newOnlineGeo(cnip.URL+"/geoip/", cnip.Client())
+	a.cnip.stats = a.cnipStats
 	server := httptest.NewServer(a.Handler())
 	t.Cleanup(func() { server.Close(); a.Close() })
 	jar, _ := cookiejar.New(nil)
@@ -165,21 +166,30 @@ func TestChinaVisitorsArePlacedByCnip(t *testing.T) {
 		}
 	}
 
-	send("browser-aaaaaaaa", "CN") // option off: nothing is asked
-	wait(1)
-	if asked.Load() != 0 {
-		t.Fatal("cnip.io was asked while the option is off")
-	}
-	var view geoView
-	json.Unmarshal(x.call(t, "PUT", "/api/geoip", map[string]any{"cnCity": true}, 200), &view)
-	if !view.CNCity || !a.cnCity.Load() {
-		t.Fatalf("the option did not turn on: %+v", view)
-	}
+	// Always on: there is no switch any more.
+	x.call(t, "PUT", "/api/geoip", map[string]any{"cnCity": false}, 400)
 	send("browser-bbbbbbbb", "CN")
 	send("browser-cccccccc", "US") // another country keeps the database (none here): no lookup
-	wait(3)
+	wait(2)
 	if asked.Load() != 1 {
 		t.Fatalf("cnip.io lookups = %d, want 1", asked.Load())
+	}
+	// The page counts the lookups and the cities found, and the counts survive a restart.
+	var view geoView
+	json.Unmarshal(x.call(t, "GET", "/api/geoip", nil, 200), &view)
+	if view.CNStats.Calls != 1 || view.CNStats.Located != 1 || view.CNStats.Cities != 1 || view.CNStats.Since == 0 {
+		t.Fatalf("cnStats = %+v", view.CNStats)
+	}
+	a.mu.RLock()
+	a.flushCNIPStats(t.Context())
+	a.mu.RUnlock()
+	if again := a.loadCNIPStats(); again.Calls != 1 || len(again.Cities) != 1 || again.Since != view.CNStats.Since {
+		t.Fatalf("reloaded stats = %+v", again)
+	}
+	var stored string
+	a.db.QueryRow("SELECT value FROM settings WHERE key='cnip_stats'").Scan(&stored)
+	if strings.Contains(stored, "203.0.113") {
+		t.Fatalf("an address was stored: %s", stored)
 	}
 	var region, city, cityZh string
 	a.db.QueryRow("SELECT region,city,city_zh FROM events_v2 WHERE user_id LIKE '%bbbbbbbb%' OR country_code='CN' ORDER BY id DESC LIMIT 1").Scan(&region, &city, &cityZh)
@@ -190,10 +200,6 @@ func TestChinaVisitorsArePlacedByCnip(t *testing.T) {
 	json.Unmarshal(x.call(t, "GET", "/api/sites/example.com/report?period=today", nil, 200), &report)
 	if len(report.Cities) != 1 || report.Cities[0] != (CityRow{Country: "CN", Name: "南京", Label: "南京", Value: 1}) {
 		t.Fatalf("cities = %+v", report.Cities)
-	}
-	x.call(t, "PUT", "/api/geoip", map[string]any{"cnCity": false}, 200)
-	if a.cnCity.Load() {
-		t.Fatal("the option did not turn off")
 	}
 }
 
