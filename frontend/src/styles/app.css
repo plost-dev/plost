@@ -1532,5 +1532,5 @@ select:disabled { opacity:.65; cursor:not-allowed; }
 /* A small tinted pill beside a settings card title, e.g. the IP database version and last update. */
 .settings-badge { display:inline-flex; align-items:center; height:24px; padding:0 10px; --sq-r:10px; font-size:12px; font-weight:500; line-height:1; white-space:nowrap; font-variant-numeric:tabular-nums; background:var(--accent-soft); color:var(--accent-text); }
 .settings-badge.is-error { background:color-mix(in srgb, #dc2626 12%, transparent); color:#dc2626; }
-/* MaxMind's logo as a faint watermark in the IP database card's top right corner. */
-.geoip-watermark { display:block; width:104px; opacity:.35; pointer-events:none; user-select:none; }
+/* MaxMind's logo in its own colours in the IP database card's top right corner. */
+.geoip-watermark { display:block; width:104px; pointer-events:none; user-select:none; }

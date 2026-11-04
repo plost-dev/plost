@@ -22,11 +22,11 @@ function versionOfTime(seconds?: number) {
   return seconds ? new Date(seconds * 1000).toISOString().slice(0, 10) : ""
 }
 
-/** MaxMind's logo, faint in the corner of the card: the data is theirs (GeoLite2). */
+/** MaxMind's logo, in its own colours, in the corner of the card: the data is theirs (GeoLite2). */
 function MaxMindWatermark() {
   return <span className="geoip-watermark" aria-hidden="true">
-    <img className="settings-brand-logo-color" src="/brands/maxmind.svg" width={104} alt="" />
-    <img className="settings-brand-logo-color is-dark" src="/brands/maxmind-dark.svg" width={104} alt="" />
+    <img className="settings-brand-logo-color" src="/brands/maxmind.svg?v=20261104" width={104} alt="" />
+    <img className="settings-brand-logo-color is-dark" src="/brands/maxmind-dark.svg?v=20261104" width={104} alt="" />
   </span>
 }
 
