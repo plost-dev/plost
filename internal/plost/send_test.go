@@ -8,8 +8,8 @@ import (
 	"testing"
 )
 
-// sendUmami posts a body the way Umami's tracker does: JSON to /api/send from the site's page.
-func sendUmami(t *testing.T, x *testApp, body any, agent string) int {
+// sendTracker posts a body the way the tracker does: JSON to /api/send from the site's page.
+func sendTracker(t *testing.T, x *testApp, body any, agent string) int {
 	t.Helper()
 	b, _ := json.Marshal(body)
 	req, _ := http.NewRequest("POST", x.server.URL+"/api/send", bytes.NewReader(b))
@@ -40,25 +40,25 @@ func storedEvents(t *testing.T, a *App) []map[string]string {
 	return out
 }
 
-func TestUmamiShapedRequestsAreStored(t *testing.T) {
+func TestTrackerShapedRequestsAreStored(t *testing.T) {
 	x := newTestApp(t)
 	x.setup(t)
 	x.addSite(t, "example.com")
 	// What Plost's tracker now sends: the site's domain as "website", the whole address, plus its own fields.
 	ours := map[string]any{"type": "event", "payload": map[string]any{"website": "example.com", "hostname": "example.com", "url": "https://example.com/pricing?utm_source=news",
-		"referrer": "https://search.example.org/", "title": "Pricing", "language": "zh-CN", "screen": "1920x1080", "v": "browser-aaaaaaaa", "i": "evt-umami-0001", "w": 1440}}
-	if status := sendUmami(t, x, ours, testChrome); status != 202 {
+		"referrer": "https://search.example.org/", "title": "Pricing", "language": "zh-CN", "screen": "1920x1080", "v": "browser-aaaaaaaa", "i": "evt-send-0001", "w": 1440}}
+	if status := sendTracker(t, x, ours, testChrome); status != 202 {
 		t.Fatalf("got %d", status)
 	}
-	// What Umami's own tracker sends: a website id that is not a domain, and a path instead of an address.
+	// What another tracker sends: a website id that is not a domain, and a path instead of an address.
 	theirs := map[string]any{"type": "event", "payload": map[string]any{"website": "6f1c2d3e-4a5b-4c6d-8e7f-0123456789ab", "hostname": "www.example.com", "url": "/docs",
 		"title": "Docs", "language": "en-US", "screen": "390x844", "name": "signup", "data": map[string]any{"plan": "pro"}}}
-	if status := sendUmami(t, x, theirs, testChrome); status != 202 {
+	if status := sendTracker(t, x, theirs, testChrome); status != 202 {
 		t.Fatalf("got %d", status)
 	}
 	// Identify calls are answered and ignored; a repeated event id is stored once.
-	sendUmami(t, x, map[string]any{"type": "identify", "payload": map[string]any{"website": "example.com", "data": map[string]any{"user": "1"}}}, testChrome)
-	sendUmami(t, x, ours, testChrome)
+	sendTracker(t, x, map[string]any{"type": "identify", "payload": map[string]any{"website": "example.com", "data": map[string]any{"user": "1"}}}, testChrome)
+	sendTracker(t, x, ours, testChrome)
 	got := storedEvents(t, x.app)
 	if len(got) != 2 {
 		t.Fatalf("want 2 events, got %v", got)
@@ -71,7 +71,7 @@ func TestUmamiShapedRequestsAreStored(t *testing.T) {
 	}
 }
 
-func TestUmamiShapedRequestsGetTheirPreflightAndNeedNoAdminHeader(t *testing.T) {
+func TestTrackerShapedRequestsGetTheirPreflightAndNeedNoAdminHeader(t *testing.T) {
 	x := newTestApp(t)
 	x.setup(t)
 	x.addSite(t, "example.com")
@@ -95,7 +95,7 @@ func TestUmamiShapedRequestsGetTheirPreflightAndNeedNoAdminHeader(t *testing.T) 
 		}
 	}
 	bot := map[string]any{"type": "event", "payload": map[string]any{"website": "example.com", "hostname": "example.com", "url": "/"}}
-	if status := sendUmami(t, x, bot, "Googlebot/2.1"); status != 202 || len(storedEvents(t, x.app)) != 0 {
+	if status := sendTracker(t, x, bot, "Googlebot/2.1"); status != 202 || len(storedEvents(t, x.app)) != 0 {
 		t.Fatalf("a bot is answered and not stored: %d", status)
 	}
 }

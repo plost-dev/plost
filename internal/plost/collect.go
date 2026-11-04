@@ -130,7 +130,7 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Vary", "Origin")
 	w.Header().Set("Access-Control-Allow-Methods", "POST, OPTIONS")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-	// /api/send takes JSON like Umami's tracker, which needs a preflight; let browsers reuse it.
+	// /api/send takes JSON, which needs a preflight; let browsers reuse it.
 	w.Header().Set("Access-Control-Max-Age", "86400")
 	// No credentials or private data are exposed by this ingestion-only endpoint.
 	if o := r.Header.Get("Origin"); o != "" && o != "null" {
@@ -157,8 +157,8 @@ func (a *App) collect(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if r.URL.Path == "/api/send" {
-		converted, err := fromUmami(b)
-		if errors.Is(err, errUmamiIgnored) {
+		converted, err := fromTracker(b)
+		if errors.Is(err, errIgnoredRequest) {
 			accepted(w, r)
 			return
 		}

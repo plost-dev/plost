@@ -6,17 +6,18 @@ import (
 	"strings"
 )
 
-// The tracker sends its normal requests the way Umami's tracker does: a JSON POST to /api/send with
+// The tracker sends its normal requests as a JSON POST to /api/send with
 // {"type":"event","payload":{...}}. Some content blockers refuse requests shaped like other analytics tools (a
-// text POST to /api/event) while they let Umami's through, so looking like Umami on the wire keeps those visitors.
+// text POST to /api/event) while they let this one through, so this shape on the wire keeps those visitors.
 // /api/event stays for older copies of the script and for proxies set up with data-api.
 
-// errUmamiIgnored marks a well-formed request that records nothing, such as Umami's "identify".
-var errUmamiIgnored = errors.New("not an event")
+// errIgnoredRequest marks a well-formed request that records nothing, such as an "identify".
+var errIgnoredRequest = errors.New("not an event")
 
-// fromUmami turns a /api/send body into the fields /api/event takes. Umami's own trackers work too: "website" may
-// be a site's domain, otherwise the page's hostname names the site, and "url" may be a path or a whole address.
-func fromUmami(b []byte) ([]byte, error) {
+// fromTracker turns a /api/send body into the fields /api/event takes. Trackers from other products work
+// too: "website" may be a site's domain, otherwise the page's hostname names the site, and "url" may be a
+// path or a whole address.
+func fromTracker(b []byte) ([]byte, error) {
 	var in struct {
 		Type    string                     `json:"type"`
 		Payload map[string]json.RawMessage `json:"payload"`
@@ -25,7 +26,7 @@ func fromUmami(b []byte) ([]byte, error) {
 		return nil, errors.New("invalid body")
 	}
 	if in.Type != "event" {
-		return nil, errUmamiIgnored
+		return nil, errIgnoredRequest
 	}
 	p := in.Payload
 	out := map[string]json.RawMessage{}

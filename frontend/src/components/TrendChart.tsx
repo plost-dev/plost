@@ -23,7 +23,7 @@ export const TRAFFIC_METRICS: ReadonlyArray<{key: TrafficMetric; label: string}>
 const DRAW_ORDER: TrafficMetric[] = ["pageviews", "visits", "visitors"]
 const FILL_ORDER: TrafficMetric[] = ["pageviews", "visits", "visitors"]
 // Visitors never outnumber visits, nor visits pageviews, so the bars stand in front of each other at the same width,
-// the smallest at the front, as Umami draws visitors over views.
+// the smallest at the front.
 const BAR_ORDER: TrafficMetric[] = ["pageviews", "visits", "visitors"]
 const BAR_MAX_WIDTH = 40
 const NONE: ReadonlyArray<TrafficMetric> = []

@@ -150,7 +150,7 @@ func seedVisitors(t *testing.T, x *testApp, site int64) (from, to time.Time) {
 	return ten, ten.Add(2 * time.Hour)
 }
 
-func TestVisitorsAndVisitsAreCountedLikeUmami(t *testing.T) {
+func TestVisitorsAndVisitsAreCountedByTheDocumentedRules(t *testing.T) {
 	x := newTestApp(t)
 	x.setup(t)
 	x.addSite(t, "example.com")

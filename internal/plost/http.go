@@ -180,7 +180,7 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("GET /api/export/{domain}", a.api(a.exportCSV, true))
 	mux.HandleFunc("POST /api/event", a.collect)
 	mux.HandleFunc("OPTIONS /api/event", a.collect)
-	// The tracker's normal address, shaped like Umami's (see umami_send.go).
+	// The tracker's normal address (see send.go).
 	mux.HandleFunc("POST /api/send", a.collect)
 	mux.HandleFunc("OPTIONS /api/send", a.collect)
 	// The tracker's second address, used only when a request to /api/event fails: an image (GET) or a Beacon (POST).

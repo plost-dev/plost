@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-// Visitors, visits and bounces are counted the way Umami counts them, so numbers from the two products can be
+// Visitors, visits and bounces are counted the way the Go edition does, so numbers from the two products can be
 // compared. A visitor is a hash of site, IP address, user agent and UTC month, which means someone who switches IP
 // address or proxy counts as a new visitor; a visit is one visitor's run of activity, ended by 30 minutes without
 // any (the session id stored with each event, see persistBatch); a bounce is a visit with a single pageview.

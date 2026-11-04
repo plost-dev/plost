@@ -7,7 +7,7 @@
 }
 html[data-theme="dark"] .traffic-overview { --traffic-visits: #60a5fa; --traffic-pageviews: #4ade80; } /* Visitors keep the light-mode purple. */
 .traffic-overview .traffic-tooltip { --traffic-visitors: #a78bfa; --traffic-visits: #60a5fa; --traffic-pageviews: #4ade80; }
-/* The bars stand in front of each other, so they share one hue, darkest at the front, as Umami draws them; the
+/* The bars stand in front of each other, so they share one hue, darkest at the front; the
    hue follows the accent (--bar-base, accent-colors.css) and the depths (--bar-*) come from VisitorGraph. "html"
    keeps this above the dark theme's colors. */
 html .traffic-overview[data-chart="bar"] {

@@ -1,15 +1,11 @@
 (() => {
   const s = document.currentScript;
   if (!s || !s.src) return;
-  // A browser driven by automation (Selenium, Puppeteer, Playwright) says so here; people's browsers never do.
   if (navigator.webdriver) {
     if (!window.plost) window.plost = window.litestats = { track: function () {} };
     return;
   }
   const domain = s.getAttribute("data-domain");
-  // Events go out exactly as Umami's tracker sends them: a JSON POST to /api/send. Some content blockers refuse
-  // requests shaped like other analytics tools but let Umami's through. A custom data-api (a proxy on the site itself)
-  // keeps the older plain format, and is used for retries too, since /e may not exist there.
   const customApi = s.getAttribute("data-api");
   let endpoint, retryEndpoint;
   try {
@@ -37,9 +33,6 @@
   function beacon(data, url) {
     try { return !!navigator.sendBeacon && navigator.sendBeacon(url, new Blob([JSON.stringify(data)], { type: "text/plain;charset=UTF-8" })); } catch (e) { return false; }
   }
-  // When the normal request fails before any answer (a content blocker or a broken network refused it), the
-  // event goes again to the second address as an image, and if that is refused too, as a Beacon. Each retry says how it
-  // travelled ("x"), and the server keeps only the first copy of an event id ("i"), so nothing is counted twice.
   function retry(data) {
     const viaBeacon = function () { beacon(Object.assign({}, data, { x: "beacon" }), retryEndpoint); };
     try {
@@ -51,19 +44,17 @@
       img.src = retryEndpoint + (retryEndpoint.indexOf("?") < 0 ? "?" : "&") + "p=" + encodeURIComponent(query);
     } catch (e) { viaBeacon(); }
   }
-  function umamiBody(data) {
+  function eventBody(data) {
     const payload = { website: data.d, hostname: location.hostname, screen: data.s, language: data.l, title: data.t, url: data.u, referrer: data.r, v: data.v, i: data.i, w: data.w };
     if (data.n !== "pageview") { payload.name = data.n; if (data.p) payload.data = data.p; }
     return JSON.stringify({ type: "event", payload: payload });
   }
   function deliver(data, attempt) {
-    const body = customApi ? JSON.stringify(data) : umamiBody(data);
+    const body = customApi ? JSON.stringify(data) : eventBody(data);
     const plain = function () { if (!beacon(Object.assign({}, data, { x: "beacon" }), retryEndpoint)) retry(data); };
     if (typeof fetch !== "function") { plain(); return; }
     try {
       fetch(endpoint, { method: "POST", body, headers: { "Content-Type": customApi ? "text/plain;charset=UTF-8" : "application/json" }, credentials: "omit", keepalive: true }).then(function (response) {
-        // Only this explicit rejection guarantees that the event was not queued.
-        // Generic 5xx responses are ambiguous and are not repeated.
         if (response.status !== 503 || attempt >= 2) return;
         return response.json().then(function (result) {
           if (result && result.error === "event_buffer_full") window.setTimeout(function () { deliver(data, attempt + 1); }, (attempt + 1) * 1000);
@@ -83,8 +74,6 @@
       deliver(data, 0);
     } catch (e) {}
   }
-  // Pages count once they have finished loading, as Umami counts them: someone who closes the tab before that has
-  // not seen the page. Navigation inside the page before then is folded into that first pageview.
   let ready = false;
   function pageview(force) {
     if (!ready || document.prerendering) return;

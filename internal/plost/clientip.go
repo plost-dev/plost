@@ -13,7 +13,7 @@ import (
 
 // Two readings of the client's address. clientIP is strict and guards rate limits and the like: it takes forwarding
 // headers only from proxies declared with -trusted-proxies (or -trust-proxy). visitorAddr is for the statistics: with
-// proxies declared it is the same strict reading, and without any it finds the visitor on its own, as Umami does, so
+// proxies declared it is the same strict reading, and without any it finds the visitor on its own, so
 // that direct, reverse-proxied and CDN setups all count right with no configuration. A visitor can forge the headers
 // that reading believes, but that only changes how their own visits are counted, never what anyone may do.
 //
