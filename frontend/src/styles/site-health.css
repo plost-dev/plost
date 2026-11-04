@@ -18,7 +18,7 @@
 .health-status .health-dot { width:10px; height:10px; box-shadow:0 0 0 5px color-mix(in srgb,var(--health-tone) 10%,transparent); }
 .health-card-foot { display:flex; align-items:center; justify-content:space-between; gap:10px; padding-top:20px; margin-top:20px; border-top:1px solid var(--color-gray-100); font-size:12px; font-variant-numeric:tabular-nums; color:var(--color-gray-600); }
 .health-card .health-note { color:var(--health-tone); font-size:var(--ui-text-caption); }
-.health-uptime { margin-top:var(--ui-grid-gap); padding:var(--ui-card-padding); background:var(--surface); border:1px solid var(--color-gray-200); --health-accent:#0d9488; }
+.health-uptime { margin-bottom:calc(var(--ui-grid-gap) - 1rem); /* the grid gap sits above it; with the page's 1rem bottom padding the footer is one gap away too */ padding:var(--ui-card-padding); background:var(--surface); border:1px solid var(--color-gray-200); --health-accent:#0d9488; }
 .health-uptime-heading { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
 .health-uptime h2 { font-size:var(--ui-text-card); line-height:24px; font-weight:600; color:var(--color-gray-900); }
 .health-uptime-heading p { font-size:12px; margin-top:4px; color:var(--color-gray-500); }
@@ -27,14 +27,10 @@
 .health-uptime-days span { height:28px; background:var(--health-tone); --sq-r:3px; }
 .health-uptime-days .health-tone-unknown { opacity:.22; }
 .health-cards-two { grid-template-columns:repeat(2,minmax(0,1fr)); }
-.site-health:first-child { margin-top:0; }
 .health-chart-legend { display:flex; align-items:center; flex-wrap:wrap; gap:16px; font-size:var(--ui-text-caption); color:var(--color-gray-500); margin-top:12px; }
 .health-chart-legend span { display:flex; align-items:center; gap:5px; }
 .health-chart-legend i { width:6px; height:6px; --sq-r:4px; background:var(--health-tone); }
 .health-uptime-days .health-tone-good,.health-chart-legend .health-tone-good { --health-tone:#22c55e; }
 html[data-theme="dark"] :is(.health-uptime-days,.health-chart-legend) .health-tone-good { --health-tone:#4ade80; }
 .health-chart-legend .health-check-count { margin-left:auto; }
-.health-footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:8px; font-size:var(--ui-text-caption); line-height:1.7; color:var(--color-gray-500); margin-top:16px; }
-.health-registration-note { font-size:var(--ui-text-caption); color:var(--color-gray-500); margin-top:4px; }
 @media(max-width:700px) { .health-cards { --health-value-height:40px; grid-template-columns:1fr; gap:var(--ui-grid-gap); } .health-card { padding:var(--ui-card-padding); } .health-card-value { margin-top:16px; font-size:34px; } .health-status { margin-top:16px; } .health-card-foot { margin-top:16px; padding-top:16px; } .health-uptime-days { gap:1px; } .health-uptime-days span { height:22px; --sq-r:2px; } }
-.health-sponsor-note .settings-heading-link { font-size:inherit; line-height:inherit; }

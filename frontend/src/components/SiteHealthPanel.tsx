@@ -30,7 +30,6 @@ function ExpiryCard({kind, date, error, stale, lastSuccessAt, now, registeredAt,
       </>}
     </div>
     {state.days === null ? <p className="health-note">{t(error ? "未能获取到期信息" : "尚无到期信息")}</p> : state.tone === "bad" ? <p className="health-note">{t("已到期")}</p> : null}
-    {dateOnly ? <p className="health-note">{t("按公开日期估算剩余天数")}</p> : null}
     {error ? <p className="health-note">{t(error)}</p> : null}
     {stale ? <p className="health-note">{t("本次查询失败，显示上次结果")}{lastSuccessAt ? ` · ${t("上次获取")}: ${formatTimestamp(lastSuccessAt, locale)}` : ""}</p> : null}
   </Surface>
@@ -62,23 +61,16 @@ export function SiteUptimeStrip({report}: {report: SiteCheckReport}) {
   </Surface>
 }
 
-/** Where the domain's expiration date came from, as reported by the server. */
-function sourceLabel(source?: string | null) {
-  return source === "rdap" ? "来自注册局 RDAP" : source === "cnnic" ? "来自 CNNIC WHOIS" : source === "who.ga" ? "来自 who.ga" : ""
-}
-
 /** Domain and certificate expiry, shown in the site's settings. */
 export function SiteInfoPanel({report}: {report: SiteCheckReport}) {
-  const {t, locale} = useT()
-  return <div className="site-health">
-    <div className="health-cards health-cards-two">
-      <ExpiryCard kind="domain" {...report.expiry?.domain} date={report.expiry?.domain.expiresAt} now={report.now}/>
-      <ExpiryCard kind="certificate" {...report.expiry?.certificate} date={report.expiry?.certificate.expiresAt} now={report.now}/>
-    </div>
-    {!report.enabled && !report.expiry ? <p className="health-registration-note">{t("开启站点检查后获取域名与证书信息")}</p> : null}
-    <div className="health-footer"><span>{t("到期信息每日更新，临时查询失败后 15 分钟重试")}{report.expiry ? ` · ${formatTimestamp(report.expiry.checkedAt, locale)}` : ""}</span></div>
-    {report.expiry?.domain.domain ? <p className="health-registration-note">{t("域名到期信息对应 {0}", {0: report.expiry.domain.domain})}{sourceLabel(report.expiry.domain.source) ? ` · ${t(sourceLabel(report.expiry.domain.source))}` : ""}</p> : null}
-    <p className="health-registration-note health-sponsor-note">{t("域名查询由 {0} 赞助；注册局没有到期日期时由 {0} 补充。", {0: "who.ga"})}{" "}
-      <a className="settings-heading-link" href="https://who.ga" target="_blank" rel="noreferrer">{t("打开 who.ga")}</a></p>
+  return <div className="health-cards health-cards-two">
+    <ExpiryCard kind="domain" {...report.expiry?.domain} date={report.expiry?.domain.expiresAt} now={report.now}/>
+    <ExpiryCard kind="certificate" {...report.expiry?.certificate} date={report.expiry?.certificate.expiresAt} now={report.now}/>
   </div>
+}
+
+/** who.ga fills in domain expiry when the registry has none, so the settings heading credits it. */
+export function WhoGaCredit() {
+  const {t} = useT()
+  return <a className="settings-heading-link" href="https://who.ga" target="_blank" rel="noreferrer">{t("域名查询由 {0} 赞助", {0: "who.ga"})}</a>
 }

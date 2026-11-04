@@ -1430,7 +1430,6 @@ html[data-theme="dark"] .metric-grid .metric-item > button[aria-pressed="true"] 
   .health-path { align-items:stretch; }
   .health-path > span { flex-basis:100%; min-width:0; overflow-wrap:anywhere; }
   .health-path .input { width:100%; min-width:0; font-size:16px; }
-  .health-footer > span, .health-registration-note { overflow-wrap:anywhere; }
 }
 @media(max-width:639px) {
   .traffic-scroll :is(.traffic-grid,.traffic-hourly-chart) { min-width:600px; }

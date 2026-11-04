@@ -5,7 +5,7 @@ import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router"
 import { useMemo, useState } from "react"
 import { Toggle } from "~/components/Toggle"
 import { Tile } from "~/components/ui"
-import { SiteInfoPanel } from "~/components/SiteHealthPanel"
+import { SiteInfoPanel, WhoGaCredit } from "~/components/SiteHealthPanel"
 import { useT } from "~/lib/i18n"
 import { showToast } from "~/lib/toast"
 import { timezoneOptions } from "~/lib/timezones"
@@ -52,7 +52,7 @@ function GeneralPage() {
         <FormActions><ActionButton className="btn btn-primary" type="submit">{t("保存设置")}</ActionButton></FormActions>
       </SettingsForm>
     </Tile>
-    {data.health ? <Tile icon="shield" title={t("站点信息")} subtitle={t("域名与 SSL 证书的到期时间")}><SiteInfoPanel report={data.health}/></Tile> : null}
+    {data.health ? <Tile icon="shield" title={t("站点信息")} titleAddon={<WhoGaCredit/>}><SiteInfoPanel report={data.health}/></Tile> : null}
     <SiteIconTile domain={domain} initial={data.iconVersion || 0} />
   </>
 }
@@ -68,7 +68,7 @@ function SiteIconTile({ domain, initial }: { domain: string, initial: number }) 
     await router.invalidate()
     showToast(message)
   }
-  return <Tile icon="globe" title={t("站点图标")} subtitle={t(version ? "正在使用上传的图标。" : "正在使用 favicon.la 自动获取的图标。")}>
+  return <Tile icon="globe" title={t("站点图标")} titleAddon={<span className="squircle settings-badge">{t(version ? "正在使用上传的图标" : "正在使用 favicon.la 自动获取的图标")}</span>}>
     <div className="settings-avatar-row">
       <SiteFavicon domain={domain} version={version} className="squircle settings-site-icon-preview" />
       <div className="settings-avatar-controls flex min-w-0 flex-wrap gap-2">
