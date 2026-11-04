@@ -1390,7 +1390,17 @@ html[data-theme="dark"] .metric-grid .metric-item > button[aria-pressed="true"] 
 .settings-form .input, .new-site-wizard .input { min-width:0; max-width:100%; }
 .settings-share-list a { max-width:100%; }
 .settings-modal-card, .settings-modal-body { min-width:0; overflow-wrap:anywhere; }
-.settings-avatar-controls > label:focus-within { outline:2px solid var(--analytics-accent); outline-offset:2px; }
+/* Profile avatar at the card's top right: click to pick a new picture (saved at once), × to remove it. */
+.settings-avatar-picker { position:relative; flex:none; }
+.settings-avatar-button { position:relative; display:block; cursor:pointer; }
+.settings-avatar-button .squircle.settings-avatar-preview { width:3.5rem; height:3.5rem; font-size:1.25rem; }
+.settings-avatar-overlay { --sq-r:24px; position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#fff; background:rgb(0 0 0 / .45); opacity:0; transition:opacity .15s; }
+.settings-avatar-button:hover .settings-avatar-overlay, .settings-avatar-button:focus-within .settings-avatar-overlay, .settings-avatar-button[aria-busy] .settings-avatar-overlay { opacity:1; }
+.settings-avatar-button:focus-within { outline:2px solid var(--analytics-accent); outline-offset:3px; border-radius:16px; }
+.settings-avatar-remove { position:absolute; top:-6px; right:-6px; display:flex; align-items:center; justify-content:center; width:20px; height:20px; border:1px solid var(--color-gray-200); border-radius:50%; background:var(--surface); color:var(--color-gray-500); font-size:10px; cursor:pointer; opacity:0; transition:opacity .15s; }
+.settings-avatar-picker:hover .settings-avatar-remove, .settings-avatar-remove:focus-visible { opacity:1; }
+.settings-avatar-remove:hover { color:var(--color-gray-900); }
+@media(hover:none) { .settings-avatar-remove { opacity:1; } }
 @media(max-width:767px) {
   .activity-search { min-width:0; flex-basis:100%; }
   .activity-search .input, .activity-window .input { font-size:16px; }

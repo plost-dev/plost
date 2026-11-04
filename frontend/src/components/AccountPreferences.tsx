@@ -1,5 +1,6 @@
 import { UserAvatar } from "./UserAvatar"
-import { ActionButton, ActionUpload } from "~/components/ActionButton"
+import { ActionButton } from "~/components/ActionButton"
+import { UIIcon } from "~/components/UIIcon"
 import { useEffect, useState } from "react"
 import { Field, FormActions, SettingsForm } from "~/components/SettingsForm"
 import { Tile } from "~/components/ui"
@@ -50,20 +51,32 @@ export function AccountPreferences({ user, onSaved }: {
   const [avatarError, setAvatarError] = useState("")
   const [processing, setProcessing] = useState(false)
   useEffect(() => {setName(user.name);setAvatar(user.avatar || "")}, [user.name,user.avatar])
-  return <Tile icon="user" title={t("个人资料")}>
-    <SettingsForm className="preferences-form" onSubmit={async event=>{event.preventDefault();await updateProfileFn({data:{name,avatar:avatar || null,locale:language}});setLocale(language);onSaved();showToast("设置已保存")}}>
-      <div className="settings-avatar-row">
-        <UserAvatar avatar={avatar} gravatarUrl={user.gravatarUrl} name={name} className="squircle settings-avatar-preview" alt={t("profile.avatar")} />
-        <div className="settings-avatar-controls flex min-w-0 flex-wrap gap-2">
-          <ActionUpload  className="btn-secondary settings-avatar-upload" accept="image/*" disabled={processing} onChange={async event=>{
-            const file=event.target.files?.[0];event.target.value="";if(!file)return
-            setProcessing(true);setAvatarError("")
-            try {setAvatar(await resizeAvatar(file))} catch(err){setAvatarError(err instanceof Error ? err.message : t("无法读取图片"))} finally {setProcessing(false)}
-          }}>{t("profile.change_avatar")}</ActionUpload>
-          {avatar ? <ActionButton  type="button" className="btn btn-secondary" onClick={()=>setAvatar("")}>{t("profile.remove_avatar")}</ActionButton> : null}
-        </div>
-      </div>
-      {avatarError ? <p role="alert" className="mt-3 text-sm text-red-600">{t(avatarError)}</p> : null}
+  // The avatar sits at the top right of the card: clicking it picks a new picture, which is saved straight away with
+  // the saved name and language, so unsaved edits in the form below stay unsaved.
+  async function saveAvatar(next: string) {
+    setProcessing(true)
+    try { await updateProfileFn({data:{avatar:next || null}}); setAvatar(next); onSaved(); showToast(next ? "头像已更新" : "头像已移除") }
+    catch (err) { setAvatarError(err instanceof Error ? err.message : "保存失败") }
+    finally { setProcessing(false) }
+  }
+  const avatarPicker = <div className="settings-avatar-picker">
+    <label className="settings-avatar-button" title={t("点击更换头像")} aria-busy={processing || undefined}>
+      <UserAvatar avatar={avatar} gravatarUrl={user.gravatarUrl} name={name} className="squircle settings-avatar-preview" alt={t("profile.avatar")} />
+      <span className="squircle settings-avatar-overlay" aria-hidden="true"><UIIcon name="upload" /></span>
+      <span className="sr-only">{t("profile.change_avatar")}</span>
+      <input type="file" accept="image/*" className="sr-only" disabled={processing} onChange={async event=>{
+        const file=event.target.files?.[0];event.target.value="";if(!file)return
+        setAvatarError("")
+        let next: string
+        try {next=await resizeAvatar(file)} catch(err){setAvatarError(err instanceof Error ? err.message : "无法读取图片");return}
+        await saveAvatar(next)
+      }} />
+    </label>
+    {avatar ? <button type="button" className="settings-avatar-remove" disabled={processing} title={t("profile.remove_avatar")} aria-label={t("profile.remove_avatar")} onClick={()=>void saveAvatar("")}><UIIcon name="xmark" /></button> : null}
+  </div>
+  return <Tile icon="user" title={t("个人资料")} actions={avatarPicker}>
+    <SettingsForm className="preferences-form" onSubmit={async event=>{event.preventDefault();await updateProfileFn({data:{name,locale:language}});setLocale(language);onSaved();showToast("设置已保存")}}>
+      {avatarError ? <p role="alert" className="mb-3 text-sm text-red-600">{t(avatarError)}</p> : null}
       <Field label={t("profile.nickname_label")}><input className="squircle input" required value={name} onChange={event=>setName(event.target.value)} /></Field>
       <Field label={t("邮箱")}><input className="squircle input bg-gray-50" value={user.email} disabled /></Field>
       <Field label={t("界面语言")}><select className="squircle input" value={language} onChange={event=>setLanguage(event.target.value === "en" ? "en" : "zh-CN")}><option value="zh-CN">简体中文</option><option value="en">English</option></select></Field>
