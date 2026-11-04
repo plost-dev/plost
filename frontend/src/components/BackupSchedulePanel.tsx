@@ -8,6 +8,7 @@ import { Toggle } from "./Toggle"
 import { UIIcon } from "./UIIcon"
 import { formatTimestamp } from "~/lib/format"
 import { useT } from "~/lib/i18n"
+import { cachedSettings, readSettings, useCachedState } from "~/lib/settings-cache"
 import { rpc } from "~/lib/rpc"
 import { showToast } from "~/lib/toast"
 import { PasswordInput } from "~/components/PasswordInput"
@@ -34,11 +35,11 @@ const sizeLabel = (bytes: number) => bytes >= 1 << 20 ? (bytes / (1 << 20)).toFi
 
 export function BackupSchedulePanel() {
   const { t, locale } = useT()
-  const [saved, setSaved] = useState<Settings | null>(null)
-  const [form, setForm] = useState<Settings | null>(null)
+  const [saved, setSaved] = useCachedState<Settings | null>("backupSettings", null)
+  const [form, setForm] = useState<Settings | null>(() => cachedSettings<Settings>("backupSettings") ?? null)
   const [secrets, setSecrets] = useState<Secrets>(NO_SECRETS)
   const [loadError, setLoadError] = useState("")
-  const [local, setLocal] = useState<BackupFile[]>([])
+  const [local, setLocal] = useCachedState<BackupFile[]>("backupLocal", [])
   const [cloud, setCloud] = useState<BackupFile[] | null>(null)
   const [connection, setConnection] = useState<{ bucket: string } | null>(null)
   const [connectionError, setConnectionError] = useState("")
@@ -50,10 +51,10 @@ export function BackupSchedulePanel() {
   // Stored errors can join two messages with "：", so each part is translated on its own.
   const message = (text: string) => text.split("：").map(part => t(part)).join(locale === "en" ? ": " : "：")
 
-  const loadLocal = useCallback(() => rpc<BackupFile[]>("/api/backup/local").then(setLocal, () => undefined), [])
+  const loadLocal = useCallback(() => readSettings<BackupFile[]>("backupLocal").then(setLocal, () => undefined), [setLocal])
   useEffect(() => {
-    rpc<Settings>("/api/backup/settings").then(next => { setSaved(next); setForm(next) }, error => setLoadError(error instanceof Error ? error.message : "加载失败，请刷新页面重试"))
-  }, [])
+    readSettings<Settings>("backupSettings").then(next => { setSaved(next); setForm(next) }, error => setLoadError(error instanceof Error ? error.message : "加载失败，请刷新页面重试"))
+  }, [setSaved])
 
   // Backups also start on their own schedule, so keep following the server: closely while one runs, slowly otherwise.
   const loaded = !!saved
@@ -62,10 +63,10 @@ export function BackupSchedulePanel() {
   useEffect(() => {
     if (!loaded) return
     const timer = setInterval(() => {
-      rpc<Settings>("/api/backup/settings").then(setSaved, () => undefined)
+      readSettings<Settings>("backupSettings").then(setSaved, () => undefined)
     }, running ? 1500 : 30000)
     return () => clearInterval(timer)
-  }, [loaded, running])
+  }, [loaded, running, setSaved])
   // Local files change whenever a backup starts, finishes or is pruned.
   useEffect(() => { if (loaded) void loadLocal() }, [loaded, running, attempt, loadLocal])
 

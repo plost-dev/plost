@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import "~/styles/backup-settings.css"
+import { readSettings, useCachedState } from "~/lib/settings-cache"
 import { geoipSettingsFn, saveGeoIPSettingsFn, updateGeoIPFn, type GeoIPEdition, type GeoIPSettings, type GeoIPSource } from "~/lib/geoip-actions"
 import { formatTimestamp } from "~/lib/format"
 import { useT } from "~/lib/i18n"
@@ -53,18 +54,18 @@ function ChinaCityTile({ data, onChange }: { data: GeoIPSettings, onChange: (nex
 /** Settings → IP 数据库: where the GeoLite2 database comes from, which one, and how its updates are going. */
 export function GeoIPSettingsPage() {
   const { t, locale } = useT()
-  const [data, setData] = useState<GeoIPSettings | null>(null)
+  const [data, setData] = useCachedState<GeoIPSettings | null>("geoip", null)
   useEffect(() => {
     let live = true
-    geoipSettingsFn().then(next => { if (live) setData(next) }, error => showToast(error instanceof Error ? error.message : "读取失败", "error"))
+    readSettings<GeoIPSettings>("geoip").then(next => { if (live) setData(next) }, error => showToast(error instanceof Error ? error.message : "读取失败", "error"))
     return () => { live = false }
-  }, [])
+  }, [setData])
   // While a download runs in the background, look again every two seconds.
   useEffect(() => {
     if (!data?.updating) return
     const timer = setTimeout(() => { void geoipSettingsFn().then(setData, () => {}) }, 2000)
     return () => clearTimeout(timer)
-  }, [data])
+  }, [data, setData])
   if (!data) return null
   return <>
     {data.managed ? <GeoIPSettings data={data} onChange={setData} /> : <Tile icon="globe" title="IP 数据库">

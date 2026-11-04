@@ -4,8 +4,9 @@ import { ConfirmModal, Field } from "./SettingsForm"
 import { Tile } from "./ui"
 import { UIIcon } from "./UIIcon"
 import { formatTimestamp } from "~/lib/format"
-import { passkeyAddFn, passkeyListFn, passkeyRemoveFn, type PasskeyItem } from "~/lib/auth-actions"
+import { passkeyAddFn, passkeyRemoveFn, type PasskeyItem } from "~/lib/auth-actions"
 import { useT } from "~/lib/i18n"
+import { readSettings, useCachedState } from "~/lib/settings-cache"
 import { PasswordInput } from "~/components/PasswordInput"
 
 // A browser ties a Passkey to a domain name, so a page opened by an address like 127.0.0.1 can never create one.
@@ -14,7 +15,7 @@ const byIpAddress = () => typeof window !== "undefined" && /^(\d{1,3}(\.\d{1,3})
 /** Passkeys are listed here; adding or removing one needs the account password. */
 export function PasskeyPanel() {
   const { t, locale } = useT()
-  const [items, setItems] = useState<PasskeyItem[] | null>(null)
+  const [items, setItems] = useCachedState<PasskeyItem[] | null>("passkeys", null)
   const [error, setError] = useState("")
   const [adding, setAdding] = useState(false)
   const [removing, setRemoving] = useState<PasskeyItem | null>(null)
@@ -23,7 +24,7 @@ export function PasskeyPanel() {
   const [pending, setPending] = useState(false)
   const ipHost = byIpAddress()
 
-  const load = useCallback(() => passkeyListFn().then(setItems, err => setError(err instanceof Error ? err.message : "加载失败，请刷新页面重试")), [])
+  const load = useCallback(() => readSettings<PasskeyItem[]>("passkeys").then(setItems, err => setError(err instanceof Error ? err.message : "加载失败，请刷新页面重试")), [setItems])
   useEffect(() => { void load() }, [load])
   const close = () => { setAdding(false); setRemoving(null); setPassword(""); setName("") }
 

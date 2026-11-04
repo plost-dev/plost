@@ -3,19 +3,21 @@ import { ActionButton } from "./ActionButton"
 import { ConfirmModal, Field, FormActions, SettingsForm } from "./SettingsForm"
 import { Tile } from "./ui"
 import { UIIcon } from "./UIIcon"
-import { siteDomainsFn, type Site } from "~/lib/actions"
-import { apiKeysFn, createApiKeyFn, removeApiKeyFn, type ApiKey } from "~/lib/api-key-actions"
+import { type Site } from "~/lib/actions"
+import { createApiKeyFn, removeApiKeyFn, type ApiKey } from "~/lib/api-key-actions"
 import { formatTimestamp } from "~/lib/format"
 import { useT } from "~/lib/i18n"
+import { readSettings, useCachedState } from "~/lib/settings-cache"
 
 // The full API guide lives on the website, so this page only hands out and revokes keys.
 export const API_DOCS_URL = "https://plo.st/self-hosted-docs.html#api"
 
 export function ApiKeyPanel() {
   const { t, locale } = useT()
-  const [keys, setKeys] = useState<ApiKey[] | null>(null)
-  const [sites, setSites] = useState<Site[]>([])
-  const [domain, setDomain] = useState("")
+  const [listed, setListed] = useCachedState<{ keys: ApiKey[] } | null>("apiKeys", null)
+  const keys = listed?.keys ?? null
+  const [sites, setSites] = useCachedState<Site[]>("siteDomains", [])
+  const [domain, setDomain] = useState(() => sites[0]?.domain || "")
   const [name, setName] = useState("")
   const [created, setCreated] = useState("")
   const [copied, setCopied] = useState(false)
@@ -23,11 +25,11 @@ export function ApiKeyPanel() {
   const [pending, setPending] = useState(false)
   const [error, setError] = useState("")
 
-  const load = useCallback(() => apiKeysFn().then(r => setKeys(r.keys), err => setError(err instanceof Error ? err.message : "加载失败，请刷新页面重试")), [])
+  const load = useCallback(() => readSettings<{ keys: ApiKey[] }>("apiKeys").then(setListed, err => setError(err instanceof Error ? err.message : "加载失败，请刷新页面重试")), [setListed])
   useEffect(() => {
     void load()
-    void siteDomainsFn().then(list => { setSites(list); setDomain(d => d || list[0]?.domain || "") }, () => {})
-  }, [load])
+    void readSettings<Site[]>("siteDomains").then(list => { setSites(list); setDomain(d => d || list[0]?.domain || "") }, () => {})
+  }, [load, setSites])
 
   return <>
     <Tile icon="key" title="API Key" subtitle="只读，每个 Key 只能读取一个站点的在线人数、访客、访问次数和浏览量。"

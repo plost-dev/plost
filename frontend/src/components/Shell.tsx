@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react"
 import { BrandMark } from "./BrandMark"
 import { GithubGlyph, LanguageGlyph, MoonGlyph, SunGlyph } from "./FooterGlyphs"
 import { logoutFn, trafficPulseFn, updateProfileFn } from "~/lib/actions"
+import { clearSettingsCache } from "~/lib/settings-cache"
 import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
 import { createThemeUpdate } from "~/lib/theme-update"
@@ -347,6 +348,7 @@ function UserMenu({
             className="squircle site-header-menu-item w-full text-left"
             onClick={async () => {
               await logoutFn()
+              clearSettingsCache()
               await router.navigate({ to: "/login" })
             }}
           >
