@@ -1,0 +1,1 @@
+import{Cn as e}from"./index-Dfvr2hSR.js";var t=e;export{t as component};

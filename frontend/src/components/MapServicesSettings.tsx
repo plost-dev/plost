@@ -78,9 +78,9 @@ function MapServicesSettings({ mapbox: initialMapbox, google: initialGoogle, usa
   </>
 }
 
-const OUTLINES: Array<{ id: MapUsage["outline"]; label: string; detail: string }> = [
-  { id: "regions", label: "国家和省/州", detail: "约 1 MB；点击国家可查看各省/州的访客分布，实时访客没有城市时落在所在省份。" },
-  { id: "countries", label: "仅国家", detail: "约 0.28 MB，加载和绘制更快；点击国家只筛选报表，不再展开省/州。" },
+const OUTLINES: Array<{ id: MapUsage["outline"]; label: string }> = [
+  { id: "regions", label: "国家和省/州" },
+  { id: "countries", label: "仅国家" },
 ]
 
 /** How detailed the built-in map is: countries with their provinces, or country outlines only for speed. */
@@ -98,13 +98,11 @@ function MapOutlinePanel({ initial, onSaved }: { initial: MapUsage["outline"]; o
     } catch (error) { showToast(error instanceof Error ? error.message : "保存失败", "error") }
     finally { setPending(false) }
   }
-  const chosen = OUTLINES.find(item => item.id === outline) || OUTLINES[0]
   return <Tile icon="globe" title={t("内置地图轮廓")} subtitle={t("没有使用 Mapbox 或 Google 地图时，统计页的访客分布地图画到多细。")}>
     <div className="squircle segmented-control inline-flex w-fit rounded-md bg-gray-100" role="radiogroup" aria-label={t("内置地图轮廓")}>
       {OUTLINES.map(item => <button key={item.id} type="button" role="radio" aria-checked={item.id === outline} aria-pressed={item.id === outline} disabled={pending}
         className="squircle rounded px-3 py-1 text-sm font-medium text-gray-600 hover:text-gray-900" onClick={() => void change(item.id)}>{t(item.label)}</button>)}
     </div>
-    <p className="mt-3 text-sm leading-6 text-gray-600">{t(chosen.detail)}</p>
   </Tile>
 }
 

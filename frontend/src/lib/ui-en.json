@@ -1443,8 +1443,6 @@
   "开启后，国家为中国的访客 IP 会发送到 api.cnip.io 查询省份和城市，其他国家仍用 IP 数据库；同一个 IP 的结果在内存里保留一天。查询超过 1.5 秒或失败时，改用 IP 数据库。城市从开启之后开始记录。": "When on, the address of each visitor in China is sent to api.cnip.io to find their province and city; other countries still use the IP database. An answer is kept in memory for a day. A lookup slower than 1.5 seconds, or one that fails, falls back to the IP database. Cities are recorded from when this is turned on.",
   "国家和省/州": "Countries and provinces",
   "仅国家": "Countries only",
-  "约 1 MB；点击国家可查看各省/州的访客分布，实时访客没有城市时落在所在省份。": "About 1 MB. Click a country to see its provinces; visitors online without a city are placed at their province.",
-  "约 0.28 MB，加载和绘制更快；点击国家只筛选报表，不再展开省/州。": "About 0.28 MB, faster to load and draw. Clicking a country only filters the report; provinces are not shown.",
   "内置地图轮廓": "Built-in map outlines",
   "没有使用 Mapbox 或 Google 地图时，统计页的访客分布地图画到多细。": "How detailed the visitor map on the statistics pages is when Mapbox or Google Maps is not used.",
   "滚轮缩放 · 拖动移动 · 点击国家筛选": "Scroll to zoom · Drag to move · Click a country to filter"
