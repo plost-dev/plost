@@ -55,6 +55,7 @@ type Config struct {
 type App struct {
 	cfg      Config
 	db       *sql.DB
+	rdb      *sql.DB      // Read-only pool for reports, see reader.go.
 	mu       sync.RWMutex // Quiesce all database access for an in-process restore.
 	secret   []byte
 	epoch    uint64
@@ -179,7 +180,12 @@ func Open(cfg Config) (*App, error) {
 		db.Close()
 		return nil, errors.New("invalid visitor secret")
 	}
-	a := &App{cfg: cfg, db: db, secret: key, queue: make(chan *ingest, 1024), stop: make(chan struct{}), limits: newLimiter(), lockFile: lock, geo: geo, recent: newRecentEvents(), live: newLivePlaces(), changes: newChangeHub()}
+	rdb, err := openReader(path)
+	if err != nil {
+		db.Close()
+		return nil, err
+	}
+	a := &App{cfg: cfg, db: db, rdb: rdb, secret: key, queue: make(chan *ingest, 1024), stop: make(chan struct{}), limits: newLimiter(), lockFile: lock, geo: geo, recent: newRecentEvents(), live: newLivePlaces(), changes: newChangeHub()}
 	a.jobCtx, a.cancelJobs = context.WithCancel(context.Background())
 	a.outboundAllow = cfg.OutboundAllow
 	a.siteProbe = newSiteChecker(cfg.OutboundAllow)
@@ -201,14 +207,18 @@ func Open(cfg Config) (*App, error) {
 	return a, nil
 }
 
-func openDB(path string) (*sql.DB, error) {
+func sqliteURL(path string, extra ...string) string {
 	u := &url.URL{Scheme: "file", Path: path}
 	q := u.Query()
-	for _, p := range []string{"busy_timeout(5000)", "journal_mode(WAL)", "synchronous(NORMAL)", "foreign_keys(ON)", "cache_size(-4096)", "temp_store(FILE)", "trusted_schema(OFF)"} {
+	for _, p := range append([]string{"busy_timeout(5000)", "journal_mode(WAL)", "synchronous(NORMAL)", "foreign_keys(ON)", "cache_size(-4096)", "temp_store(FILE)", "trusted_schema(OFF)"}, extra...) {
 		q.Add("_pragma", p)
 	}
 	u.RawQuery = q.Encode()
-	db, err := sql.Open("sqlite", u.String())
+	return u.String()
+}
+
+func openDB(path string) (*sql.DB, error) {
+	db, err := sql.Open("sqlite", sqliteURL(path))
 	if err != nil {
 		return nil, err
 	}
@@ -331,6 +341,9 @@ func (a *App) Close() error {
 		a.mu.Lock()
 		defer a.mu.Unlock()
 		err = a.db.Close()
+		if a.rdb != nil {
+			_ = a.rdb.Close()
+		}
 		unlockDirectory(a.lockFile)
 	})
 	return err

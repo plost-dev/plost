@@ -46,8 +46,9 @@ html[data-theme="dark"] {
 
 .dots-loader { display:inline-flex; align-items:center; gap:4px; height:var(--ui-control-compact); padding-inline:8px; color:var(--analytics-accent, var(--color-gray-500)); }
 /* A floating pill keeps the toolbar layout untouched while the dots show. */
-.dots-loader-floating { position:fixed; z-index:30; top:64px; left:50%; transform:translateX(-50%); height:28px; border:1px solid var(--color-gray-200); border-radius:9999px; background:var(--surface); box-shadow:0 2px 8px rgb(0 0 0 / .12); pointer-events:none; }
+.dots-loader-floating { position:fixed; z-index:30; top:50%; left:50%; transform:translate(-50%,-50%); height:40px; gap:6px; padding-inline:16px; border:1px solid var(--color-gray-200); border-radius:9999px; background:var(--surface); box-shadow:0 2px 8px rgb(0 0 0 / .12); pointer-events:none; }
 .dots-loader i { width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.3; animation:dots-bounce 1.1s ease-in-out infinite; }
+.dots-loader-floating i { width:8px; height:8px; }
 .dots-loader i:nth-child(2) { animation-delay:.15s; }
 .dots-loader i:nth-child(3) { animation-delay:.3s; }
 @keyframes dots-bounce {

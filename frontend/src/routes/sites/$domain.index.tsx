@@ -50,6 +50,9 @@ function DashboardContent({ domain }: { domain: string }) {
   const key = JSON.stringify(search)
   const view = useSettled(data, key)
   const shown = view.result?.ok && !view.switching ? view.result.value : null
+  // The search the report on screen was loaded for; while another range loads, its old data keeps its own time axis.
+  const shownSearch = useRef(search)
+  if (!view.switching) shownSearch.current = search
   useEffect(() => {
     if (!shown) return
     recent.set(domain + key, { at: Date.now(), value: shown })
@@ -68,7 +71,7 @@ function DashboardContent({ domain }: { domain: string }) {
   if (result && !result.ok) return <PageState title="页面出错" description={result.message} />
   return <Shell user={me} layout="analytics">
     {result?.ok
-      ? <AnalyticsDashboard data={result.value} domain={domain} search={search} loading={view.switching && !cached}
+      ? <AnalyticsDashboard data={result.value} domain={domain} search={search} dataSearch={view.switching && !cached ? shownSearch.current : search} loading={view.switching && !cached}
         readonly={!result.value.access.member} canManage={result.value.access.canManage} onSearch={onSearch} />
       : <AnalyticsDashboardSkeleton domain={domain} search={search} readonly={!me} onSearch={onSearch} />}
   </Shell>

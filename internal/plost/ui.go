@@ -213,7 +213,7 @@ func (a *App) groupRows(ctx context.Context, site int64, rng Range, q url.Values
 	if len(visitors) > 0 && visitors[0] {
 		count = "count(DISTINCT " + visitorSQL + ")"
 	}
-	rows, err := a.db.QueryContext(ctx, "SELECT "+expression+","+count+" AS n FROM events_v2 WHERE "+w+extra+" GROUP BY 1 ORDER BY n DESC,1 LIMIT 200", args...)
+	rows, err := a.rdb.QueryContext(ctx, "SELECT "+expression+","+count+" AS n FROM events_v2 WHERE "+w+extra+" GROUP BY 1 ORDER BY n DESC,1 LIMIT 200", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -235,107 +235,48 @@ func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Val
 	if service, key := a.mapService(ctx); service != "" && a.setting(ctx, mapUseDetail, "true") == "true" {
 		result[map[string]string{"mapbox": "mapboxToken", "google": "googleMapsKey"}[service]] = key
 	}
-	channel := channelSQL
-	w0, a0 := where(site.ID, rng, q)
-	channelRows, err := a.db.QueryContext(ctx, "SELECT "+channel+",count(DISTINCT "+visitorSQL+") AS n FROM events_v2 WHERE "+w0+" AND name='pageview' GROUP BY 1 ORDER BY n DESC,1", a0...)
-	if err != nil {
-		return nil, err
+	var mu sync.Mutex
+	set := func(key string, value any) {
+		mu.Lock()
+		result[key] = value
+		mu.Unlock()
 	}
-	channels := []Row{}
-	for channelRows.Next() {
-		var v Row
-		if err = channelRows.Scan(&v.Name, &v.Value); err != nil {
-			channelRows.Close()
-			return nil, err
+	list := func(key, query string, args []any) func(context.Context) error {
+		return func(ctx context.Context) error {
+			rows, err := collectRows(a.rdb.QueryContext(ctx, query, args...))
+			if err == nil {
+				set(key, rows)
+			}
+			return err
 		}
-		channels = append(channels, v)
-	}
-	err = channelRows.Err()
-	channelRows.Close()
-	if err != nil {
-		return nil, err
-	}
-	result["channels"] = channels
-	// Visitors, like the channel list and the column heading, not pageviews.
-	ai, err := a.groupRows(ctx, site.ID, rng, q, "referrer_source", " AND name='pageview' AND ("+channel+")='ai'", true)
-	if err != nil {
-		return nil, err
-	}
-	result["aiSources"] = ai
-	for _, group := range []struct{ name, expression, extra string }{{"titles", "title", " AND name='pageview'"}, {"hostnames", "hostname", " AND name='pageview'"}, {"utm", "utm_source", " AND name='pageview' AND utm_source<>''"}, {"utmMediums", "utm_medium", " AND name='pageview' AND utm_medium<>''"}, {"campaigns", "utm_campaign", " AND name='pageview' AND utm_campaign<>''"}, {"notFoundPages", "pathname", " AND name='404'"}, {"downloads", "COALESCE(json_extract(props,'$.url'),'')", " AND name='File Download'"}, {"outbound", "COALESCE(json_extract(props,'$.url'),'')", " AND name='Outbound Link: Click'"}, {"eventCounts", "name", " AND name NOT IN ('pageview','404')"}} {
-		rows, err := a.groupRows(ctx, site.ID, rng, q, group.expression, group.extra)
-		if err != nil {
-			return nil, err
-		}
-		result[group.name] = rows
 	}
 	w, args := where(site.ID, rng, q)
+	tasks := []func(context.Context) error{
+		list("channels", "SELECT "+channelSQL+",count(DISTINCT "+visitorSQL+") AS n FROM events_v2 WHERE "+w+" AND name='pageview' GROUP BY 1 ORDER BY n DESC,1", args),
+		// Visitors, like the channel list and the column heading, not pageviews.
+		func(ctx context.Context) error {
+			rows, err := a.groupRows(ctx, site.ID, rng, q, "referrer_source", " AND name='pageview' AND ("+channelSQL+")='ai'", true)
+			if err == nil {
+				set("aiSources", rows)
+			}
+			return err
+		},
+		list("properties", "SELECT e.name||' · '||j.key||' · '||CAST(j.value AS TEXT),count(*) AS n FROM events_v2 e,json_each(e.props) j WHERE "+w+" AND name NOT IN ('pageview','404') AND j.type IN ('text','integer','real','true','false') GROUP BY 1 ORDER BY n DESC,1 LIMIT 200", args),
+	}
+	for _, group := range []struct{ name, expression, extra string }{{"utm", "utm_source", " AND name='pageview' AND utm_source<>''"}, {"utmMediums", "utm_medium", " AND name='pageview' AND utm_medium<>''"}, {"campaigns", "utm_campaign", " AND name='pageview' AND utm_campaign<>''"}, {"notFoundPages", "pathname", " AND name='404'"}, {"downloads", "COALESCE(json_extract(props,'$.url'),'')", " AND name='File Download'"}, {"outbound", "COALESCE(json_extract(props,'$.url'),'')", " AND name='Outbound Link: Click'"}, {"eventCounts", "name", " AND name NOT IN ('pageview','404')"}} {
+		tasks = append(tasks, func(ctx context.Context) error {
+			rows, err := a.groupRows(ctx, site.ID, rng, q, group.expression, group.extra)
+			if err == nil {
+				set(group.name, rows)
+			}
+			return err
+		})
+	}
 	for _, dim := range []struct{ key, column string }{{"pageVisitors", "pathname"}, {"titles", "title"}, {"hostnames", "hostname"}} {
-		rows, err := a.db.QueryContext(ctx, "SELECT "+dim.column+",count(DISTINCT "+visitorSQL+") AS n FROM events_v2 WHERE "+w+" AND name='pageview' AND "+dim.column+"<>'' GROUP BY 1 ORDER BY n DESC,1 LIMIT 200", args...)
-		if err != nil {
-			return nil, err
-		}
-		list := []Row{}
-		for rows.Next() {
-			var v Row
-			if err = rows.Scan(&v.Name, &v.Value); err != nil {
-				rows.Close()
-				return nil, err
-			}
-			list = append(list, v)
-		}
-		err = rows.Err()
-		rows.Close()
-		if err != nil {
-			return nil, err
-		}
-		result[dim.key] = list
+		tasks = append(tasks, list(dim.key, "SELECT "+dim.column+",count(DISTINCT "+visitorSQL+") AS n FROM events_v2 WHERE "+w+" AND name='pageview' AND "+dim.column+"<>'' GROUP BY 1 ORDER BY n DESC,1 LIMIT 200", args))
 	}
-	properties, err := a.db.QueryContext(ctx, "SELECT e.name||' · '||j.key||' · '||CAST(j.value AS TEXT),count(*) AS n FROM events_v2 e,json_each(e.props) j WHERE "+w+" AND name NOT IN ('pageview','404') AND j.type IN ('text','integer','real','true','false') GROUP BY 1 ORDER BY n DESC,1 LIMIT 200", args...)
-	if err != nil {
-		return nil, err
-	}
-	propRows := []Row{}
-	for properties.Next() {
-		var v Row
-		if err = properties.Scan(&v.Name, &v.Value); err != nil {
-			properties.Close()
-			return nil, err
-		}
-		propRows = append(propRows, v)
-	}
-	err = properties.Err()
-	properties.Close()
-	if err != nil {
-		return nil, err
-	}
-	result["properties"] = propRows
-	for _, entry := range []bool{true, false} {
-		order := "ASC"
-		key := "entryPages"
-		if !entry {
-			order = "DESC"
-			key = "exitPages"
-		}
-		rows, err := a.db.QueryContext(ctx, "SELECT pathname,count(DISTINCT visitor) AS n FROM (SELECT pathname,"+visitorSQL+" AS visitor,row_number() OVER (PARTITION BY "+visitSQL+" ORDER BY timestamp "+order+",id "+order+") AS rn FROM events_v2 WHERE "+w+" AND name='pageview') WHERE rn=1 GROUP BY pathname ORDER BY n DESC,pathname LIMIT 200", args...)
-		if err != nil {
-			return nil, err
-		}
-		list := []Row{}
-		for rows.Next() {
-			var v Row
-			if err = rows.Scan(&v.Name, &v.Value); err != nil {
-				rows.Close()
-				return nil, err
-			}
-			list = append(list, v)
-		}
-		err = rows.Err()
-		rows.Close()
-		if err != nil {
-			return nil, err
-		}
-		result[key] = list
+	for _, entry := range []struct{ key, order string }{{"entryPages", "ASC"}, {"exitPages", "DESC"}} {
+		tasks = append(tasks, list(entry.key, "SELECT pathname,count(DISTINCT visitor) AS n FROM (SELECT pathname,"+visitorSQL+" AS visitor,row_number() OVER (PARTITION BY "+visitSQL+" ORDER BY timestamp "+entry.order+",id "+entry.order+") AS rn FROM events_v2 WHERE "+w+" AND name='pageview') WHERE rn=1 GROUP BY pathname ORDER BY n DESC,pathname LIMIT 200", args))
 	}
 	// The visiting-hours grid always covers the last seven local days ending today,
 	// whatever range is chosen, so every row is one real date and today is the last row.
@@ -346,25 +287,30 @@ func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Val
 	now := time.Now().In(loc)
 	firstDay := time.Date(now.Year(), now.Month(), now.Day()-6, 0, 0, 0, 0, loc)
 	week := Range{From: firstDay, To: time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, loc)}
-	hw, ha := where(site.ID, week, q)
-	heatArgs := append([]any{site.Timezone}, ha...)
-	rows, err := a.db.QueryContext(ctx, "SELECT plost_local_day_hour(timestamp,?) AS slot,count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+hw+" AND name='pageview' GROUP BY slot", heatArgs...)
-	if err != nil {
-		return nil, err
-	}
-	heat := []map[string]any{}
-	for rows.Next() {
-		var slot, count int64
-		if err = rows.Scan(&slot, &count); err != nil {
-			rows.Close()
-			return nil, err
+	tasks = append(tasks, func(ctx context.Context) error {
+		hw, ha := where(site.ID, week, q)
+		heatArgs := append([]any{site.Timezone}, ha...)
+		rows, err := a.rdb.QueryContext(ctx, "SELECT plost_local_day_hour(timestamp,?) AS slot,count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+hw+" AND name='pageview' GROUP BY slot", heatArgs...)
+		if err != nil {
+			return err
 		}
-		day := time.Unix(slot/24*86400, 0).UTC()
-		heat = append(heat, map[string]any{"date": day.Format("2006-01-02"), "dow": (int(day.Weekday())+6)%7 + 1, "hour": slot % 24, "value": count})
-	}
-	err = rows.Err()
-	rows.Close()
-	if err != nil {
+		defer rows.Close()
+		heat := []map[string]any{}
+		for rows.Next() {
+			var slot, count int64
+			if err := rows.Scan(&slot, &count); err != nil {
+				return err
+			}
+			day := time.Unix(slot/24*86400, 0).UTC()
+			heat = append(heat, map[string]any{"date": day.Format("2006-01-02"), "dow": (int(day.Weekday())+6)%7 + 1, "hour": slot % 24, "value": count})
+		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		set("heatmap", heat)
+		return nil
+	})
+	if err := parallel(ctx, tasks...); err != nil {
 		return nil, err
 	}
 	days := make([]map[string]any, 7)
@@ -374,7 +320,6 @@ func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Val
 	}
 	result["heatmapDays"] = days
 	result["heatmapHour"] = now.Hour()
-	result["heatmap"] = heat
 	return result, nil
 }
 

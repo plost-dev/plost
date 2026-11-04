@@ -379,7 +379,9 @@ func (a *App) restoreBackup(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) replaceDatabase(incoming, safety string) error {
 	path := filepath.Join(a.cfg.DataDir, "plost.db")
+	_ = a.rdb.Close()
 	if err := a.db.Close(); err != nil {
+		a.rdb, _ = openReader(path)
 		return err
 	}
 	rollback := func(original error) error {
@@ -401,6 +403,9 @@ func (a *App) replaceDatabase(incoming, safety string) error {
 		_ = os.Remove(path + "-shm")
 		a.db, err = openDB(path)
 		if err != nil {
+			return err
+		}
+		if a.rdb, err = openReader(path); err != nil {
 			return err
 		}
 		return original
@@ -433,7 +438,13 @@ func (a *App) replaceDatabase(incoming, safety string) error {
 		db.Close()
 		return rollback(errors.New("invalid visitor secret"))
 	}
+	rdb, err := openReader(path)
+	if err != nil {
+		db.Close()
+		return rollback(err)
+	}
 	a.db = db
+	a.rdb = rdb
 	a.secret = key
 	a.epoch++
 	return nil

@@ -36,6 +36,7 @@ type RegionRow struct {
 	Name    string `json:"name"`
 	Value   int64  `json:"value"`
 }
+
 // CityRow is a city's visitors: its English name (the key), its Chinese name when one is known, and its country.
 type CityRow struct {
 	Country string `json:"country"`
@@ -62,16 +63,16 @@ type Report struct {
 	Countries []Row    `json:"countries"`
 	// Regions counts visitors by province or state, for the map: an ISO 3166-2 code, or the name the online GeoIP
 	// service gave, under its country.
-	Regions   []RegionRow `json:"regions"`
+	Regions []RegionRow `json:"regions"`
 	// Cities counts visitors by city, where the GeoIP lookup named one (recorded since cities were added).
-	Cities []CityRow `json:"cities"`
-	Browsers  []Row       `json:"browsers"`
-	OS        []Row       `json:"os"`
-	Devices   []Row       `json:"devices"`
-	Languages []Row       `json:"languages"`
-	Screens   []Row       `json:"screens"`
-	Events    []Row       `json:"events"`
-	Readonly  bool        `json:"readonly"`
+	Cities    []CityRow `json:"cities"`
+	Browsers  []Row     `json:"browsers"`
+	OS        []Row     `json:"os"`
+	Devices   []Row     `json:"devices"`
+	Languages []Row     `json:"languages"`
+	Screens   []Row     `json:"screens"`
+	Events    []Row     `json:"events"`
+	Readonly  bool      `json:"readonly"`
 	// Live counts the visitors online now (the last five minutes, like Overview.Online) by country, for the map, and
 	// LivePoints places them where a City GeoIP database could (livepoints.go).
 	Live []Row `json:"live"`
@@ -157,19 +158,19 @@ func where(site int64, r Range, q url.Values) (string, []any) {
 func (a *App) overview(ctx context.Context, site int64, r Range, q url.Values) (Overview, error) {
 	w, args := where(site, r, q)
 	var o Overview
-	err := a.db.QueryRowContext(ctx, "SELECT count(DISTINCT "+visitorSQL+"),count(DISTINCT "+visitSQL+"),count(*) FROM events_v2 WHERE "+w+" AND name='pageview'", args...).Scan(&o.Visitors, &o.Visits, &o.Pageviews)
+	err := a.rdb.QueryRowContext(ctx, "SELECT count(DISTINCT "+visitorSQL+"),count(DISTINCT "+visitSQL+"),count(*) FROM events_v2 WHERE "+w+" AND name='pageview'", args...).Scan(&o.Visitors, &o.Visits, &o.Pageviews)
 	if err != nil {
 		return o, err
 	}
 	if o.Visits > 0 {
-		err = a.db.QueryRowContext(ctx, `SELECT COALESCE(100.0*sum(pv=1)/count(*),0),COALESCE(avg(dur),0) FROM (SELECT count(*) AS pv,max(timestamp)-min(timestamp) AS dur FROM events_v2 WHERE `+w+` AND name='pageview' GROUP BY `+visitSQL+`)`, args...).Scan(&o.BounceRate, &o.Duration)
+		err = a.rdb.QueryRowContext(ctx, `SELECT COALESCE(100.0*sum(pv=1)/count(*),0),COALESCE(avg(dur),0) FROM (SELECT count(*) AS pv,max(timestamp)-min(timestamp) AS dur FROM events_v2 WHERE `+w+` AND name='pageview' GROUP BY `+visitSQL+`)`, args...).Scan(&o.BounceRate, &o.Duration)
 		if err != nil {
 			return o, err
 		}
 	}
 	live := Range{From: time.Now().Add(-5 * time.Minute), To: time.Now().Add(time.Second)}
 	lw, la := where(site, live, q)
-	err = a.db.QueryRowContext(ctx, "SELECT count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+lw, la...).Scan(&o.Online)
+	err = a.rdb.QueryRowContext(ctx, "SELECT count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+lw, la...).Scan(&o.Online)
 	return o, err
 }
 
@@ -193,7 +194,7 @@ func (a *App) rows(ctx context.Context, site int64, r Range, q url.Values, colum
 	if column == "country_code" {
 		limit = "300"
 	}
-	rows, err := a.db.QueryContext(ctx, "SELECT "+column+","+metric+" AS n FROM events_v2 WHERE "+w+" GROUP BY "+column+" ORDER BY n DESC,"+column+" LIMIT "+limit, args...)
+	rows, err := a.rdb.QueryContext(ctx, "SELECT "+column+","+metric+" AS n FROM events_v2 WHERE "+w+" GROUP BY "+column+" ORDER BY n DESC,"+column+" LIMIT "+limit, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +214,7 @@ func (a *App) series(ctx context.Context, site int64, r Range, q url.Values) ([]
 	start := r.From
 	if r.Period == "all" {
 		var earliest sql.NullInt64
-		if err := a.db.QueryRowContext(ctx, "SELECT min(timestamp) FROM events_v2 WHERE site_id=?", site).Scan(&earliest); err != nil {
+		if err := a.rdb.QueryRowContext(ctx, "SELECT min(timestamp) FROM events_v2 WHERE site_id=?", site).Scan(&earliest); err != nil {
 			return nil, err
 		}
 		if !earliest.Valid {
@@ -291,7 +292,7 @@ func (a *App) series(ctx context.Context, site int64, r Range, q url.Values) ([]
 		"va AS (SELECT bucket,count(*) AS n,100.0*sum(pv=1)/count(*) AS bounce,avg(dur) AS dur FROM vi GROUP BY bucket), " +
 		"vu AS (" + visitorBucket + ") " +
 		"SELECT b.bucket,COALESCE(vu.n,0),b.pv,COALESCE(va.n,0),COALESCE(va.bounce,0),COALESCE(va.dur,0) FROM b LEFT JOIN vu ON vu.bucket=b.bucket LEFT JOIN va ON va.bucket=b.bucket"
-	rows, err := a.db.QueryContext(ctx, query, args...)
+	rows, err := a.rdb.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -322,9 +323,16 @@ func (a *App) report(r *http.Request, site Site, readonly bool) (Report, error) 
 		return Report{}, err
 	}
 	result := Report{Site: site, Range: rng, Readonly: readonly}
-	result.Overview, err = a.overview(r.Context(), site.ID, rng, q)
-	if err != nil {
-		return result, err
+	tasks := []func(context.Context) error{
+		func(ctx context.Context) (err error) { result.Overview, err = a.overview(ctx, site.ID, rng, q); return },
+		func(ctx context.Context) (err error) { result.Series, err = a.series(ctx, site.ID, rng, q); return },
+		func(ctx context.Context) (err error) { result.Regions, err = a.regions(ctx, site.ID, rng, q); return },
+		func(ctx context.Context) (err error) { result.Cities, err = a.cities(ctx, site.ID, rng, q); return },
+		func(ctx context.Context) (err error) { result.Live, err = a.liveCountries(ctx, site.ID, q); return },
+		func(ctx context.Context) (err error) {
+			result.LiveRegions, err = a.liveRegions(ctx, site.ID, q)
+			return
+		},
 	}
 	if rng.Period != "all" {
 		prev := Range{From: rng.From.Add(-rng.To.Sub(rng.From)), To: rng.From, Period: rng.Period}
@@ -332,14 +340,10 @@ func (a *App) report(r *http.Request, site Site, readonly bool) (Report, error) 
 		if rng.Period == "yesterday" {
 			prev.From = rng.From.AddDate(0, 0, -1)
 		}
-		result.Previous, err = a.overview(r.Context(), site.ID, prev, q)
-		if err != nil {
-			return result, err
-		}
-	}
-	result.Series, err = a.series(r.Context(), site.ID, rng, q)
-	if err != nil {
-		return result, err
+		tasks = append(tasks, func(ctx context.Context) (err error) {
+			result.Previous, err = a.overview(ctx, site.ID, prev, q)
+			return
+		})
 	}
 	for _, v := range []struct {
 		col        string
@@ -348,34 +352,21 @@ func (a *App) report(r *http.Request, site Site, readonly bool) (Report, error) 
 	}{
 		{"referrer_source", &result.Sources, false, false}, {"pathname", &result.Pages, true, false}, {"country_code", &result.Countries, false, false}, {"browser", &result.Browsers, false, false}, {"os", &result.OS, false, false}, {"device", &result.Devices, false, false}, {"language", &result.Languages, false, false}, {"screen", &result.Screens, false, false}, {"name", &result.Events, false, true},
 	} {
-		*v.out, err = a.rows(r.Context(), site.ID, rng, q, v.col, v.pv, v.events)
-		if err != nil {
-			return result, err
-		}
+		tasks = append(tasks, func(ctx context.Context) (err error) {
+			*v.out, err = a.rows(ctx, site.ID, rng, q, v.col, v.pv, v.events)
+			return
+		})
 	}
-	result.Regions, err = a.regions(r.Context(), site.ID, rng, q)
-	if err != nil {
-		return result, err
+	if q.Get("ui") == "1" {
+		tasks = append(tasks, func(ctx context.Context) (err error) {
+			result.Details, err = a.reportDetails(ctx, site, rng, q)
+			return
+		})
 	}
-	result.Cities, err = a.cities(r.Context(), site.ID, rng, q)
-	if err != nil {
-		return result, err
-	}
-	result.Live, err = a.liveCountries(r.Context(), site.ID, q)
-	if err != nil {
-		return result, err
-	}
-	result.LiveRegions, err = a.liveRegions(r.Context(), site.ID, q)
-	if err != nil {
+	if err := parallel(r.Context(), tasks...); err != nil {
 		return result, err
 	}
 	result.LivePoints = a.live.points(site.ID, time.Now(), strings.ToUpper(q.Get("country")))
-	if q.Get("ui") == "1" {
-		result.Details, err = a.reportDetails(r.Context(), site, rng, q)
-		if err != nil {
-			return result, err
-		}
-	}
 	return result, nil
 }
 
@@ -532,7 +523,7 @@ func (a *App) openapi(w http.ResponseWriter, r *http.Request) {
 // shades so many, and a country filter leaves just that country's.
 func (a *App) regions(ctx context.Context, site int64, r Range, q url.Values) ([]RegionRow, error) {
 	w, args := where(site, r, q)
-	rows, err := a.db.QueryContext(ctx, "SELECT country_code,region,count(DISTINCT "+visitorSQL+") AS n FROM events_v2 WHERE "+w+" AND name='pageview' AND region<>'' AND country_code<>'' GROUP BY 1,2 ORDER BY n DESC,1,2 LIMIT 1000", args...)
+	rows, err := a.rdb.QueryContext(ctx, "SELECT country_code,region,count(DISTINCT "+visitorSQL+") AS n FROM events_v2 WHERE "+w+" AND name='pageview' AND region<>'' AND country_code<>'' GROUP BY 1,2 ORDER BY n DESC,1,2 LIMIT 1000", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -552,7 +543,7 @@ func (a *App) regions(ctx context.Context, site int64, r Range, q url.Values) ([
 // two towns of the same name in different countries stay apart; the Chinese name shown is the latest one recorded.
 func (a *App) cities(ctx context.Context, site int64, r Range, q url.Values) ([]CityRow, error) {
 	w, args := where(site, r, q)
-	rows, err := a.db.QueryContext(ctx, "SELECT country_code,city,max(city_zh),count(DISTINCT "+visitorSQL+") AS n FROM events_v2 WHERE "+w+" AND name='pageview' AND city<>'' AND country_code<>'' GROUP BY 1,2 ORDER BY n DESC,1,2 LIMIT 1000", args...)
+	rows, err := a.rdb.QueryContext(ctx, "SELECT country_code,city,max(city_zh),count(DISTINCT "+visitorSQL+") AS n FROM events_v2 WHERE "+w+" AND name='pageview' AND city<>'' AND country_code<>'' GROUP BY 1,2 ORDER BY n DESC,1,2 LIMIT 1000", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -573,7 +564,7 @@ func (a *App) cities(ctx context.Context, site int64, r Range, q url.Values) ([]
 func (a *App) liveRegions(ctx context.Context, site int64, q url.Values) ([]RegionRow, error) {
 	live := Range{From: time.Now().Add(-5 * time.Minute), To: time.Now().Add(time.Second)}
 	w, args := where(site, live, q)
-	rows, err := a.db.QueryContext(ctx, "SELECT country_code,region,count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+w+" AND country_code<>'' GROUP BY 1,2 ORDER BY 3 DESC LIMIT 1000", args...)
+	rows, err := a.rdb.QueryContext(ctx, "SELECT country_code,region,count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+w+" AND country_code<>'' GROUP BY 1,2 ORDER BY 3 DESC LIMIT 1000", args...)
 	if err != nil {
 		return nil, err
 	}
@@ -593,7 +584,7 @@ func (a *App) liveRegions(ctx context.Context, site int64, q url.Values) ([]Regi
 func (a *App) liveCountries(ctx context.Context, site int64, q url.Values) ([]Row, error) {
 	live := Range{From: time.Now().Add(-5 * time.Minute), To: time.Now().Add(time.Second)}
 	w, args := where(site, live, q)
-	rows, err := a.db.QueryContext(ctx, "SELECT country_code, count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+w+" AND country_code<>'' GROUP BY 1 ORDER BY 2 DESC LIMIT 250", args...)
+	rows, err := a.rdb.QueryContext(ctx, "SELECT country_code, count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+w+" AND country_code<>'' GROUP BY 1 ORDER BY 2 DESC LIMIT 250", args...)
 	if err != nil {
 		return nil, err
 	}

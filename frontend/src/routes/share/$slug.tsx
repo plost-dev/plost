@@ -34,13 +34,15 @@ function ShareContent({ slug }: { slug: string }) {
   const view = useSettled(data, JSON.stringify(search))
   const loading = useRef(false)
   loading.current = view.pending
+  const shownSearch = useRef(search)
+  if (!view.switching) shownSearch.current = search
   useRouterAutoRefresh({ skip: () => loading.current })
   const onSearch = (next: DashSearch) => { void router.navigate({to: "/share/$slug", params: {slug}, search: next}) }
   const { result } = view
   if (result && !result.ok) return <PageState title="分享链接无效" description={result.message} />
   return <Shell layout="analytics">
     {result?.ok
-      ? <AnalyticsDashboard data={result.value} domain={result.value.site.domain} search={search} loading={view.switching} onSearch={onSearch} />
+      ? <AnalyticsDashboard data={result.value} domain={result.value.site.domain} search={search} dataSearch={view.switching ? shownSearch.current : search} loading={view.switching} onSearch={onSearch} />
       : <AnalyticsDashboardSkeleton domain="" search={search} onSearch={onSearch} />}
   </Shell>
 }
