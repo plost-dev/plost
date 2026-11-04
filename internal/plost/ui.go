@@ -45,6 +45,24 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+	// Local calendar day (days since 1970-01-01) times 24 plus the local hour, for per-date grids.
+	err = sqlite.RegisterDeterministicScalarFunction("plost_local_day_hour", 2, func(_ *sqlite.FunctionContext, args []driver.Value) (driver.Value, error) {
+		ts, ok := args[0].(int64)
+		if !ok {
+			return nil, nil
+		}
+		zone, _ := args[1].(string)
+		loc, err := uiLocation(zone)
+		if err != nil {
+			return nil, err
+		}
+		t := time.Unix(ts, 0).In(loc)
+		day := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.UTC).Unix() / 86400
+		return day*24 + int64(t.Hour()), nil
+	})
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (a *App) setting(ctx context.Context, key, fallback string) string {
@@ -317,25 +335,43 @@ func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Val
 		}
 		result[key] = list
 	}
-	heatArgs := append([]any{site.Timezone}, args...)
-	rows, err := a.db.QueryContext(ctx, "SELECT plost_local_hour(timestamp,?) AS slot,count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+w+" AND name='pageview' GROUP BY slot", heatArgs...)
+	// The visiting-hours grid always covers the last seven local days ending today,
+	// whatever range is chosen, so every row is one real date and today is the last row.
+	loc, err := uiLocation(site.Timezone)
+	if err != nil {
+		loc = time.UTC
+	}
+	now := time.Now().In(loc)
+	firstDay := time.Date(now.Year(), now.Month(), now.Day()-6, 0, 0, 0, 0, loc)
+	week := Range{From: firstDay, To: time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, loc)}
+	hw, ha := where(site.ID, week, q)
+	heatArgs := append([]any{site.Timezone}, ha...)
+	rows, err := a.db.QueryContext(ctx, "SELECT plost_local_day_hour(timestamp,?) AS slot,count(DISTINCT "+visitorSQL+") FROM events_v2 WHERE "+hw+" AND name='pageview' GROUP BY slot", heatArgs...)
 	if err != nil {
 		return nil, err
 	}
-	heat := []map[string]int64{}
+	heat := []map[string]any{}
 	for rows.Next() {
 		var slot, count int64
 		if err = rows.Scan(&slot, &count); err != nil {
 			rows.Close()
 			return nil, err
 		}
-		heat = append(heat, map[string]int64{"dow": slot / 24, "hour": slot % 24, "value": count})
+		day := time.Unix(slot/24*86400, 0).UTC()
+		heat = append(heat, map[string]any{"date": day.Format("2006-01-02"), "dow": (int(day.Weekday())+6)%7 + 1, "hour": slot % 24, "value": count})
 	}
 	err = rows.Err()
 	rows.Close()
 	if err != nil {
 		return nil, err
 	}
+	days := make([]map[string]any, 7)
+	for i := range days {
+		d := time.Date(firstDay.Year(), firstDay.Month(), firstDay.Day()+i, 0, 0, 0, 0, time.UTC)
+		days[i] = map[string]any{"date": d.Format("2006-01-02"), "dow": (int(d.Weekday())+6)%7 + 1}
+	}
+	result["heatmapDays"] = days
+	result["heatmapHour"] = now.Hour()
 	result["heatmap"] = heat
 	return result, nil
 }

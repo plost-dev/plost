@@ -578,9 +578,11 @@ func TestOriginalUIReportsAndSiteRename(t *testing.T) {
 		Entry        []Row `json:"entryPages"`
 		Exit         []Row `json:"exitPages"`
 		Heatmap      []struct {
+			Date      string
 			Dow, Hour int
 			Value     int64
 		} `json:"heatmap"`
+		HeatmapDays []struct{ Date string } `json:"heatmapDays"`
 	}
 	if err := json.Unmarshal(b, &details); err != nil {
 		t.Fatal(err)
@@ -595,7 +597,7 @@ func TestOriginalUIReportsAndSiteRename(t *testing.T) {
 	x.app.db.QueryRow("SELECT min(timestamp) FROM events_v2").Scan(&ts)
 	loc, _ := time.LoadLocation("Asia/Tashkent")
 	at := time.Unix(ts, 0).In(loc)
-	if len(details.Heatmap) != 1 || details.Heatmap[0].Hour != at.Hour() || details.Heatmap[0].Dow != (int(at.Weekday())+6)%7+1 || details.Heatmap[0].Value != 2 {
+	if len(details.Heatmap) != 1 || details.Heatmap[0].Hour != at.Hour() || details.Heatmap[0].Dow != (int(at.Weekday())+6)%7+1 || details.Heatmap[0].Value != 2 || details.Heatmap[0].Date != at.Format("2006-01-02") || len(details.HeatmapDays) != 7 || details.HeatmapDays[6].Date != time.Now().In(loc).Format("2006-01-02") {
 		t.Fatal("heatmap timezone/visitor grouping incorrect")
 	}
 	x.call(t, "GET", "/api/sites?period=invalid&ui=1", nil, 400)

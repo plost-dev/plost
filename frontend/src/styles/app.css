@@ -908,6 +908,7 @@ html[data-theme="dark"] { --map-ocean: #242630; --map-empty: #3d4151; --map-bord
 .traffic-day { display: contents; }
 .traffic-hour { font-size: 10px; color: var(--color-gray-400); height: 18px; }
 .traffic-day-label { font-size: 10px; color: var(--color-gray-500); align-self: center; }
+.traffic-day-label[data-today] { color: var(--color-gray-900); font-weight: 600; }
 .traffic-paired-report .traffic-cell { min-width:0; min-height:0; width:100%; max-width:16px; height:auto; aspect-ratio:1; --sq-r:4px; transition:opacity 120ms; }
 .traffic-cell:hover, .traffic-cell:focus-visible { outline: 2px solid var(--analytics-accent); outline-offset: 1px; }
 .traffic-meta { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px 12px; margin-top:12px; }
