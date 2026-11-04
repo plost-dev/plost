@@ -1,7 +1,7 @@
 import { useT } from "~/lib/i18n"
 import { line as chartLine, curveMonotoneX } from "d3"
 import { useEffect, useId, useMemo, useRef, useState } from "react"
-import { formatClock, formatDayLong, formatDayShort, formatMonthYYYY } from "~/lib/format"
+import { formatClock, formatDayLong, formatDayShort, formatMonthYYYY, parseStamp } from "~/lib/format"
 import type { Interval } from "~/lib/range"
 import { INTERVAL_VIEW } from "~/lib/range"
 import type { Point } from "~/lib/ch"
@@ -48,6 +48,34 @@ function axisLabel(date: string, interval: Interval, withYear: boolean, locale: 
   if (interval === "hour") return formatClock(date)
   if (interval === "minute") return formatClock(date, true)
   return formatDayShort(date, withYear, locale)
+}
+
+/**
+ * Which points get a time label: every step-th one at a fixed step, never evenly spread with rounding, which leaves
+ * uneven gaps such as 0:00 2:00 3:00 5:00. Hours and minutes line up with the clock (0:00, 3:00, 6:00 …); days, weeks
+ * and months count from the first point. The step is the smallest that fits within the room for labels.
+ */
+const TICK_STEPS: Record<Interval, number[]> = {
+  minute: [1, 2, 5, 10, 15, 30, 60, 120],
+  hour: [1, 2, 3, 4, 6, 12, 24],
+  day: [1, 2, 3, 7, 14, 28, 56],
+  week: [1, 2, 4, 8, 13, 26, 52],
+  month: [1, 2, 3, 6, 12, 24],
+}
+function tickIndices(dates: ReadonlyArray<string>, interval: Interval, maxTicks: number): number[] {
+  if (!dates.length) return []
+  const position = (date: string, i: number) => {
+    if (interval !== "hour" && interval !== "minute") return i
+    const d = parseStamp(date)
+    return interval === "hour" ? d.getHours() : d.getHours() * 60 + d.getMinutes()
+  }
+  const steps = TICK_STEPS[interval] ?? [1]
+  let picked: number[] = []
+  for (const step of steps) {
+    picked = dates.flatMap((date, i) => position(date, i) % step === 0 ? [i] : [])
+    if (picked.length <= maxTicks) break
+  }
+  return picked.length ? picked : [0]
 }
 
 function tooltipLabel(date: string, interval: Interval, withYear: boolean, index: number, total: number, realtime: boolean, locale: string) {
@@ -172,11 +200,9 @@ export function TrendChart({
       const top = value > 0 ? Math.min(y(value), baseline - 1) : baseline
       return {key, i, path: value > 0 ? barPath(x(i) - barWidth / 2, barWidth, top, baseline) : ""}
     })).flat()
-    const xTickCount = Math.min(Math.max(2, Math.floor(innerW / (withYear ? 110 : 76))), 8, points.length)
-    const xTicks = points.length ? Array.from({ length: xTickCount }, (_, i) => {
-      const index = xTickCount === 1 ? 0 : Math.round((i * (points.length - 1)) / (xTickCount - 1))
-      return { index, x: x(index), label: axisLabel(points[index].date, interval, withYear, locale) }
-    }) : []
+    const maxTicks = Math.min(Math.max(2, Math.floor(innerW / (withYear ? 110 : 76))), 8)
+    const xTicks = tickIndices(points.map(point => point.date), interval, maxTicks)
+      .map(index => ({ index, x: x(index), label: axisLabel(points[index].date, interval, withYear, locale) }))
     return { left, right, innerW, slot, bars, baseline, x, y, lines, areas, columns, xTicks, yTickVals }
   }, [points, width, interval, withYear, locale, type, visible])
 

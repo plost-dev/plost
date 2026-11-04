@@ -24,7 +24,7 @@ export function percentShort(n: number) {
 const WEEKDAYS = ["星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"]
 const MONTHS_EN = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
-function parseStamp(date: string) {
+export function parseStamp(date: string) {
   if (date.includes(" ")) {
     const [d, t] = date.split(" ")
     const [y, m, day] = d.split("-").map(Number)

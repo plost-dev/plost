@@ -1,0 +1,1 @@
+import{Cn as e}from"./index-X51d62b0.js";var t=e;export{t as component};
