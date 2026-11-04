@@ -536,7 +536,7 @@ func TestRegistrableDomain(t *testing.T) {
 func TestExpiryRefreshSchedule(t *testing.T) {
 	now := time.Date(2026, 10, 31, 12, 0, 0, 0, time.UTC)
 	snapshot := func(age time.Duration, mutate func(*ExpirySnapshot)) *ExpirySnapshot {
-		s := &ExpirySnapshot{CheckedAt: isoTime(now.Add(-age)), Domain: DomainExpiry{ExpiresAt: "2027-01-01T00:00:00.000Z"}, Certificate: CertificateResult{ExpiresAt: "2027-01-01T00:00:00.000Z", Valid: true}}
+		s := &ExpirySnapshot{CheckedAt: isoTime(now.Add(-age)), Lookup: expiryLookupVersion, Domain: DomainExpiry{ExpiresAt: "2027-01-01T00:00:00.000Z"}, Certificate: CertificateResult{ExpiresAt: "2027-01-01T00:00:00.000Z", Valid: true}}
 		if mutate != nil {
 			mutate(s)
 		}
@@ -553,6 +553,10 @@ func TestExpiryRefreshSchedule(t *testing.T) {
 		"transient failure, retry":       {snapshot(16*time.Minute, func(s *ExpirySnapshot) { s.Domain.Error = "检查超时" }), true},
 		"permanent failure waits a day":  {snapshot(2*time.Hour, func(s *ExpirySnapshot) { s.Domain.Error, s.Domain.Retryable = "暂不支持", boolPtr(false) }), false},
 		"permanent failure, a day later": {snapshot(25*time.Hour, func(s *ExpirySnapshot) { s.Domain.Error, s.Domain.Retryable = "暂不支持", boolPtr(false) }), true},
+		"older lookup had no date": {snapshot(time.Hour, func(s *ExpirySnapshot) {
+			s.Lookup, s.Domain.ExpiresAt, s.Domain.Error, s.Domain.Retryable = 0, "", "暂不支持", boolPtr(false)
+		}), true},
+		"older lookup with a date waits": {snapshot(time.Hour, func(s *ExpirySnapshot) { s.Lookup = 0 }), false},
 		"certificate problem is retried": {snapshot(16*time.Minute, func(s *ExpirySnapshot) { s.Certificate.Error = "证书已过期" }), true},
 		"unreadable timestamp":           {snapshot(time.Hour, func(s *ExpirySnapshot) { s.CheckedAt = "garbage" }), true},
 	} {

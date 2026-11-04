@@ -59,8 +59,14 @@ type CertificateResult struct {
 	LastSuccessAt string `json:"lastSuccessAt,omitempty"`
 }
 
+// expiryLookupVersion goes up whenever the domain lookup can answer more than before (2: the who.ga
+// fallback), so a stored "unsupported" answer from an older lookup is asked again at once instead of
+// waiting out the day it would otherwise be kept.
+const expiryLookupVersion = 2
+
 type ExpirySnapshot struct {
 	CheckedAt   string            `json:"checkedAt"`
+	Lookup      int               `json:"lookup,omitempty"`
 	Domain      DomainExpiry      `json:"domain"`
 	Certificate CertificateResult `json:"certificate"`
 }
@@ -529,12 +535,15 @@ func checkExpiry(ctx context.Context, lookup *domainLookup, dial dialFunc, roots
 		cert = result
 	}()
 	wg.Wait()
-	return ExpirySnapshot{CheckedAt: isoTime(time.Now()), Domain: domain, Certificate: cert}
+	return ExpirySnapshot{CheckedAt: isoTime(time.Now()), Lookup: expiryLookupVersion, Domain: domain, Certificate: cert}
 }
 
 // expiryRefreshDue: successful lookups live for a day; transient failures get another try in 15 minutes.
 func expiryRefreshDue(s *ExpirySnapshot, now time.Time) bool {
 	if s == nil {
+		return true
+	}
+	if s.Lookup < expiryLookupVersion && s.Domain.ExpiresAt == "" {
 		return true
 	}
 	retryable := s.Domain.Retryable == nil || *s.Domain.Retryable
@@ -582,5 +591,5 @@ func mergeExpiry(previous *ExpirySnapshot, current ExpirySnapshot) ExpirySnapsho
 	case c.Error != "" && oldCert.ExpiresAt != "":
 		c.ExpiresAt, c.Stale, c.LastSuccessAt = oldCert.ExpiresAt, true, firstNonEmpty(oldCert.LastSuccessAt, prevChecked)
 	}
-	return ExpirySnapshot{CheckedAt: current.CheckedAt, Domain: d, Certificate: c}
+	return ExpirySnapshot{CheckedAt: current.CheckedAt, Lookup: current.Lookup, Domain: d, Certificate: c}
 }
