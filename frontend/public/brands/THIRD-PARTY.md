@@ -85,6 +85,9 @@ use the existing local generic UI fallback at the same 16 × 16 size.
 all declaring CC0-1.0, checked the same way and listed in `platforms/sources.json` with their checksums. They identify
 in-app browsers only.
 
+`xiaomi.svg`, `huawei.svg` and `vivo.svg`, from the same commit and also CC0-1.0, stand for the MIUI, Huawei and vivo
+browsers, whose own app icons (kept in `images/icon/browser/`) are near-identical blue globes.
+
 ## Traffic source icons (2026-10-22)
 
 The bundled `sources/` icons are unmodified SVG assets from [The SVG](https://thesvg.org/),

@@ -75,8 +75,12 @@ const BROWSER_NAMES_ZH: Record<string, string> = {
   "OPPO Browser": "OPPO 浏览器",
   "Samsung Internet": "三星浏览器",
   "Yandex Browser": "Yandex 浏览器",
-  "Chromium WebView": "安卓内置网页",
-  "iOS WebView": "iOS 内置网页",
+}
+
+// Pages opened inside other apps, named after the engine and system every reader knows, in either language.
+const BROWSER_LABELS: Record<string, string> = {
+  "Chromium WebView": "Chrome Android",
+  "iOS WebView": "Safari iOS",
 }
 
 export function browserDisplayName(name: string): string {
@@ -100,7 +104,7 @@ export function reportValueLabel(kind: string | undefined, name: string, locale:
   }
   if (kind === "browser") {
     const shown = browserDisplayName(label || name)
-    return locale === "en" ? shown : BROWSER_NAMES_ZH[shown] || shown
+    return BROWSER_LABELS[shown] || (locale === "en" ? shown : BROWSER_NAMES_ZH[shown]) || shown
   }
   return label || name
 }
