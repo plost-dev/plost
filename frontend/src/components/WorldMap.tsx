@@ -263,6 +263,8 @@ function WorldMap({
           event.preventDefault()
           if (clickable(c.properties.code)) onCountryClick?.(c.properties.code)
         })
+        // A click opens the country without focusing its shape, which would leave a focus frame round it.
+        .on("mousedown.focus", (event: MouseEvent) => event.preventDefault())
         .on("mouseover", function (event, c) { enter(c.properties.code, c.properties.code).call(this, event) })
         .on("mousemove", move)
         .on("mouseout", function (_, c) { leave(c.properties.code).call(this) })
