@@ -11,7 +11,7 @@ import { numberShort } from "~/lib/format"
 import { MapboxVisitorMap } from "./MapboxVisitorMap"
 import { HelpHint } from "./HelpHint"
 import { readMapFlags, saveMapFlags, useGoogleMapStyle, useMapStyle } from "~/lib/map-preferences"
-import { loadRegionMap, mainland, type CountryShape, type RegionFeature, type RegionMap } from "~/lib/world-regions"
+import { loadCountryMap, loadRegionMap, mainland, type CountryShape, type RegionFeature, type RegionMap } from "~/lib/world-regions"
 import { regionName } from "~/lib/geography"
 
 const MAP_ROTATE: [number, number] = [-150, 0]
@@ -42,6 +42,8 @@ function cachedPath(view: string, path: d3.GeoPath) {
     return d
   }
 }
+
+export type MapOutline = "regions" | "countries"
 
 /** A report row of the "regions" kind: code is the country, name the province (an ISO 3166-2 code, or a name). */
 export type RegionRow = { name: string, value: number, code?: string }
@@ -89,10 +91,13 @@ function WorldMap({
   liveRegions = NONE,
   points = NONE,
   showFlags = true,
+  outline = "regions",
   onCountryClick,
   onBack,
 }: {
   rows: Array<{ name: string, value: number, label?: string }>
+  /** "regions": countries with their provinces; "countries": country outlines only, lighter to load and draw. */
+  outline?: MapOutline
   /** The visitors online now by country and province, for placing those without a city. */
   liveRegions?: LiveRegion[]
   /** Visitors by province, shown when a country is open. */
@@ -130,7 +135,8 @@ function WorldMap({
     return { maxValue, dataByCode }
   }, [rows, locale])
 
-  const shape = useMemo(() => focus && map ? map.countries.find(c => c.properties.code === iso2(focus)) : undefined, [map, focus])
+  // Only a map with provinces opens a country; with country outlines only, a click just filters the report.
+  const shape = useMemo(() => focus && map?.regions.length ? map.countries.find(c => c.properties.code === iso2(focus)) : undefined, [map, focus])
   // The open country's provinces with their visitors. Rows the map cannot place (a name it does not know) are left out.
   const { regionMax, regionValues } = useMemo(() => {
     const regionValues = new Map<string, number>()
@@ -153,6 +159,15 @@ function WorldMap({
     }
     return counts
   }, [live])
+  // Everyone online in each country, those placed at a city included, for the tooltip.
+  const liveTotalByCode = useMemo(() => {
+    const counts = new Map(liveByCode)
+    for (const p of points) {
+      const code = iso2(p.country)
+      if (code) counts.set(code, (counts.get(code) || 0) + p.count)
+    }
+    return counts
+  }, [liveByCode, points])
   const arrivals = useLiveArrivals(live)
   const pointArrivals = usePointArrivals(points)
 
@@ -201,7 +216,7 @@ function WorldMap({
     setLoadFailed(false)
     function load() {
       observer?.disconnect()
-      loadRegionMap().then((data) => {
+      ;(outline === "countries" ? loadCountryMap : loadRegionMap)().then((data) => {
         if (active) setMap(data)
       }).catch(() => {
         if (active) setLoadFailed(true)
@@ -215,7 +230,7 @@ function WorldMap({
       observer.observe(svgRef.current)
     } else load()
     return () => { active = false; observer?.disconnect() }
-  }, [attempt])
+  }, [attempt, outline])
 
   // The geography: drawn when the map loads and when a country opens or closes, never for a refresh of the numbers.
   useEffect(() => {
@@ -276,7 +291,7 @@ function WorldMap({
       .attr("stroke-linejoin", "round")
       .attr("d", path) : null
     // On the world map the province lines are drawn finer than the borders, for detail without clutter.
-    if (!shape) root.append("path").datum(map.regionLines).attr("class", "region-lines").attr("d", path)
+    if (!shape && map.regions.length) root.append("path").datum(map.regionLines).attr("class", "region-lines").attr("d", path)
       .attr("fill", "none").attr("stroke", BORDER).attr("stroke-width", 0.35).attr("stroke-opacity", 0.8)
       .attr("vector-effect", "non-scaling-stroke").attr("pointer-events", "none")
     const flags = root.append("g").attr("class", "country-flags")
@@ -437,7 +452,7 @@ function WorldMap({
 
   const hoveredRegion = tooltip.hovered?.startsWith("region:") ? tooltip.hovered.slice(7).split("|") : null
   const hovered = !hoveredRegion && tooltip.hovered ? dataByCode.get(tooltip.hovered) : undefined
-  const hoveredLive = hovered ? liveByCode.get(hovered.code) || 0 : 0
+  const hoveredLive = hovered ? liveTotalByCode.get(hovered.code) || 0 : 0
   const focusCode = shape?.properties.code || ""
   const legendMax = focusCode ? regionMax : maxValue
 
@@ -469,7 +484,7 @@ function WorldMap({
         ) : null}
       </div>
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-gray-400">
-        <span>{t(focusCode ? "滚轮缩放 · 拖动移动" : "滚轮缩放 · 拖动移动 · 点击国家查看省/州")}</span>
+        <span>{t(focusCode ? "滚轮缩放 · 拖动移动" : map && !map.regions.length ? "滚轮缩放 · 拖动移动 · 点击国家筛选" : "滚轮缩放 · 拖动移动 · 点击国家查看省/州")}</span>
         <span className="map-legend inline-flex items-center gap-1.5">
           <span>0</span>
           <span className="squircle map-legend-bar" style={{ background: `linear-gradient(to right, ${COLOR_STOPS.map(c => `var(${c})`).join(", ")})` }} aria-hidden="true"/>
@@ -528,10 +543,12 @@ export function MapCard({
   livePoints = [],
   liveRegions = [],
   liveCount = 0,
+  outline = "regions",
   onViewVisitors,
   onCountryClick,
   onBack,
 }: {
+  outline?: MapOutline
   mapboxToken?: string
   googleMapsKey?: string
   rows: Array<{ name: string, value: number, label?: string }>
@@ -577,7 +594,7 @@ export function MapCard({
               </label>
           </div>
           {/* Visitors placed by city get their own dots; the rest stay at their country. */}
-          <VisitorMap key={googleMapsKey || mapboxToken} token={mapboxToken} googleKey={googleMapsKey} rows={rows} regions={regions} focus={focus} live={unplacedLive(live, livePoints)} points={livePoints} liveRegions={liveRegions} showFlags={showFlags} onCountryClick={onCountryClick} onBack={onBack} />
+          <VisitorMap key={googleMapsKey || mapboxToken} token={mapboxToken} googleKey={googleMapsKey} rows={rows} regions={regions} focus={focus} live={unplacedLive(live, livePoints)} points={livePoints} liveRegions={liveRegions} showFlags={showFlags} outline={outline} onCountryClick={onCountryClick} onBack={onBack} />
 
         </Surface>
       </div>

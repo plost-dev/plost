@@ -4,6 +4,7 @@ import type { Feature, MultiLineString, MultiPolygon, Polygon, Position } from "
 import regionMapUrl from "../assets/world-regions.bin?url"
 import { decodeTopology } from "./world-map-format"
 import { subdivisionCode } from "./geography"
+import { COUNTRIES_BY_TWO_LETTER_CODE, loadWorldMap } from "./world-countries"
 
 /** c: country, i: ISO 3166-2 code ("" where Natural Earth has none), n/z: English and Chinese names. */
 export type RegionProps = { c: string, i: string, n: string, z: string }
@@ -34,6 +35,38 @@ export function loadRegionMap(): Promise<RegionMap> {
     return buildRegionMap(decodeTopology(await response.arrayBuffer()) as never)
   }).catch((error) => {
     mapPromise = undefined
+    throw error
+  })
+}
+
+let countryMapPromise: Promise<RegionMap> | undefined
+
+/**
+ * The lighter map: country outlines only, from the 280 KB world map the overview's globe uses, instead of the
+ * 1 MB map with every province. It has no provinces, so a country cannot be opened and live visitors without a city
+ * sit at their country's middle.
+ */
+export function loadCountryMap(): Promise<RegionMap> {
+  return countryMapPromise ??= loadWorldMap().then((features): RegionMap => {
+    const byAlpha3 = new Map(Object.entries(COUNTRIES_BY_TWO_LETTER_CODE).map(([alpha2, entry]) => [entry.alpha_3, alpha2]))
+    const countries: CountryShape[] = []
+    const centroids = new Map<string, [number, number]>()
+    for (const feature of features) {
+      const code = byAlpha3.get(feature.properties.a3)
+      if (!code) continue
+      const shape: CountryShape = { type: "Feature", properties: { code }, geometry: feature.geometry }
+      countries.push(shape)
+      const c = d3.geoCentroid(mainland(shape) as never)
+      if (Number.isFinite(c[0]) && Number.isFinite(c[1])) centroids.set(code, c)
+    }
+    return {
+      regions: [], countries, centroids, regionLines: { type: "MultiLineString", coordinates: [] },
+      regionCode: (country: string, name: string) => /^[A-Z]{2}-[A-Z0-9]{1,3}$/i.test(name.trim()) ? name.trim().toUpperCase() : subdivisionCode(country, name),
+      regionCenter: () => undefined,
+      regionAt: () => "",
+    }
+  }).catch((error) => {
+    countryMapPromise = undefined
     throw error
   })
 }

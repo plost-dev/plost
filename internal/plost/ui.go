@@ -210,7 +210,7 @@ func (a *App) groupRows(ctx context.Context, site int64, rng Range, q url.Values
 }
 
 func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Values) (map[string]any, error) {
-	result := map[string]any{"mapboxToken": "", "googleMapsKey": ""}
+	result := map[string]any{"mapboxToken": "", "googleMapsKey": "", "mapOutline": a.setting(ctx, mapOutline, "regions")}
 	// The statistics pages show the chosen map service unless it is set to the overview only.
 	if service, key := a.mapService(ctx); service != "" && a.setting(ctx, mapUseDetail, "true") == "true" {
 		result[map[string]string{"mapbox": "mapboxToken", "google": "googleMapsKey"}[service]] = key
@@ -506,16 +506,28 @@ func (a *App) mapKeyState(enabled bool, key string) map[string]any {
 const (
 	mapUseDetail   = "map_use_detail"   // On by default: the statistics pages used the service before this setting.
 	mapUseOverview = "map_use_overview" // Off by default: the overview keeps its dotted globe.
+	// The built-in map's outlines: "regions" (countries with their provinces, the default) or "countries" only, a
+	// quarter of the download and much less to draw, for those who want the page as light as it can be.
+	mapOutline = "map_outline"
 )
 
 func (a *App) mapUsage(w http.ResponseWriter, r *http.Request) error {
 	if r.Method == "PUT" {
 		var in struct {
-			Detail   *bool `json:"detail"`
-			Overview *bool `json:"overview"`
+			Detail   *bool   `json:"detail"`
+			Overview *bool   `json:"overview"`
+			Outline  *string `json:"outline"`
 		}
 		if err := readJSON(w, r, &in); err != nil {
 			return err
+		}
+		if in.Outline != nil {
+			if *in.Outline != "regions" && *in.Outline != "countries" {
+				return failure(400, "未知的地图轮廓")
+			}
+			if _, err := a.db.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", mapOutline, *in.Outline); err != nil {
+				return err
+			}
 		}
 		for key, value := range map[string]*bool{mapUseDetail: in.Detail, mapUseOverview: in.Overview} {
 			if value == nil {
@@ -526,9 +538,10 @@ func (a *App) mapUsage(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 	}
-	return jsonResponse(w, map[string]bool{
+	return jsonResponse(w, map[string]any{
 		"detail":   a.setting(r.Context(), mapUseDetail, "true") == "true",
 		"overview": a.setting(r.Context(), mapUseOverview, "false") == "true",
+		"outline":  a.setting(r.Context(), mapOutline, "regions"),
 	})
 }
 

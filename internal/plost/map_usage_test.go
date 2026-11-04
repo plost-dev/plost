@@ -27,11 +27,22 @@ func TestMapUsage(t *testing.T) {
 		json.Unmarshal(x.call(t, "GET", "/api/overview/map", nil, 200), &got)
 		return got
 	}
-	var usage map[string]bool
+	var usage map[string]any
 	json.Unmarshal(x.call(t, "GET", "/api/map-usage", nil, 200), &usage)
-	if !usage["detail"] || usage["overview"] {
+	if usage["detail"] != true || usage["overview"] != false || usage["outline"] != "regions" {
 		t.Fatalf("default usage = %v", usage)
 	}
+	// The outlines: provinces by default, countries only on request, and nothing else.
+	x.call(t, "PUT", "/api/map-usage", map[string]any{"outline": "countries"}, 200)
+	x.call(t, "PUT", "/api/map-usage", map[string]any{"outline": "cities"}, 400)
+	var report struct {
+		Details map[string]any `json:"details"`
+	}
+	json.Unmarshal(x.call(t, "GET", "/api/sites/example.com/report?period=today&ui=1", nil, 200), &report)
+	if report.Details["mapOutline"] != "countries" {
+		t.Fatalf("the report should carry the outline setting: %v", report.Details["mapOutline"])
+	}
+	x.call(t, "PUT", "/api/map-usage", map[string]any{"outline": "regions"}, 200)
 	if detail() != "pk.test" || overview()["service"] != "" {
 		t.Fatalf("by default only the statistics pages use Mapbox: %q %v", detail(), overview())
 	}

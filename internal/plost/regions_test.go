@@ -77,3 +77,25 @@ func TestReportCountsVisitorsByRegion(t *testing.T) {
 		t.Fatalf("region filter: %+v", report.Overview)
 	}
 }
+
+// The map colours every country from the report's list, so it is not cut to the 50 busiest like other lists.
+func TestReportListsEveryCountry(t *testing.T) {
+	x := newTestApp(t)
+	x.setup(t)
+	x.addSite(t, "example.com")
+	var site int64
+	x.app.db.QueryRow("SELECT id FROM sites").Scan(&site)
+	now := time.Now().Unix()
+	for i := 0; i < 120; i++ {
+		code := string(rune('A'+i/26)) + string(rune('A'+i%26))
+		if _, err := x.app.db.Exec("INSERT INTO events_v2(site_id,timestamp,name,hostname,pathname,user_id,session_id,session_visitor_id,country_code) VALUES(?,?,?,?,?,?,?,?,?)",
+			site, now-int64(i), "pageview", "example.com", "/", fmt.Sprint("u", i), fmt.Sprint("s", i), fmt.Sprint("h", i), code); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var report Report
+	json.Unmarshal(x.call(t, "GET", "/api/sites/example.com/report?period=today", nil, 200), &report)
+	if len(report.Countries) != 120 {
+		t.Fatalf("countries = %d, want 120", len(report.Countries))
+	}
+}

@@ -188,7 +188,12 @@ func (a *App) rows(ctx context.Context, site int64, r Range, q url.Values, colum
 	} else {
 		w += " AND name='pageview'"
 	}
-	rows, err := a.db.QueryContext(ctx, "SELECT "+column+","+metric+" AS n FROM events_v2 WHERE "+w+" GROUP BY "+column+" ORDER BY n DESC,"+column+" LIMIT 50", args...)
+	// Every country, since the map colours each one from this list; other dimensions keep their 50 busiest.
+	limit := "50"
+	if column == "country_code" {
+		limit = "300"
+	}
+	rows, err := a.db.QueryContext(ctx, "SELECT "+column+","+metric+" AS n FROM events_v2 WHERE "+w+" GROUP BY "+column+" ORDER BY n DESC,"+column+" LIMIT "+limit, args...)
 	if err != nil {
 		return nil, err
 	}

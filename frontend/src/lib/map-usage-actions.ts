@@ -1,7 +1,7 @@
 import {rpc} from "./rpc"
 
 /** Where the chosen map service is used: each site's statistics page, the site overview's globe, or both. */
-export type MapUsage={detail:boolean;overview:boolean}
+export type MapUsage={detail:boolean;overview:boolean;outline:"regions"|"countries"}
 export const mapUsageFn=()=>rpc<MapUsage>("/api/map-usage")
 export const saveMapUsageFn=(data:Partial<MapUsage>)=>rpc<MapUsage>("/api/map-usage","PUT",data)
 
