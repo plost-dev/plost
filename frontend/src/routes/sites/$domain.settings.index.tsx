@@ -1,5 +1,6 @@
 import { SettingsTips } from "~/components/SettingsTips"
-import { ActionButton } from "~/components/ActionButton"
+import { ActionButton, ActionUpload } from "~/components/ActionButton"
+import { SiteFavicon } from "~/components/SiteFavicon"
 import { SettingsForm, Field, FormActions } from "~/components/SettingsForm"
 import { createFileRoute, getRouteApi, useRouter } from "@tanstack/react-router"
 import { useMemo, useState } from "react"
@@ -8,7 +9,8 @@ import { Tile } from "~/components/ui"
 import { useT } from "~/lib/i18n"
 import { showToast } from "~/lib/toast"
 import { timezoneOptions } from "~/lib/timezones"
-import { saveSettingsFn, saveSiteCheckFn } from "~/lib/actions"
+import { cleanDomainInput } from "~/lib/domain-input"
+import { removeSiteIconFn, saveSettingsFn, saveSiteCheckFn, uploadSiteIconFn } from "~/lib/actions"
 
 const settings = getRouteApi("/sites/$domain/settings")
 
@@ -38,7 +40,9 @@ function GeneralPage() {
         showToast("设置已保存")
       }}>
         <Field label={t("站点名称")}><input className="squircle input" title={t("在站点列表中显示，留空则默认使用域名。")} placeholder={domain} value={name} onChange={event => setName(event.target.value)} /></Field>
-        <Field label={t("站点域名")}><input className="squircle input" value={newDomain} onChange={event => setNewDomain(event.target.value)} required /></Field>
+        <Field label={t("站点域名")}><input className="squircle input" value={newDomain} onChange={event => setNewDomain(event.target.value)}
+          onPaste={event => { event.preventDefault(); setNewDomain(cleanDomainInput(event.clipboardData.getData("text"))) }}
+          onBlur={() => setNewDomain(cleanDomainInput(newDomain))} required /></Field>
         <Field label={t("报表时区")}><select className="squircle input" value={timezone} onChange={event => setTimezone(event.target.value)}>
           {ZONES.some(zone => zone.value === timezone) ? null : <option value={timezone}>{timezone}</option>}
           {ZONES.map(zone => <option key={zone.value} value={zone.value}>{t(zone.label)}</option>)}
@@ -48,10 +52,46 @@ function GeneralPage() {
         <FormActions><ActionButton className="btn btn-primary" type="submit">{t("保存设置")}</ActionButton></FormActions>
       </SettingsForm>
     </Tile>
+    <SiteIconTile domain={domain} initial={data.iconVersion || 0} />
     <SettingsTips tips={[
       "站点域名改动后，埋点脚本里的 data-domain 也要一起改成新域名，否则新的访问不会记到这个站点。",
       "时区决定「今天」「昨天」从几点开始算，也决定按天、按小时统计的分界。",
+      "站点图标默认取自 favicon.la，也可以上传自己的图标（PNG、JPG、GIF、WebP 或 ICO，不超过 256 KB），恢复默认即可删掉。",
       "站点检查每 5 分钟访问一次检查路径，跟随跳转后返回 HTTP 200 视为正常，并检查证书和域名到期时间。无需安装探针或统计脚本。",
     ]} />
   </>
+}
+
+/** The site's icon: the one favicon.la finds by default, or one uploaded here, which shows everywhere the site does. */
+function SiteIconTile({ domain, initial }: { domain: string, initial: number }) {
+  const router = useRouter()
+  const { t } = useT()
+  const [version, setVersion] = useState(initial)
+  const [busy, setBusy] = useState(false)
+  const done = async (next: number, message: string) => {
+    setVersion(next)
+    await router.invalidate()
+    showToast(message)
+  }
+  return <Tile icon="globe" title={t("站点图标")} subtitle={t(version ? "正在使用上传的图标。" : "正在使用 favicon.la 自动获取的图标。")}>
+    <div className="settings-avatar-row">
+      <SiteFavicon domain={domain} version={version} className="squircle settings-site-icon-preview" />
+      <div className="settings-avatar-controls flex min-w-0 flex-wrap gap-2">
+        <ActionUpload className="btn-secondary" accept="image/png,image/jpeg,image/gif,image/webp,image/x-icon,.ico" disabled={busy} onChange={async event => {
+          const file = event.target.files?.[0]
+          event.target.value = ""
+          if (!file) return
+          setBusy(true)
+          try { await done((await uploadSiteIconFn(domain, file)).iconVersion, "站点图标已更新") }
+          catch (error) { showToast(error instanceof Error ? error.message : "上传失败", "error") }
+          finally { setBusy(false) }
+        }}>{t("上传图标")}</ActionUpload>
+        {version ? <ActionButton type="button" className="btn btn-secondary" disabled={busy} onClick={async () => {
+          setBusy(true)
+          try { await removeSiteIconFn(domain); await done(0, "已恢复默认图标") }
+          finally { setBusy(false) }
+        }}>{t("恢复默认")}</ActionButton> : null}
+      </div>
+    </div>
+  </Tile>
 }

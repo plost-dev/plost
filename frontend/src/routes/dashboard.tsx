@@ -13,7 +13,6 @@ import { useT } from "~/lib/i18n"
 import { readSiteLayout, setSiteLayout, subscribeSiteLayout, type SiteLayout } from "~/lib/site-layout-preference"
 import { useRouterAutoRefresh } from "~/lib/router-refresh"
 import { RollingNumber } from "~/components/RollingNumber"
-import { expiryState } from "~/lib/site-check-view"
 
 export const Route = createFileRoute("/dashboard")({
   loader: async () => {
@@ -32,7 +31,6 @@ function DashboardPage() {
   const [layoutSaveFailed, setLayoutSaveFailed] = useState(false)
   // The figures update once a minute; new visits pushed by the server move only the live dots on the overview's map.
   useRouterAutoRefresh({ intervalMs: 60_000 })
-  const now = new Date().toISOString()
   function changeLayout(value: SiteLayout) {
     setLayoutSaveFailed(!setSiteLayout(value))
   }
@@ -98,11 +96,10 @@ function DashboardPage() {
                 <Link to="/sites/$domain" params={{ domain: site.domain }} className="block">
                   <Surface className="management-site-row">
                     <div className="management-site-identity flex w-full items-center gap-x-2.5">
-                      <SiteFavicon domain={site.domain} className="size-[18px]" />
+                      <SiteFavicon domain={site.domain} version={site.iconVersion} className="size-[18px]" />
                       <div className="management-site-name min-w-0 flex-1">
                         <div className="management-site-heading">
                           <h3 title={site.name || site.domain} className="management-site-title text-base leading-6 font-semibold text-gray-900">{site.name || site.domain}</h3>
-                          <p className={`management-site-ssl${{warning: " is-expiring", bad: " is-expired", unknown: " is-unknown"}[expiryState(site.certificateExpiresAt, now).tone as string] ?? ""}`}><UIIcon name="lock"/>SSL {expiryState(site.certificateExpiresAt, now).days ?? "—"}{expiryState(site.certificateExpiresAt, now).days === null ? "" : ` ${t("天")}`}</p>
                         </div>
                       </div>
                     </div>

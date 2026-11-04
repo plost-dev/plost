@@ -159,6 +159,8 @@ func (a *App) Handler() http.Handler {
 	mux.HandleFunc("GET /api/sites/{domain}/settings", a.api(a.siteSettings, true))
 	mux.HandleFunc("PUT /api/sites/{domain}/settings", a.api(a.updateSite, true))
 	mux.HandleFunc("DELETE /api/sites/{domain}", a.api(a.deleteSite, true))
+	mux.HandleFunc("PUT /api/sites/{domain}/icon", a.api(a.putSiteIcon, true))
+	mux.HandleFunc("DELETE /api/sites/{domain}/icon", a.api(a.deleteSiteIcon, true))
 	mux.HandleFunc("GET /api/sites/{domain}/report", a.api(a.siteReport, false))
 	mux.HandleFunc("GET /api/sites/{domain}/checks", a.api(a.siteCheckGet, true))
 	mux.HandleFunc("PUT /api/sites/{domain}/checks", a.api(a.siteCheckPut, true))
@@ -345,6 +347,7 @@ func (a *App) listSites(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	expiries := a.certificateExpiries(r.Context())
+	icons := a.siteIconVersions(r)
 	_, trendSpan := a.sparklineSettings(r.Context())
 	result := []map[string]any{}
 	for _, s := range sites {
@@ -360,7 +363,7 @@ func (a *App) listSites(w http.ResponseWriter, r *http.Request) error {
 		if at, ok := expiries[s.ID]; ok {
 			expiry = at
 		}
-		item := map[string]any{"site": s, "overview": over, "certificateExpiresAt": expiry}
+		item := map[string]any{"site": s, "overview": over, "certificateExpiresAt": expiry, "iconVersion": icons[s.ID]}
 		if r.URL.Query().Get("ui") == "1" {
 			series, err := a.series(r.Context(), s.ID, rng, nil)
 			if err != nil {
@@ -422,12 +425,16 @@ func (a *App) createSite(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	_, err = a.db.ExecContext(r.Context(), "INSERT INTO sites(domain,name,timezone,public,created_at) VALUES(?,?,?,?,?)", in.Domain, in.Name, in.Timezone, in.Public, unixNow())
+	res, err := a.db.ExecContext(r.Context(), "INSERT INTO sites(domain,name,timezone,public,created_at) VALUES(?,?,?,?,?)", in.Domain, in.Name, in.Timezone, in.Public, unixNow())
 	if err != nil {
 		if _, e := readSite(r.Context(), a.db, in.Domain); e == nil {
 			return failure(409, "这个网站已经添加")
 		}
 		return err
+	}
+	// A new site has its checks on from the start; its settings page can turn them off.
+	if id, err := res.LastInsertId(); err == nil {
+		_ = a.saveSiteCheck(r.Context(), Site{ID: id, Domain: in.Domain}, true, "/")
 	}
 	return jsonResponse(w, map[string]string{"domain": in.Domain})
 }
@@ -454,7 +461,7 @@ func (a *App) siteSettings(w http.ResponseWriter, r *http.Request) error {
 	if err := rows.Err(); err != nil {
 		return err
 	}
-	return jsonResponse(w, map[string]any{"site": s, "shares": shares})
+	return jsonResponse(w, map[string]any{"site": s, "shares": shares, "iconVersion": a.siteIconVersions(r)[s.ID]})
 }
 
 func (a *App) updateSite(w http.ResponseWriter, r *http.Request) error {

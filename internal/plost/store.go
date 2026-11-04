@@ -269,6 +269,9 @@ CREATE TABLE IF NOT EXISTS site_check_results(
  target_url TEXT NOT NULL,checked_at INTEGER NOT NULL,ok INTEGER NOT NULL,status INTEGER NOT NULL DEFAULT 0,
  duration_ms INTEGER NOT NULL DEFAULT -1,error TEXT NOT NULL DEFAULT '');
 CREATE INDEX IF NOT EXISTS site_check_results_site_time ON site_check_results(site_id,checked_at DESC);
+CREATE TABLE IF NOT EXISTS site_icons(
+ site_id INTEGER PRIMARY KEY REFERENCES sites(id) ON DELETE CASCADE,type TEXT NOT NULL,data BLOB NOT NULL,
+ updated_at INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS passkeys(
  id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
  credential_id TEXT NOT NULL UNIQUE,name TEXT NOT NULL,credential TEXT NOT NULL,
@@ -356,9 +359,10 @@ func normalizeDomain(s string) (string, error) {
 	if !strings.Contains(s, "://") {
 		s = "https://" + s
 	}
+	// A pasted address is fine: the scheme, www., port, path, query and fragment are dropped, leaving the host.
 	u, err := url.Parse(s)
-	if err != nil || u.Hostname() == "" || u.User != nil || u.Port() != "" || (u.Path != "" && u.Path != "/") || u.RawQuery != "" || u.Fragment != "" {
-		return "", errors.New("请输入不含路径和端口的网站域名")
+	if err != nil || u.Hostname() == "" || u.User != nil {
+		return "", errors.New("网站域名无效")
 	}
 	host := strings.TrimSuffix(strings.TrimPrefix(u.Hostname(), "www."), ".")
 	if len(host) > 253 || !strings.Contains(host, ".") || strings.ContainsAny(host, " /\\@:%[]") {

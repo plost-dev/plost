@@ -25,10 +25,10 @@ export async function updateProfileFn({data}:Input<Omit<Partial<User>,"avatar"|"
   return result
 }
 export async function accountSettingsFn(){const user=await meFn();if(!user)throw Error("请先登录");return {user,passkeys:[]}}
-export async function siteDomainsFn(){return (await rpc<Array<{site:Site}>>("/api/sites")).map(r=>r.site)}
+export async function siteDomainsFn(){return (await rpc<Array<{site:Site;iconVersion?:number}>>("/api/sites")).map(r=>({...r.site,iconVersion:r.iconVersion||0}))}
 export async function sitesFn(){
-  const items=await rpc<Array<{site:Site;overview:GoOverview;series:GoPoint[];previous:GoOverview;certificateExpiresAt:string|null}>>("/api/sites?period=24h&ui=1")
-  return items.map(({site:s,overview:o,series,previous,certificateExpiresAt})=>({...s,certificateExpiresAt,visitors:o.visitors,visits:o.visits,pageviews:o.pageviews,live:o.online,change:previous.visitors?Math.round((o.visitors-previous.visitors)/previous.visitors*100):0,sparkline:series.map(p=>p.visitors)}))
+  const items=await rpc<Array<{site:Site;overview:GoOverview;series:GoPoint[];previous:GoOverview;iconVersion?:number}>>("/api/sites?period=24h&ui=1")
+  return items.map(({site:s,overview:o,series,previous,iconVersion})=>({...s,iconVersion:iconVersion||0,visitors:o.visitors,visits:o.visits,pageviews:o.pageviews,live:o.online,change:previous.visitors?Math.round((o.visitors-previous.visitors)/previous.visitors*100):0,sparkline:series.map(p=>p.visitors)}))
 }
 export async function trafficPulseFn(){const items=await rpc<Array<{site:Site;overview:GoOverview}>>("/api/sites");return {sites:{count:items.length,visitors:items.reduce((n,s)=>n+s.overview.visitors,0),visits:items.reduce((n,s)=>n+s.overview.visits,0),pageviews:items.reduce((n,s)=>n+s.overview.pageviews,0)}}}
 export const overviewLiveFn=()=>rpc<OverviewPlace[]>("/api/overview/live")
@@ -37,7 +37,7 @@ export const overviewChartsFn=()=>rpc<OverviewCharts>("/api/overview/charts")
 export async function createSiteFn({data}:Input<{domain:string;timezone:string;name?:string|null}>){return rpc<{domain:string}>("/api/sites","POST",data)}
 export async function siteReadyFn({data}:Input<{domain:string}>){const r=await rpc<GoReport>(sitePath(data.domain)+"/report?period=all");return {ready:r.overview.pageviews>0}}
 export type Share={id:number;name:string;slug:string;createdAt:number}
-const siteSettingsOnly=({data}:Input<{domain:string}>)=>rpc<{site:Site;shares:Share[]}>(sitePath(data.domain)+"/settings")
+const siteSettingsOnly=({data}:Input<{domain:string}>)=>rpc<{site:Site;shares:Share[];iconVersion?:number}>(sitePath(data.domain)+"/settings")
 export const siteCheckFn=({data}:Input<{domain:string}>)=>rpc<{report:SiteCheckReport;canManage:boolean}>(sitePath(data.domain)+"/checks")
 export const runSiteCheckFn=({data}:Input<{domain:string}>)=>rpc<{ok:boolean}>(sitePath(data.domain)+"/checks/run","POST",{})
 export const saveSiteCheckFn=({data}:Input<{domain:string;enabled:boolean;path:string}>)=>rpc<{ok:boolean}>(sitePath(data.domain)+"/checks","PUT",{enabled:data.enabled,path:data.path})
@@ -68,3 +68,11 @@ export async function dashboardFn({data}:Input<Partial<DashSearch>&{domain:strin
 export async function shareDashboardFn({data}:Input<Partial<DashSearch>&{slug:string}>){return adaptReport(await rpc<GoReport>("/api/share/"+encodeURIComponent(data.slug)+"?"+query(data)))}
 export const recentVisitorsFn=({data}:Input<{domain:string}>)=>rpc<{rows:RecentVisitor[];total:number;online:number;timezone:string;fetchedAt:string}>(sitePath(data.domain)+"/visitors")
 export async function activityFn({data}:Input<{domain:string;window?:string}>){const rows=await rpc<Array<{at:number;name:string;page:string;source:string;country:string;browser:string;os:string;device:string}>>(sitePath(data.domain)+"/activity?period="+(data.window==="30m"?"realtime":data.window==="7d"?"7d":"24h"));const {site}=await siteSettingsFn({data});return {rows:rows.slice(0,200).map(r=>({name:r.name,pathname:r.page,source:r.source,country:r.country,browser:r.browser,os:r.os,device:r.device,time:new Date(r.at*1000).toISOString()})) as RecentEvent[],timezone:site.timezone,hasMore:rows.length>200,fetchedAt:new Date().toISOString()}}
+/** Uploads a site's own icon (PNG, JPG, GIF, WebP or ICO, up to 256 KB) and returns its new version. */
+export async function uploadSiteIconFn(domain:string,file:File){
+  const response=await fetch(sitePath(domain)+"/icon",{method:"PUT",credentials:"same-origin",headers:{"X-Plost-Request":"1","Content-Type":file.type||"application/octet-stream"},body:file})
+  const result=await response.json().catch(()=>({}))
+  if(!response.ok)throw new Error(typeof result.error==="string"?result.error:"上传失败")
+  return result as {iconVersion:number}
+}
+export const removeSiteIconFn=(domain:string)=>rpc<{iconVersion:number}>(sitePath(domain)+"/icon","DELETE")

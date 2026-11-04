@@ -16,7 +16,7 @@ export function SiteSwitcher({
 }) {
   const { t } = useT()
   const [open, setOpen] = useState(false)
-  const [sites, setSites] = useState<Array<{ domain: string, name?: string | null }>>([])
+  const [sites, setSites] = useState<Array<{ domain: string, name?: string | null, iconVersion?: number }>>([])
   const box = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -55,7 +55,7 @@ export function SiteSwitcher({
   if (readonly) {
     return (
       <div className="squircle control-trigger flex items-center gap-x-1.5 rounded-md pr-2.5 pl-0 text-sm font-medium text-gray-700" title={fullTitle}>
-        <SiteFavicon domain={domain} className="size-4" />
+        <SiteFavicon domain={domain} version={currentSite?.iconVersion} className="size-4" />
         <span className="hidden truncate font-semibold sm:mr-1 sm:block lg:mr-0">{displayName}</span>
       </div>
     )
@@ -70,7 +70,7 @@ export function SiteSwitcher({
         className="squircle control-trigger flex items-center gap-x-1.5 rounded-md !pl-1.5 pr-2.5 text-sm font-medium text-gray-700 hover:bg-gray-150/80"
         onClick={() => setOpen((v) => !v)}
       >
-        <SiteFavicon domain={domain} className="size-4" />
+        <SiteFavicon domain={domain} version={currentSite?.iconVersion} className="size-4" />
         <span className="hidden truncate font-semibold sm:mr-1 sm:block lg:mr-0">{displayName}</span>
         <UIIcon name="chevron-down" className="ui-chevron hidden lg:block" />
       </button>
@@ -103,7 +103,7 @@ export function SiteSwitcher({
               onClick={() => setOpen(false)}
             >
               <span className="flex min-w-0 items-center">
-                <SiteFavicon domain={site.domain} className="mr-2 size-4" />
+                <SiteFavicon domain={site.domain} version={site.iconVersion} className="mr-2 size-4" />
                 <span className="truncate">{site.name || site.domain}</span>
                 {site.name && site.name.toLowerCase() !== site.domain.toLowerCase() ? (
                   <span className="selection-detail ml-2 text-xs font-normal text-gray-400 truncate">{site.domain}</span>

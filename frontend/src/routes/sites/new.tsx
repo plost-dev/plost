@@ -9,6 +9,7 @@ import { Shell } from "~/components/Shell"
 import { createSiteFn, meFn, siteReadyFn } from "~/lib/actions"
 import { useT } from "~/lib/i18n"
 import { timezoneOptions } from "~/lib/timezones"
+import { cleanDomainInput } from "~/lib/domain-input"
 
 export const Route = createFileRoute("/sites/new")({
   loader: async () => ({ me: await meFn() }),
@@ -73,7 +74,7 @@ function NewSitePage() {
               setError("")
               setPending(true)
               try {
-                const siteRow = await createSiteFn({ data: { domain, timezone, name } })
+                const siteRow = await createSiteFn({ data: { domain: cleanDomainInput(domain), timezone, name } })
                 setCreated(siteRow.domain)
                 setStep(2)
               } catch (err) {
@@ -90,7 +91,10 @@ function NewSitePage() {
             <label className="block text-sm font-medium text-gray-900">
               {t("site.domain")}
               <span className="mt-1 block text-xs font-normal text-gray-500">{t("site.domain_hint")}</span>
-              <input className="squircle input mt-2" autoFocus autoCapitalize="none" spellCheck={false} placeholder="example.com" value={domain} onChange={(e) => setDomain(e.target.value)} required />
+              <input className="squircle input mt-2" autoFocus autoCapitalize="none" spellCheck={false} placeholder="example.com" value={domain} onChange={(e) => setDomain(e.target.value)}
+                // A pasted address shows as its bare host at once; anything typed is tidied on leaving the field.
+                onPaste={(e) => { e.preventDefault(); setDomain(cleanDomainInput(e.clipboardData.getData("text"))) }}
+                onBlur={() => setDomain(cleanDomainInput(domain))} required />
             </label>
             <label className="block text-sm font-medium text-gray-900">
               {t("site.timezone")}

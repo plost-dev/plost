@@ -130,7 +130,8 @@ func TestSiteCheckSettingsAndReport(t *testing.T) {
 	if !strings.Contains(raw, `"checks":[]`) || !strings.Contains(raw, `"latest":null`) || !strings.Contains(raw, `"expiry":null`) {
 		t.Fatalf("an unconfigured site has empty lists, not nulls where the page expects arrays: %s", raw)
 	}
-	if r := x.checks(t, "example.com"); r.Enabled || r.Path != "/" || r.URL != "https://example.com/" {
+	// A new site starts with its checks on.
+	if r := x.checks(t, "example.com"); !r.Enabled || r.Path != "/" || r.URL != "https://example.com/" {
 		t.Fatalf("defaults: %+v", r)
 	}
 	x.call(t, "GET", "/api/sites/unknown.example.org/checks", nil, 404)
@@ -141,8 +142,8 @@ func TestSiteCheckSettingsAndReport(t *testing.T) {
 		x.call(t, "PUT", "/api/sites/example.com/checks", map[string]any{"enabled": true, "path": path}, 400)
 	}
 	x.call(t, "PUT", "/api/sites/example.com/checks", map[string]any{"enabled": true, "path": "/", "extra": 1}, 400)
-	if r := x.checks(t, "example.com"); r.Enabled {
-		t.Fatal("a rejected save must not enable anything")
+	if r := x.checks(t, "example.com"); r.Path != "/" {
+		t.Fatal("a rejected save must not change anything")
 	}
 
 	x.call(t, "PUT", "/api/sites/example.com/checks", map[string]any{"enabled": false, "path": "/health"}, 200)

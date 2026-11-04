@@ -110,6 +110,9 @@ func (a *App) faviconSource(w http.ResponseWriter, r *http.Request) {
 		faviconPlaceholder(w, sitePlaceholder)
 		return
 	}
+	if a.serveSiteIcon(w, r, name) {
+		return
+	}
 	source := name
 	if domain, ok := sourceDomains()[name]; ok {
 		source = domain
