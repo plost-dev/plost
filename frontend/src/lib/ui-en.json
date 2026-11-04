@@ -1319,6 +1319,7 @@
   "图标不能超过 256 KB": "The icon must be 256 KB or smaller",
   "图标只支持 PNG、JPG、GIF、WebP 或 ICO": "The icon must be PNG, JPG, GIF, WebP or ICO",
   "上传失败": "Upload failed",
+  "数据为全部站点最近 24 小时的统计": "Figures cover all sites over the last 24 hours",
   "地球": "Globe",
   "右键切换地球或平面地图": "Right-click to switch between globe and flat map",
   "平面": "Map",

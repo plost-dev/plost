@@ -139,7 +139,7 @@ type geoRecord struct {
 		ISOCode string `maxminddb:"iso_code"`
 	} `maxminddb:"country"`
 	// Only City databases name the province or state, largest first: France's region and then its department,
-	// England and then its county. The map's provinces are the smallest of these, so the last one is kept.
+	// England and then its county (see mapSubdivisionLevel for which one is kept).
 	Subdivisions []struct {
 		ISOCode string `maxminddb:"iso_code"`
 	} `maxminddb:"subdivisions"`
@@ -192,7 +192,7 @@ func (g *geoIP) country(ip netip.Addr, now time.Time) string {
 	return code
 }
 
-// region returns the address's country and its smallest subdivision as an ISO 3166-2 code ("CN-GD", "US-NE", "FR-75"),
+// region returns the address's country and its province or state as an ISO 3166-2 code ("CN-GD", "US-NE", "FR-75"),
 // or "" for the region when the database has none (a Country database, or an address placed only by country).
 func (g *geoIP) region(ip netip.Addr, now time.Time) (country, region string) {
 	g.refresh(now)
@@ -213,12 +213,21 @@ func (g *geoIP) region(ip netip.Addr, now time.Time) (country, region string) {
 		return "", ""
 	}
 	if n := len(rec.Subdivisions); n > 0 {
-		if code := strings.ToUpper(rec.Subdivisions[n-1].ISOCode); regionCodePattern.MatchString(code) {
+		level := rec.Subdivisions[0]
+		if secondLevelMaps[country] {
+			level = rec.Subdivisions[n-1]
+		}
+		if code := strings.ToUpper(level.ISOCode); regionCodePattern.MatchString(code) {
 			region = country + "-" + code
 		}
 	}
 	return country, region
 }
+
+// secondLevelMaps are the countries the visitor map divides into their smaller units (Natural Earth's provinces
+// there): France's departments, England's counties, Italy's and Spain's provinces and so on. Elsewhere the map shows
+// the first level, which is also all a City database has for most countries.
+var secondLevelMaps = map[string]bool{"FR": true, "GB": true, "IT": true, "ES": true, "BE": true, "IE": true, "PH": true}
 
 var regionCodePattern = regexp.MustCompile(`^[A-Z0-9]{1,3}$`)
 

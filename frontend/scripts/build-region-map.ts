@@ -11,10 +11,18 @@ import countriesMeta from "../src/lib/countries_meta.json"
 const [shp, mapshaper] = process.argv.slice(2)
 if (!shp || !mapshaper) throw new Error("usage: bun scripts/build-region-map.ts <admin-1 .shp> <mapshaper>")
 
-// Natural Earth files these places under the country that governs them; GeoIP databases give them their own codes.
+// Natural Earth files these places under the country that governs them (or under none); GeoIP databases give them
+// their own country codes. Keyed by ISO 3166-2 code where there is one, otherwise by name.
 const OWN_COUNTRY: Record<string, string> = {
-  "French Guiana": "GF", "Guadeloupe": "GP", "Martinique": "MQ", "Réunion": "RE", "Mayotte": "YT",
-  "Svalbard": "SJ", "Christmas Island": "CX", "Cocos (Keeling) Islands": "CC",
+  "FR-GF": "GF", "FR-GP": "GP", "FR-MQ": "MQ", "FR-RE": "RE", "FR-YT": "YT", "NO-21": "SJ", "NO-X01~": "BV",
+  "Christmas Island": "CX", "Cocos (Keeling) Islands": "CC",
+}
+// ISO 3166-2 renumbered Poland's and Czechia's regions; Natural Earth still has the old letters, GeoIP the new codes.
+const RENAMED: Record<string, string> = {
+  "PL-DS": "PL-02", "PL-KP": "PL-04", "PL-LU": "PL-06", "PL-LB": "PL-08", "PL-LD": "PL-10", "PL-MA": "PL-12", "PL-MZ": "PL-14", "PL-OP": "PL-16",
+  "PL-PK": "PL-18", "PL-PD": "PL-20", "PL-PM": "PL-22", "PL-SL": "PL-24", "PL-SK": "PL-26", "PL-WN": "PL-28", "PL-WP": "PL-30", "PL-ZP": "PL-32",
+  "CZ-PR": "CZ-10", "CZ-ST": "CZ-20", "CZ-JC": "CZ-31", "CZ-PL": "CZ-32", "CZ-KA": "CZ-41", "CZ-US": "CZ-42", "CZ-LI": "CZ-51", "CZ-KR": "CZ-52",
+  "CZ-PA": "CZ-53", "CZ-VY": "CZ-63", "CZ-JM": "CZ-64", "CZ-OL": "CZ-71", "CZ-ZL": "CZ-72", "CZ-MO": "CZ-80",
 }
 const known = new Set(Object.keys(countriesMeta))
 
@@ -33,12 +41,12 @@ const collection = topology.objects[layer] as { type: string, geometries: Geomet
 const unplaced = new Set<string>()
 collection.geometries = collection.geometries.filter(g => g.type !== null && g.arcs).map((g) => {
   const p = g.properties
-  let country = OWN_COUNTRY[p.name] || p.iso_a2
+  let country = OWN_COUNTRY[p.iso_3166_2] || OWN_COUNTRY[p.name] || p.iso_a2
   if (!known.has(country)) {
     unplaced.add(p.name)
     country = ""
   }
-  const code = /^[A-Z]{2}-[A-Z0-9]{1,3}$/.test(p.iso_3166_2) ? p.iso_3166_2 : ""
+  const code = RENAMED[p.iso_3166_2] || (/^[A-Z]{2}-[A-Z0-9]{1,3}$/.test(p.iso_3166_2) ? p.iso_3166_2 : "")
   // c: country, i: ISO 3166-2 code ("" for areas without one), n/z: English and Chinese names for codes CLDR lacks.
   return { ...g, properties: { c: country, i: code, n: p.name || "", z: p.name_zh || "" } }
 })

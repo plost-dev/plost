@@ -80,10 +80,9 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
         <div className="overview-hero-heading">
           <span className="squircle overview-hero-badge" aria-hidden="true"><UIIcon name="globe" /></span>
           <h1 id="overview-hero-title" className="overview-hero-title">{t("nav.sites")}</h1>
-          {/* Two quiet chips say what the figures cover; the green dot says the page updates by itself. */}
+          {/* A quiet chip counts the sites; the green dot says the page updates by itself. */}
           <div className="overview-hero-meta">
             <span className="overview-hero-chip">{t("footer.sites").replace("{n}", numberShort(sites.length))}</span>
-            <span className="overview-hero-chip"><UIIcon name="clock" />{t("近 24 小时")}</span>
             <span className="overview-hero-live">
               <i aria-hidden="true" />
               <span role="status" className="overview-hero-updated">{updated}</span>
@@ -103,6 +102,8 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
       </div>
       <div className="overview-hero-body">
         {charts ? <MetricsChart charts={charts} /> : <div className="overview-hero-loading" aria-hidden="true" />}
+        {/* What the figures cover, said once and quietly; it comes forward while the card is hovered. */}
+        <p className="overview-hero-footnote"><UIIcon name="info" />{t("数据为全部站点最近 24 小时的统计")}</p>
       </div>
       <OverviewMap places={places} config={mapConfig} replay={replay} />
     </section>

@@ -3,6 +3,7 @@ package plost
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -18,7 +19,7 @@ func TestReportCountsVisitorsByRegion(t *testing.T) {
 	place := func(country, region string) mmdbtype.Map {
 		return mmdbtype.Map{"country": mmdbtype.Map{"iso_code": mmdbtype.String(country)}, "subdivisions": mmdbtype.Slice{mmdbtype.Map{"iso_code": mmdbtype.String(region)}}}
 	}
-	writeGeoDB(t, path, map[string]any{"203.0.113.0/26": place("CN", "GD"), "203.0.113.64/26": place("US", "NE"), "203.0.113.128/26": "JP", "203.0.113.192/26": place("DE", "BY"), "198.51.100.0/24": mmdbtype.Map{"country": mmdbtype.Map{"iso_code": mmdbtype.String("FR")}, "subdivisions": mmdbtype.Slice{mmdbtype.Map{"iso_code": mmdbtype.String("IDF")}, mmdbtype.Map{"iso_code": mmdbtype.String("75")}}}}, time.Now())
+	writeGeoDB(t, path, map[string]any{"203.0.113.0/26": place("CN", "GD"), "203.0.113.64/26": place("US", "NE"), "203.0.113.128/26": "JP", "203.0.113.192/26": place("DE", "BY"), "198.51.100.0/25": mmdbtype.Map{"country": mmdbtype.Map{"iso_code": mmdbtype.String("FR")}, "subdivisions": mmdbtype.Slice{mmdbtype.Map{"iso_code": mmdbtype.String("IDF")}, mmdbtype.Map{"iso_code": mmdbtype.String("75")}}}, "198.51.100.128/25": mmdbtype.Map{"country": mmdbtype.Map{"iso_code": mmdbtype.String("CZ")}, "subdivisions": mmdbtype.Slice{mmdbtype.Map{"iso_code": mmdbtype.String("42")}, mmdbtype.Map{"iso_code": mmdbtype.String("423")}}}}, time.Now())
 	a, err := Open(Config{DataDir: t.TempDir(), Version: "test", GeoIPPath: path})
 	if err != nil {
 		t.Fatal(err)
@@ -49,12 +50,13 @@ func TestReportCountsVisitorsByRegion(t *testing.T) {
 	send("203.0.113.130", "d", nil)                                     // the database places this one only by country
 	send("203.0.113.200", "e", map[string]string{"CF-IPCountry": "AT"}) // the CDN disagrees: no region rather than a wrong one
 	send("198.51.100.9", "f", nil)                                      // a region and its department: the department, as on the map
+	send("198.51.100.200", "g", nil)                                    // Czechia's region and district: the region, as on the map
 	var report Report
 	if err := json.Unmarshal(x.call(t, "GET", "/api/sites/example.com/report?period=today", nil, 200), &report); err != nil {
 		t.Fatal(err)
 	}
-	want := []RegionRow{{"CN", "CN-GD", 2}, {"FR", "FR-75", 1}, {"US", "US-NE", 1}}
-	if len(report.Regions) != len(want) || report.Regions[0] != want[0] || report.Regions[1] != want[1] || report.Regions[2] != want[2] {
+	want := []RegionRow{{"CN", "CN-GD", 2}, {"CZ", "CZ-42", 1}, {"FR", "FR-75", 1}, {"US", "US-NE", 1}}
+	if fmt.Sprint(report.Regions) != fmt.Sprint(want) {
 		t.Fatalf("regions: %+v", report.Regions)
 	}
 	json.Unmarshal(x.call(t, "GET", "/api/sites/example.com/report?period=today&country=US", nil, 200), &report)

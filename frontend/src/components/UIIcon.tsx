@@ -7,6 +7,7 @@ const icons: Record<string, string> = {
   lock: "lock",
   key: "key",
   warn: "triangle-exclamation",
+  info: "circle-info",
   mail: "envelope",
   cloud: "cloud-arrow-down",
   grid: "grid-2",

@@ -293,7 +293,7 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
    the figures sit below it on the left. On wide screens the card is as tall as a site card in the card layout. */
 .overview-hero-head { position:relative; z-index:2; grid-column:1 / -1; grid-row:1; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 16px; padding:24px 24px 0; pointer-events:none; }
 .overview-hero-head > * { pointer-events:auto; }
-.overview-hero-body { position:relative; z-index:1; grid-column:1; grid-row:2; display:flex; flex-direction:column; justify-content:center; gap:10px; min-width:0; min-height:0; padding:12px 8px 20px 24px; }
+.overview-hero-body { position:relative; z-index:1; grid-column:1; grid-row:2; display:flex; flex-direction:column; justify-content:center; gap:10px; min-width:0; min-height:0; padding:12px 8px 14px 24px; }
 /* Icon, title, then the site count and update time on the same line. */
 .overview-hero-heading { display:flex; flex-wrap:wrap; align-items:center; column-gap:10px; row-gap:4px; min-width:0; }
 .overview-hero-badge { --sq-r:10px; display:grid; place-items:center; width:32px; height:32px; flex:none; background:color-mix(in srgb, var(--accent-color) 12%, var(--surface)); color:var(--accent-color); }
@@ -340,6 +340,11 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 
 /* Key figures */
 /* No boxes: the four figures stand in a row, parted by thin vertical rules. */
+/* The note under the figures: faint until the card is hovered. */
+.overview-hero-footnote { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--color-gray-500); opacity:.45; transition:opacity 200ms; }
+.overview-hero-footnote .ui-icon { width:12px; height:12px; font-size:11px; }
+.overview-hero:is(:hover, :focus-within) .overview-hero-footnote { opacity:.8; }
+@media (hover:none) { .overview-hero-footnote { opacity:.7; } }
 .overview-hero-body > .overview-hero-tiles { display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); padding:6px 0; }
 .overview-hero-tile { position:relative; display:flex; flex-direction:column; gap:4px; min-width:0; padding:4px 20px; }
 .overview-hero-tile:first-child { padding-left:0; }
@@ -376,7 +381,12 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
   .overview-hero-head { padding:22px 20px 0; }
   .overview-hero-meta { flex-basis:100%; margin-left:0; }
   .overview-hero-body { padding:18px 20px 0; }
-  .overview-hero-body > .overview-hero-tiles { grid-template-columns:repeat(2, minmax(0,1fr)); row-gap:20px; }
+  /* The note under the figures: faint until the card is hovered. */
+.overview-hero-footnote { display:flex; align-items:center; gap:6px; font-size:12px; color:var(--color-gray-500); opacity:.45; transition:opacity 200ms; }
+.overview-hero-footnote .ui-icon { width:12px; height:12px; font-size:11px; }
+.overview-hero:is(:hover, :focus-within) .overview-hero-footnote { opacity:.8; }
+@media (hover:none) { .overview-hero-footnote { opacity:.7; } }
+.overview-hero-body > .overview-hero-tiles { grid-template-columns:repeat(2, minmax(0,1fr)); row-gap:20px; }
   .overview-hero-tile:nth-child(odd) { padding-left:0; border-left:0; }
   .overview-globe { grid-column:1; grid-row:3; min-height:280px; }
 }
