@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/netip"
 	"os"
+	"regexp"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -137,6 +138,11 @@ type geoRecord struct {
 	Country struct {
 		ISOCode string `maxminddb:"iso_code"`
 	} `maxminddb:"country"`
+	// Only City databases name the province or state, largest first: France's region and then its department,
+	// England and then its county. The map's provinces are the smallest of these, so the last one is kept.
+	Subdivisions []struct {
+		ISOCode string `maxminddb:"iso_code"`
+	} `maxminddb:"subdivisions"`
 	// Only City databases have a location: the middle of the city or area the address belongs to.
 	Location struct {
 		Latitude  *float64 `maxminddb:"latitude"`
@@ -184,6 +190,59 @@ func (g *geoIP) country(ip netip.Addr, now time.Time) string {
 		return ""
 	}
 	return code
+}
+
+// region returns the address's country and its smallest subdivision as an ISO 3166-2 code ("CN-GD", "US-NE", "FR-75"),
+// or "" for the region when the database has none (a Country database, or an address placed only by country).
+func (g *geoIP) region(ip netip.Addr, now time.Time) (country, region string) {
+	g.refresh(now)
+	ip = ip.Unmap()
+	if !ip.IsValid() || !ip.IsGlobalUnicast() || ip.IsPrivate() {
+		return "", ""
+	}
+	db := g.db.Load()
+	if db == nil {
+		return "", ""
+	}
+	var rec geoRecord
+	if err := db.reader.Lookup(ip).Decode(&rec); err != nil {
+		return "", ""
+	}
+	country = strings.ToUpper(rec.Country.ISOCode)
+	if !countryPattern.MatchString(country) {
+		return "", ""
+	}
+	if n := len(rec.Subdivisions); n > 0 {
+		if code := strings.ToUpper(rec.Subdivisions[n-1].ISOCode); regionCodePattern.MatchString(code) {
+			region = country + "-" + code
+		}
+	}
+	return country, region
+}
+
+var regionCodePattern = regexp.MustCompile(`^[A-Z0-9]{1,3}$`)
+
+// requestRegion names the province or state of the visitor in country (the one requestCountry chose): its ISO
+// 3166-2 code from a City database, or the name the online service gives, which the page matches to a code. A
+// lookup that places the address in another country than the CDN said gives no region, rather than a wrong one.
+func (a *App) requestRegion(r *http.Request, country string, now time.Time) string {
+	if country == "" || !a.placesKnown() || !a.visitorKnown(r) {
+		return ""
+	}
+	ip, _ := a.visitorAddr(r)
+	if !ip.IsValid() {
+		return ""
+	}
+	if a.geoOnline.Load() {
+		if p := a.online.place(ip, now); p.country == country {
+			return p.region
+		}
+		return ""
+	}
+	if c, region := a.geo.region(ip, now); c == country {
+		return region
+	}
+	return ""
 }
 
 // requestCountry names the visitor's country: a CDN's country header when one counts (visitorCountryHeader),

@@ -38,7 +38,7 @@ func TestOnlineGeoCachesAnswersAndFailures(t *testing.T) {
 	o := newOnlineGeo(srv.URL+"/v1/", srv.Client())
 	now := time.Now()
 	p := o.place(netip.MustParseAddr("203.0.113.5"), now)
-	if p.country != "CN" || !p.placed || p.lat != 30.29 || p.lon != 120.15 {
+	if p.country != "CN" || p.region != "浙江" || !p.placed || p.lat != 30.29 || p.lon != 120.15 {
 		t.Fatalf("place = %+v", p)
 	}
 	o.place(netip.MustParseAddr("203.0.113.5"), now.Add(time.Hour))

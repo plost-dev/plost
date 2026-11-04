@@ -31,6 +31,11 @@ type Row struct {
 	Name  string `json:"name"`
 	Value int64  `json:"value"`
 }
+type RegionRow struct {
+	Country string `json:"country"`
+	Name    string `json:"name"`
+	Value   int64  `json:"value"`
+}
 type Point struct {
 	At         int64   `json:"at"`
 	Visitors   int64   `json:"visitors"`
@@ -48,13 +53,16 @@ type Report struct {
 	Sources   []Row    `json:"sources"`
 	Pages     []Row    `json:"pages"`
 	Countries []Row    `json:"countries"`
-	Browsers  []Row    `json:"browsers"`
-	OS        []Row    `json:"os"`
-	Devices   []Row    `json:"devices"`
-	Languages []Row    `json:"languages"`
-	Screens   []Row    `json:"screens"`
-	Events    []Row    `json:"events"`
-	Readonly  bool     `json:"readonly"`
+	// Regions counts visitors by province or state, for the map: an ISO 3166-2 code, or the name the online GeoIP
+	// service gave, under its country.
+	Regions   []RegionRow `json:"regions"`
+	Browsers  []Row       `json:"browsers"`
+	OS        []Row       `json:"os"`
+	Devices   []Row       `json:"devices"`
+	Languages []Row       `json:"languages"`
+	Screens   []Row       `json:"screens"`
+	Events    []Row       `json:"events"`
+	Readonly  bool        `json:"readonly"`
 	// Live counts the visitors online now (the last five minutes, like Overview.Online) by country, for the map, and
 	// LivePoints places them where a City GeoIP database could (livepoints.go).
 	Live       []Row          `json:"live"`
@@ -120,12 +128,12 @@ func parseRange(q url.Values, zone string) (Range, error) {
 	return r, nil
 }
 
-var filterColumns = map[string]string{"source": "referrer_source", "page": "pathname", "country": "country_code", "browser": "browser", "os": "os", "device": "device", "language": "language", "screen": "screen", "hostname": "hostname"}
+var filterColumns = map[string]string{"source": "referrer_source", "page": "pathname", "country": "country_code", "region": "region", "browser": "browser", "os": "os", "device": "device", "language": "language", "screen": "screen", "hostname": "hostname"}
 
 func where(site int64, r Range, q url.Values) (string, []any) {
 	w := "site_id=? AND timestamp>=? AND timestamp<?"
 	args := []any{site, r.From.Unix(), r.To.Unix()}
-	for _, k := range []string{"source", "page", "country", "browser", "os", "device", "language", "screen", "hostname"} {
+	for _, k := range []string{"source", "page", "country", "region", "browser", "os", "device", "language", "screen", "hostname"} {
 		if values, ok := q[k]; ok && len(values) > 0 {
 			w += " AND " + filterColumns[k] + "=?"
 			args = append(args, short(values[0], 2048))
@@ -313,6 +321,10 @@ func (a *App) report(r *http.Request, site Site, readonly bool) (Report, error) 
 			return result, err
 		}
 	}
+	result.Regions, err = a.regions(r.Context(), site.ID, rng, q)
+	if err != nil {
+		return result, err
+	}
 	result.Live, err = a.liveCountries(r.Context(), site.ID, q)
 	if err != nil {
 		return result, err
@@ -474,6 +486,26 @@ func (a *App) exportCSV(w http.ResponseWriter, r *http.Request) error {
 
 func (a *App) openapi(w http.ResponseWriter, r *http.Request) {
 	_ = jsonResponse(w, map[string]any{"openapi": "3.1.0", "info": map[string]string{"title": "Plost Go statistics API", "version": "0.1.0"}, "paths": map[string]any{"/api/v1/stats": map[string]any{"get": map[string]any{"summary": "Online, today and yesterday metrics for the API key's site", "security": []any{map[string]any{"bearerAuth": []string{}}}, "responses": map[string]any{"200": map[string]any{"description": "Site statistics"}, "401": map[string]any{"description": "Missing, invalid or deleted API key"}}}}}, "components": map[string]any{"securitySchemes": map[string]any{"bearerAuth": map[string]string{"type": "http", "scheme": "bearer"}}}})
+}
+
+// regions counts the visitors of each province or state with a recorded one. The busiest come first; the map only
+// shades so many, and a country filter leaves just that country's.
+func (a *App) regions(ctx context.Context, site int64, r Range, q url.Values) ([]RegionRow, error) {
+	w, args := where(site, r, q)
+	rows, err := a.db.QueryContext(ctx, "SELECT country_code,region,count(DISTINCT "+visitorSQL+") AS n FROM events_v2 WHERE "+w+" AND name='pageview' AND region<>'' AND country_code<>'' GROUP BY 1,2 ORDER BY n DESC,1,2 LIMIT 1000", args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []RegionRow{}
+	for rows.Next() {
+		var v RegionRow
+		if err := rows.Scan(&v.Country, &v.Name, &v.Value); err != nil {
+			return nil, err
+		}
+		out = append(out, v)
+	}
+	return out, rows.Err()
 }
 
 // liveCountries counts the visitors of the last five minutes by country, with the report's filters.

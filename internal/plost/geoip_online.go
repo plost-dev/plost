@@ -37,6 +37,7 @@ type onlineGeo struct {
 
 type onlinePlace struct {
 	country  string
+	region   string // the province or state as the service names it ("Queensland", "江苏")
 	lat, lon float64
 	placed   bool // the answer had coordinates
 	until    time.Time
@@ -134,6 +135,7 @@ func (o *onlineGeo) ask(ip netip.Addr) (onlinePlace, bool) {
 	}
 	var answer struct {
 		Country   string   `json:"country_code"`
+		Region    string   `json:"region"`
 		Latitude  *float64 `json:"latitude"`
 		Longitude *float64 `json:"longitude"`
 	}
@@ -143,6 +145,8 @@ func (o *onlineGeo) ask(ip netip.Addr) (onlinePlace, bool) {
 	p := onlinePlace{country: strings.ToUpper(answer.Country)}
 	if !countryPattern.MatchString(p.country) {
 		p.country = ""
+	} else {
+		p.region = short(strings.TrimSpace(answer.Region), 100)
 	}
 	if lat, lon := answer.Latitude, answer.Longitude; lat != nil && lon != nil && *lat >= -90 && *lat <= 90 && *lon >= -180 && *lon <= 180 {
 		p.lat, p.lon, p.placed = roundCoord(*lat), roundCoord(*lon), true

@@ -44,3 +44,10 @@ export function geographyLabel(kind: "region" | "city", name: string, country: s
   const fullName = nation ? `${countryName(nation, locale)} · ${text}` : text
   return locale === "en" ? fullName : simplifiedChinese(fullName)
 }
+
+/** A province's own name without its country, for the map: CLDR's translation, else the names the map carries. */
+export function regionName(code: string, english: string, chinese: string, locale: string): string {
+  const translations = code ? names[code.replace("-", "").toLowerCase()] : undefined
+  if (locale === "en") return translations?.[0] || english || code
+  return simplifiedChinese(translations?.[1] || chinese || translations?.[0] || english || code)
+}

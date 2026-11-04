@@ -17,14 +17,21 @@ export type WorldTopology = {
 }
 
 export function decodeWorldMap(buffer: ArrayBuffer): WorldTopology {
+  const topology = decodeTopology(buffer) as WorldTopology
+  if (topology.objects?.countries?.type !== "GeometryCollection") throw new Error("Invalid world map asset")
+  return topology
+}
+
+/** Decodes any topology in the LSM1 layout; world-regions.bin uses it for provinces (scripts/build-region-map.ts). */
+export function decodeTopology(buffer: ArrayBuffer): { type: "Topology", transform: WorldTopology["transform"], objects: Record<string, unknown>, arcs: number[][][] } {
   const bytes = new Uint8Array(buffer)
   const view = new DataView(buffer)
   const invalid = () => new Error("Invalid world map asset")
   if (bytes.length < 8 || view.getUint32(0, true) !== 0x314d534c) throw invalid()
   const headerEnd = 8 + view.getUint32(4, true)
   if (headerEnd >= bytes.length) throw invalid()
-  const header = JSON.parse(new TextDecoder().decode(bytes.subarray(8, headerEnd))) as Omit<WorldTopology, "arcs">
-  if (header.type !== "Topology" || header.objects?.countries?.type !== "GeometryCollection") throw invalid()
+  const header = JSON.parse(new TextDecoder().decode(bytes.subarray(8, headerEnd)))
+  if (header.type !== "Topology" || !header.objects || typeof header.objects !== "object") throw invalid()
   let offset = headerEnd
   function uint() {
     let value = 0
