@@ -64,7 +64,7 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
     void overviewMapFn().then(setMapConfig).catch(() => setMapConfig({ service: "" }))
   }, [])
   useEffect(() => {
-    const timer = window.setInterval(() => setNow(Date.now()), 5_000)
+    const timer = window.setInterval(() => setNow(Date.now()), 1_000)
     return () => window.clearInterval(timer)
   }, [])
 
@@ -75,7 +75,8 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
     const [before, after] = t(template).split("{n}")
     return <>{before}<span className="overview-hero-age">{n}</span>{after}</>
   }
-  const updated = seconds < 10 ? t("刚刚更新") : seconds < 60 ? age("{n} 秒前更新", Math.floor(seconds / 5) * 5) : age("{n} 分钟前更新", Math.floor(seconds / 60))
+  // Counts every second from 1 up to the minute refresh, which starts it again at 1; minutes only if a refresh is late.
+  const updated = seconds <= 60 ? age("{n} 秒前更新", Math.max(1, seconds)) : age("{n} 分钟前更新", Math.floor(seconds / 60))
   async function refresh() {
     setRefreshing(true)
     setReplay(n => n + 1)
