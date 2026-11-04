@@ -338,7 +338,7 @@ func TestBackupSettingsAPI(t *testing.T) {
 	bad(map[string]any{"schedule": "monthly"})
 	bad(map[string]any{"hour": 24})
 	bad(map[string]any{"keep": 91})
-	// Keys and the backup password only come from the env file.
+	// Keys and the backup password are saved into the env file, so without one they are refused.
 	bad(map[string]any{"backupPassword": "a-new-backup-password"})
 	bad(map[string]any{"accessKey": "NEWKEY"})
 	bad(map[string]any{"secretKey": "NEWSECRET"})
@@ -584,4 +584,39 @@ func TestOneBackupAtATimeAndShutdown(t *testing.T) {
 	x.app.jobsMu.Lock()
 	x.app.closing = false
 	x.app.jobsMu.Unlock()
+}
+
+// The credentials and the backup password typed on the settings page go into the env file and are used at once;
+// other lines of the file stay, and a password systemd would read differently is refused.
+func TestBackupKeysSavedToEnvFile(t *testing.T) {
+	f := newFakeS3(t)
+	x := newTestApp(t)
+	x.useFakeS3(f)
+	x.app.cfg.BackupAccessKey, x.app.cfg.BackupSecretKey, x.app.cfg.BackupPassword = "", "", ""
+	env := filepath.Join(t.TempDir(), "plost.env")
+	os.WriteFile(env, []byte("PLOST_MAPBOX_TOKEN=pk.keep\n"), 0o600)
+	x.app.cfg.EnvFile = env
+	x.setup(t)
+
+	for _, pw := range []string{"short", "has a \"quote\" inside", "costs $HOME here", " leading-space-pw"} {
+		x.call(t, "PUT", "/api/backup/settings", f.settings(map[string]any{"backupPassword": pw}), 400)
+	}
+	var s map[string]any
+	json.Unmarshal(x.call(t, "PUT", "/api/backup/settings", f.settings(map[string]any{"accessKey": fakeAccess, "secretKey": fakeSecret, "backupPassword": testBackupPassword}), 200), &s)
+	if s["hasAccessKey"] != true || s["hasSecretKey"] != true || s["hasBackupPassword"] != true || s["editable"] != true {
+		t.Fatalf("settings after saving the keys: %v", s)
+	}
+	want := "PLOST_MAPBOX_TOKEN=pk.keep\nPLOST_BACKUP_ACCESS_KEY=" + fakeAccess + "\nPLOST_BACKUP_SECRET_KEY=" + fakeSecret + "\nPLOST_BACKUP_PASSWORD=" + testBackupPassword + "\n"
+	if got, _ := os.ReadFile(env); string(got) != want {
+		t.Fatalf("env file:\n%s\nwant:\n%s", got, want)
+	}
+	// Used at once: a backup to the cloud works without a restart.
+	if out := x.runAndWait(t); out["lastStatus"] == "error" {
+		t.Fatalf("backup with the saved keys failed: %v", out)
+	}
+	// Blank fields keep what is set.
+	x.call(t, "PUT", "/api/backup/settings", f.settings(map[string]any{"keep": 3}), 200)
+	if got, _ := os.ReadFile(env); string(got) != want {
+		t.Fatalf("a save with blank keys changed the env file:\n%s", got)
+	}
 }

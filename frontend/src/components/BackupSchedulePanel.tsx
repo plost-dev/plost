@@ -16,16 +16,18 @@ import { EnvKeyStatus } from "./EnvKeyStatus"
 type Settings = {
   provider: "r2" | "s3", endpoint: string, region: string, bucket: string, prefix: string
   hasAccessKey: boolean, hasSecretKey: boolean, hasBackupPassword: boolean
+  /** The saved Access Key ID, shown by its start; editable: the keys can be saved into the env file (-env-file). */
+  accessKey: string, editable: boolean
   cloudEnabled: boolean, cloudConfigured: boolean
   schedule: "off" | "hourly" | "daily" | "weekly", hour: number, minute: number, weekday: number, keep: number
   lastRunAt: number, lastAttemptAt: number, lastStatus: string, lastBackup: string, lastError: string
   effectivePrefix: string, scheduleTimezone: string, running: boolean
 }
-// The credentials and the backup password come from the env file; only the account password is typed here.
-type Secrets = { currentPassword: string }
+// Typed credentials and backup password are written into the service's env file on save; blank ones keep what is set.
+type Secrets = { currentPassword: string, accessKey: string, secretKey: string, backupPassword: string }
 type BackupFile = { name: string, size: number, modified: number }
 
-const NO_SECRETS: Secrets = { currentPassword: "" }
+const NO_SECRETS: Secrets = { currentPassword: "", accessKey: "", secretKey: "", backupPassword: "" }
 const EDITABLE = ["provider", "endpoint", "region", "bucket", "prefix", "cloudEnabled", "schedule", "hour", "minute", "weekday", "keep"] as const
 const STORAGE = new Set<keyof Settings>(["provider", "endpoint", "region", "bucket", "prefix"])
 const sizeLabel = (bytes: number) => bytes >= 1 << 20 ? (bytes / (1 << 20)).toFixed(1) + " MiB" : Math.max(1, Math.round(bytes / 1024)) + " KiB"
@@ -73,9 +75,10 @@ export function BackupSchedulePanel() {
     </Tile>
   }
 
-  const dirty = EDITABLE.some(key => form[key] !== saved[key])
+  const typedKeys = !!(secrets.accessKey.trim() || secrets.secretKey.trim() || secrets.backupPassword)
+  const dirty = EDITABLE.some(key => form[key] !== saved[key]) || typedKeys
   const frequency = form.schedule
-  const hasKeys = saved.hasAccessKey && saved.hasSecretKey
+  const hasKeys = (saved.hasAccessKey || !!secrets.accessKey.trim()) && (saved.hasSecretKey || !!secrets.secretKey.trim())
   const ready = !!form.bucket.trim() && hasKeys && (form.provider !== "r2" || !!form.endpoint.trim()) && !!form.region.trim()
   const canRun = saved.hasBackupPassword && (saved.keep > 0 || saved.cloudEnabled) && (!saved.cloudEnabled || saved.cloudConfigured)
   const status = saved.running ? "正在备份…" : saved.lastStatus === "error" ? "最近一次备份失败" : saved.lastRunAt ? "备份成功" : "尚未执行备份"
@@ -88,7 +91,11 @@ export function BackupSchedulePanel() {
       ...(key === "provider" ? { region: value === "r2" ? "auto" : cur.region === "auto" ? "" : cur.region } : {}),
     } as Settings)
   }
-  function secret(key: keyof Secrets, value: string) { setMsg(""); setErr(""); setSecrets(cur => ({ ...cur, [key]: value })) }
+  function secret(key: keyof Secrets, value: string) {
+    setMsg(""); setErr("")
+    if (key === "accessKey" || key === "secretKey") { setConnection(null); setConnectionError("") }
+    setSecrets(cur => ({ ...cur, [key]: value }))
+  }
 
   const storageData = () => ({ provider: form.provider, endpoint: form.endpoint, region: form.region, bucket: form.bucket, prefix: form.prefix })
 
@@ -103,6 +110,7 @@ export function BackupSchedulePanel() {
   async function save() {
     const next = await rpc<Settings>("/api/backup/settings", "PUT", {
       ...storageData(), currentPassword: secrets.currentPassword,
+      accessKey: secrets.accessKey.trim(), secretKey: secrets.secretKey.trim(), backupPassword: secrets.backupPassword,
       cloudEnabled: form!.cloudEnabled, schedule: form!.schedule, hour: form!.hour, minute: form!.minute, weekday: form!.weekday, keep: form!.keep,
     })
     setSaved(next); setForm(next); setSecrets(NO_SECRETS); setConnection(null)
@@ -134,17 +142,28 @@ export function BackupSchedulePanel() {
             </Field>
           </div>
           <div className="backup-credentials">
-            <div className="flex items-center gap-2"><h3>{t("访问凭据")}</h3><HelpHint>{t("密钥写在服务的 env 文件里，不存数据库，恢复备份也不会丢；改完重启 Plost 生效。")}</HelpHint></div>
+            <div className="flex items-center gap-2"><h3>{t("访问凭据")}</h3><HelpHint>{t("保存后写入服务的 env 文件，立即生效；不存数据库，恢复备份也不会丢。留空表示保持现有的值。")}</HelpHint></div>
             <div className="backup-fields">
-              <EnvKeyStatus label="Access Key ID" name="PLOST_BACKUP_ACCESS_KEY" configured={saved.hasAccessKey}/>
-              <EnvKeyStatus label="Secret Access Key" name="PLOST_BACKUP_SECRET_KEY" configured={saved.hasSecretKey}/>
+              {saved.editable ? <>
+                <Field label="Access Key ID">
+                  <input className="squircle input" autoComplete="off" autoCapitalize="none" spellCheck={false} maxLength={1024} value={secrets.accessKey}
+                    placeholder={saved.hasAccessKey ? t("已设置 {0}，留空保持不变", { 0: saved.accessKey }) : t("未设置")} onChange={e => secret("accessKey", e.target.value)} />
+                </Field>
+                <Field label="Secret Access Key">
+                  <PasswordInput className="squircle input" autoComplete="new-password" maxLength={1024} value={secrets.secretKey}
+                    placeholder={saved.hasSecretKey ? t("已设置，留空保持不变") : t("未设置")} onChange={e => secret("secretKey", e.target.value)} />
+                </Field>
+              </> : <>
+                <EnvKeyStatus label="Access Key ID" name="PLOST_BACKUP_ACCESS_KEY" configured={saved.hasAccessKey}/>
+                <EnvKeyStatus label="Secret Access Key" name="PLOST_BACKUP_SECRET_KEY" configured={saved.hasSecretKey}/>
+              </>}
             </div>
           </div>
           <div className="backup-test-actions">
             <ActionButton disabled={!!busy || !ready} loading={busy === "test"} onClick={async () => {
               if (busy) return
               setBusy("test"); setConnection(null); setConnectionError(""); setMsg(""); setErr("")
-              try { setConnection(await rpc<{ bucket: string }>("/api/backup/cloud/test", "POST", storageData())) }
+              try { setConnection(await rpc<{ bucket: string }>("/api/backup/cloud/test", "POST", { ...storageData(), accessKey: secrets.accessKey.trim(), secretKey: secrets.secretKey.trim() })) }
               catch (error) { setConnectionError(error instanceof Error ? t(error.message) : t("连接测试失败，请重试")) }
               finally { setBusy("") }
             }}>{t(busy === "test" ? "测试中…" : "测试连接")}</ActionButton>
@@ -174,7 +193,10 @@ export function BackupSchedulePanel() {
             <Field label={t("本地保留份数")} hint={t("最近的备份保存在数据目录的 backups/scheduled 中。0 表示不在本地保留，需要启用云存储上传。")}>
               <input className="squircle input" type="number" min={0} max={90} step={1} required value={form.keep} onChange={e => set("keep", Math.max(0, Math.min(90, Math.trunc(Number(e.target.value) || 0))))} />
             </Field>
-            <EnvKeyStatus wide label={t("计划备份密码")} name="PLOST_BACKUP_PASSWORD" configured={saved.hasBackupPassword}/>
+            {saved.editable ? <Field wide label={t("计划备份密码")} hint={t("用来加密自动备份的文件，恢复时需要它。至少 12 个字符，不能含引号、反斜杠和 $。")}>
+              <PasswordInput className="squircle input" autoComplete="new-password" minLength={12} maxLength={256} value={secrets.backupPassword}
+                placeholder={saved.hasBackupPassword ? t("已设置，留空保持不变") : t("未设置")} onChange={e => secret("backupPassword", e.target.value)} />
+            </Field> : <EnvKeyStatus wide label={t("计划备份密码")} name="PLOST_BACKUP_PASSWORD" configured={saved.hasBackupPassword}/>}
             <Field wide label={t("当前管理员密码")} hint={t("修改备份去向时需要确认身份。")}>
               <PasswordInput className="squircle input" required={dirty} autoComplete="current-password" value={secrets.currentPassword} onChange={e => secret("currentPassword", e.target.value)} />
             </Field>

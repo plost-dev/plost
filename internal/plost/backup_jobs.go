@@ -96,7 +96,7 @@ func (a *App) writeBackup(ctx context.Context, reason string) (string, error) {
 	case err != nil:
 		return "", safeError("无法读取备份设置")
 	case len(s.BackupPassword) < 12:
-		return "", safeError("请先在 env 文件里设置 " + EnvBackupPassword)
+		return "", safeError("请先在备份设置里填写计划备份密码")
 	case s.Keep == 0 && !s.CloudEnabled:
 		return "", safeError("本地保留 0 份时需要启用云存储上传")
 	}

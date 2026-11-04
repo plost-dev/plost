@@ -67,8 +67,30 @@ func (a *App) loadSettings(ctx context.Context) (backupSettings, error) {
 		Scan(&s.Provider, &s.Endpoint, &s.Region, &s.Bucket, &s.Prefix, &s.CloudEnabled,
 			&s.Schedule, &s.Hour, &s.Minute, &s.Weekday, &s.Keep, &s.LastRunAt, &s.LastAttemptAt, &s.LastStatus, &s.LastError, &s.LastBackup)
 	// The credentials and the backup password are only ever in the env file (env_keys.go).
+	a.keysMu.RLock()
 	s.AccessKey, s.SecretKey, s.BackupPassword = a.cfg.BackupAccessKey, a.cfg.BackupSecretKey, a.cfg.BackupPassword
+	a.keysMu.RUnlock()
 	return s, err
+}
+
+// saveBackupKeys writes the credentials and the backup password typed on the settings page into the env file and
+// uses them at once. Blank values keep what is set.
+func (a *App) saveBackupKeys(access, secret, password string) error {
+	a.keysMu.Lock()
+	defer a.keysMu.Unlock()
+	for _, k := range []struct {
+		name, value string
+		into        *string
+	}{{EnvBackupAccessKey, access, &a.cfg.BackupAccessKey}, {EnvBackupSecretKey, secret, &a.cfg.BackupSecretKey}, {EnvBackupPassword, password, &a.cfg.BackupPassword}} {
+		if k.value == "" || k.value == *k.into {
+			continue
+		}
+		if err := writeEnvKey(a.cfg.EnvFile, k.name, k.value); err != nil {
+			return failure(500, "写入 env 文件失败："+err.Error())
+		}
+		*k.into = k.value
+	}
+	return nil
 }
 
 // saveSettings stores everything but the credentials and the backup password, which stay in the env file; the old
@@ -112,6 +134,7 @@ func (a *App) publicSettings(s backupSettings) map[string]any {
 	return map[string]any{
 		"provider": s.Provider, "endpoint": s.Endpoint, "region": s.Region, "bucket": s.Bucket, "prefix": s.Prefix,
 		"hasAccessKey": s.AccessKey != "", "hasSecretKey": s.SecretKey != "", "hasBackupPassword": s.BackupPassword != "",
+		"accessKey": maskKey(s.AccessKey), "editable": a.cfg.EnvFile != "",
 		"cloudEnabled": s.CloudEnabled, "cloudConfigured": configured,
 		"schedule": s.Schedule, "hour": s.Hour, "minute": s.Minute, "weekday": s.Weekday, "keep": s.Keep,
 		"lastRunAt": s.LastRunAt, "lastAttemptAt": s.LastAttemptAt, "lastStatus": s.LastStatus, "lastBackup": s.LastBackup,
@@ -257,14 +280,29 @@ func (a *App) backupSettingsPut(w http.ResponseWriter, r *http.Request) error {
 	if !a.checkPassword(r.Context(), in.CurrentPassword) {
 		return failure(400, "当前账号密码错误")
 	}
-	if in.AccessKey != "" || in.SecretKey != "" || in.BackupPassword != "" {
-		return failure(400, "Access Key、Secret Key 和计划备份密码请写在 env 文件（"+EnvBackupAccessKey+"、"+EnvBackupSecretKey+"、"+EnvBackupPassword+"），然后重启服务")
+	// The credentials and the backup password go into the env file, never the database; blank ones stay as set.
+	in.AccessKey, in.SecretKey = strings.TrimSpace(in.AccessKey), strings.TrimSpace(in.SecretKey)
+	if (in.AccessKey != "" || in.SecretKey != "" || in.BackupPassword != "") && a.cfg.EnvFile == "" {
+		return failure(400, "启动 Plost 时没有指定 env 文件（-env-file），请直接在 env 文件里修改 "+EnvBackupAccessKey+"、"+EnvBackupSecretKey+" 和 "+EnvBackupPassword)
+	}
+	if in.BackupPassword != "" && (len(in.BackupPassword) < 12 || len(in.BackupPassword) > 256) {
+		return failure(400, "计划备份密码需要 12 到 256 个字节")
+	}
+	// systemd reads the env file with quotes, backslashes and $ references of its own, and trims the ends; a
+	// password it would read differently could not open the backups made with it after a restart.
+	if in.BackupPassword != "" && (strings.ContainsAny(in.BackupPassword, "\"'\\$\r\n") || strings.TrimSpace(in.BackupPassword) != in.BackupPassword) {
+		return failure(400, "计划备份密码不能包含引号、反斜杠、$ 或换行，首尾也不能是空格")
 	}
 	saved, err := a.loadSettings(r.Context())
 	if err != nil {
 		return err
 	}
-	in.AccessKey, in.SecretKey = saved.AccessKey, saved.SecretKey
+	if in.AccessKey == "" {
+		in.AccessKey = saved.AccessKey
+	}
+	if in.SecretKey == "" {
+		in.SecretKey = saved.SecretKey
+	}
 	next := saved
 	if next.cloudSettings, err = resolveCloud(in.cloudInput, saved.cloudSettings, a.allowPrivateCloud); err != nil {
 		return err
@@ -280,13 +318,19 @@ func (a *App) backupSettingsPut(w http.ResponseWriter, r *http.Request) error {
 		return failure(400, "自动备份设置无效")
 	}
 	next.Schedule, next.Hour, next.Minute, next.Weekday, next.Keep = in.Schedule, in.Hour, in.Minute, in.Weekday, in.Keep
+	if in.BackupPassword != "" {
+		next.BackupPassword = in.BackupPassword
+	}
 	if next.Schedule != "off" {
 		if len(next.BackupPassword) < 12 {
-			return failure(400, "请先在 env 文件里设置 "+EnvBackupPassword+"，自动备份需要它加密文件")
+			return failure(400, "请先填写计划备份密码，自动备份需要它加密文件")
 		}
 		if next.Keep == 0 && !next.CloudEnabled {
 			return failure(400, "本地保留 0 份时，需要启用云存储上传")
 		}
+	}
+	if err = a.saveBackupKeys(next.AccessKey, next.SecretKey, in.BackupPassword); err != nil {
+		return err
 	}
 	if err = a.saveSettings(r.Context(), next); err != nil {
 		return err

@@ -1355,10 +1355,7 @@
   "在服务的 env 文件里加入 {0}=…，然后重启 Plost。": "Add {0}=… to the service's env file, then restart Plost.",
   "已在 env 文件中设置 {0}": "{0} is set in the env file",
   "未设置 {0}": "{0} is not set",
-  "请先在 env 文件里设置 PLOST_BACKUP_PASSWORD": "Set PLOST_BACKUP_PASSWORD in the env file first",
-  "请先在 env 文件里设置 PLOST_BACKUP_PASSWORD，自动备份需要它加密文件": "Set PLOST_BACKUP_PASSWORD in the env file first; scheduled backups are encrypted with it",
   "Access Key、Secret Key 和计划备份密码请写在 env 文件（PLOST_BACKUP_ACCESS_KEY、PLOST_BACKUP_SECRET_KEY、PLOST_BACKUP_PASSWORD），然后重启服务": "Put the access key, secret key and backup password in the env file (PLOST_BACKUP_ACCESS_KEY, PLOST_BACKUP_SECRET_KEY, PLOST_BACKUP_PASSWORD), then restart the service",
-  "密钥写在服务的 env 文件里，不存数据库，恢复备份也不会丢；改完重启 Plost 生效。": "Keys live in the service's env file, not the database, so restoring a backup never loses them. Restart Plost after changing them.",
   "修改备份去向时需要确认身份。": "Confirm it is you when changing where backups go.",
   "与前一周期相比": "Compared with the previous period",
   "实时，5 分钟内": "Live, last 5 minutes",
@@ -1431,5 +1428,14 @@
   "在线查询（geo.plost.io，本机不存库）": "Online lookup (geo.plost.io, no local database)",
   "每位访客的 IP 会发送到 geo.plost.io 查询国家和城市，本机不保存数据库；同一个 IP 的结果在内存里保留一天。查询超过 1.5 秒或失败时，这条访问不记国家。": "Each visitor's IP is sent to geo.plost.io to find the country and city; no database is kept here, and an answer is reused from memory for a day. A lookup that takes over 1.5 seconds or fails leaves that visit without a country.",
   "已改用在线查询，本机的库文件已删除。": "Switched to online lookup; the local database file has been deleted.",
-  "除「在线查询」外，查询都在本机完成，访客 IP 不会发给任何人；选「在线查询」时，访客 IP 会发送到 Plost 的 geo.plost.io 服务查询（该服务不记录、不保存查询的 IP）。": "Except with online lookup, lookups happen on this server and visitor IPs go nowhere. With online lookup, visitor IPs are sent to Plost's geo.plost.io service, which neither logs nor keeps them."
+  "除「在线查询」外，查询都在本机完成，访客 IP 不会发给任何人；选「在线查询」时，访客 IP 会发送到 Plost 的 geo.plost.io 服务查询（该服务不记录、不保存查询的 IP）。": "Except with online lookup, lookups happen on this server and visitor IPs go nowhere. With online lookup, visitor IPs are sent to Plost's geo.plost.io service, which neither logs nor keeps them.",
+  "保存后写入服务的 env 文件，立即生效；不存数据库，恢复备份也不会丢。留空表示保持现有的值。": "Saved into the service's env file and used at once; never stored in the database, so a restore keeps them. Leave a field blank to keep its current value.",
+  "已设置 {0}，留空保持不变": "Set ({0}); leave blank to keep",
+  "已设置，留空保持不变": "Set; leave blank to keep",
+  "未设置": "Not set",
+  "用来加密自动备份的文件，恢复时需要它。至少 12 个字符，不能含引号、反斜杠和 $。": "Encrypts scheduled backups and is needed to restore them. At least 12 characters, without quotes, backslashes or $.",
+  "计划备份密码需要 12 到 256 个字节": "The backup password must be 12 to 256 bytes",
+  "计划备份密码不能包含引号、反斜杠、$ 或换行，首尾也不能是空格": "The backup password cannot contain quotes, backslashes, $ or line breaks, or start or end with a space",
+  "请先填写计划备份密码，自动备份需要它加密文件": "Enter a backup password first; scheduled backups are encrypted with it",
+  "请先在备份设置里填写计划备份密码": "Enter a backup password in the backup settings first"
 }
