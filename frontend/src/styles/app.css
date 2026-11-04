@@ -834,6 +834,9 @@ html[data-theme="dark"] { --map-ocean: #242630; --map-empty: #3d4151; --map-bord
 .dash-identity .control-trigger { max-width:100%; }
 .dash-active-filters { display:flex; align-items:center; gap:6px; min-width:0; overflow-x:auto; padding-block:3px; scrollbar-width:thin; overscroll-behavior-inline:contain; }
 .dash-active-filters > button { flex:none; white-space:nowrap; }
+.dash-clear-filters { --sq-r:10px; display:grid; place-items:center; width:32px; height:32px; border:1px solid var(--color-gray-200); background:var(--surface); color:var(--color-gray-500); }
+.dash-clear-filters:hover { color:var(--color-gray-900); background:var(--color-gray-50); }
+.dash-clear-filters .ui-icon { width:14px; height:14px; font-size:13px; }
 .filter-chip-label { max-width:clamp(100px,18vw,240px); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .dash-toolbar .control-trigger {
   height: var(--control-height); min-width: var(--control-height); padding-inline: 12px;

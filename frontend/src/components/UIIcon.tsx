@@ -8,6 +8,7 @@ const icons: Record<string, string> = {
   key: "key",
   warn: "triangle-exclamation",
   info: "circle-info",
+  "filter-clear": "filter-slash",
   mail: "envelope",
   cloud: "cloud-arrow-down",
   grid: "grid-2",
