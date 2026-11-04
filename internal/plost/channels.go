@@ -1,6 +1,9 @@
 package plost
 
-import "strings"
+import (
+	"regexp"
+	"strings"
+)
 
 // Channels group referrers by kind of visit. A referrer is the host (or, from apps, the app id) the tracker stored,
 // so a domain matches itself and its subdomains: cn.bing.com and www4.bing.com are Bing, noai.duckduckgo.com is
@@ -9,7 +12,7 @@ import "strings"
 
 var aiReferrers = []string{
 	"chatgpt.com", "openai.com", "perplexity.ai", "pplx.ai", "claude.ai", "gemini.google.com", "bard.google.com",
-	"notebooklm.google", "notebooklm.google.com", "copilot.microsoft.com", "copilot.cloud.microsoft", "grok.com",
+	"notebooklm.google", "notebooklm.google.com", "copilot.microsoft.com", "copilot.com", "copilot.cloud.microsoft", "grok.com",
 	"deepseek.com", "meta.ai", "kimi.com", "kimi.ai", "kimi.moonshot.cn", "doubao.com", "qwen.ai", "tongyi.aliyun.com",
 	"qianwen.aliyun.com", "tongyi.com", "qianwen.com", "chat.mistral.ai", "poe.com", "phind.com", "you.com",
 	"yuanbao.tencent.com", "yiyan.baidu.com", "chatglm.cn", "metaso.cn",
@@ -59,16 +62,32 @@ var channelSQL = "CASE WHEN referrer_source IN ('','Direct') THEN 'direct' WHEN 
 // campaignPrefix marks a source that is only known from a link's utm_source tag.
 const campaignPrefix = "utm:"
 
+// taggedSites maps utm_source tags that name a well-known site without its domain.
+var taggedSites = map[string]string{
+	"chatgpt": "chatgpt.com", "openai": "openai.com", "perplexity": "perplexity.ai", "gemini": "gemini.google.com",
+	"copilot": "copilot.microsoft.com", "claude": "claude.ai", "deepseek": "deepseek.com", "grok": "grok.com", "zalo": "zalo",
+}
+
+var hostTag = regexp.MustCompile(`^[a-z0-9-]+(\.[a-z0-9-]+)+$`)
+
 // sourceName picks what the source report shows. A referring website always wins and
-// is stored as its domain; the utm_source tag is used only when the browser sent no
-// referring website, and is stored as "utm:<tag>" so the interface can say it is a
-// campaign link rather than a site.
+// is stored as its domain. Without one, a utm_source tag that is itself a domain (ChatGPT
+// adds utm_source=chatgpt.com) or names a well-known site counts as that site; any other
+// tag is stored as "utm:<tag>" so the interface can say it is a campaign link, not a site.
 func sourceName(site, utmSource string) string {
 	if site != "" && site != "Direct" {
 		return site
 	}
-	if tag := strings.TrimSpace(utmSource); tag != "" {
-		return campaignPrefix + short(tag, 200)
+	tag := strings.TrimSpace(utmSource)
+	if tag == "" {
+		return "Direct"
 	}
-	return "Direct"
+	lower := strings.ToLower(tag)
+	if known, ok := taggedSites[lower]; ok {
+		return known
+	}
+	if len(lower) <= 253 && hostTag.MatchString(lower) {
+		return canonicalHost(lower)
+	}
+	return campaignPrefix + short(tag, 200)
 }

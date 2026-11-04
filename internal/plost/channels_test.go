@@ -45,6 +45,10 @@ func TestSourceNamePrefersReferringSite(t *testing.T) {
 		{"", " voguesly ", "utm:voguesly"},
 		{"Direct", "", "Direct"},
 		{"google.com", "", "google.com"},
+		{"Direct", "chatgpt.com", "chatgpt.com"},
+		{"Direct", "Perplexity", "perplexity.ai"},
+		{"Direct", "www.Example.org", "example.org"},
+		{"Direct", "spotlight_house", "utm:spotlight_house"},
 	} {
 		if got := sourceName(c.site, c.utm); got != c.want {
 			t.Errorf("sourceName(%q, %q) = %q, want %q", c.site, c.utm, got, c.want)
