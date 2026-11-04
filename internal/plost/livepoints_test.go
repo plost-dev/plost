@@ -46,7 +46,7 @@ func TestLivePointsPlaceVisitorsByCity(t *testing.T) {
 	if err := json.Unmarshal(x.call(t, "GET", "/api/sites/example.com/report?period=today", nil, 200), &report); err != nil {
 		t.Fatal(err)
 	}
-	if len(report.LivePoints) != 1 || report.LivePoints[0] != (LivePoint{Lat: 35.69, Lon: 139.69, Country: "JP", Count: 2}) {
+	if len(report.LivePoints) != 1 || report.LivePoints[0] != (LivePoint{Lat: 35.69, Lon: 139.69, Country: "JP", Count: 2, Last: report.LivePoints[0].Last}) || report.LivePoints[0].Last == 0 {
 		t.Fatalf("live points: %+v", report.LivePoints)
 	}
 	json.Unmarshal(x.call(t, "GET", "/api/sites/example.com/report?period=today&country=US", nil, 200), &report)

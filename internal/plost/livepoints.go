@@ -66,6 +66,7 @@ type LivePoint struct {
 	Lon     float64 `json:"lon"`
 	Country string  `json:"country"`
 	Count   int     `json:"count"`
+	Last    int64   `json:"last"` // The latest visit there, Unix seconds.
 }
 
 // points groups the site's visitors online now by place, the busiest first. A country filter narrows it; other
@@ -83,6 +84,7 @@ func (l *livePlaces) points(site int64, now time.Time, country string) []LivePoi
 			counts[key] = &LivePoint{Lat: p.lat, Lon: p.lon, Country: p.country}
 		}
 		counts[key].Count++
+		counts[key].Last = max(counts[key].Last, p.at)
 	}
 	l.mu.Unlock()
 	out := make([]LivePoint, 0, len(counts))
@@ -118,37 +120,32 @@ func (a *App) recordPlace(r *http.Request, site int64, visitor, country string, 
 	a.live.record(site, visitor, livePlace{at: now.Unix(), lat: lat, lon: lon, country: country})
 }
 
-// OverviewPlace is one place on the site overview's globe: the visitors online there now, across all sites.
-// Without a City GeoIP database a place is a whole country and carries no coordinates.
+// OverviewPlace is one place on the site overview's globe: the visitors online there now, across all sites, and
+// when the latest of them came, so the page can make the newest dot glow. Without a City GeoIP database a place is a
+// whole country and carries no coordinates.
 type OverviewPlace struct {
-	Lat      *float64       `json:"lat,omitempty"`
-	Lon      *float64       `json:"lon,omitempty"`
-	Country  string         `json:"country"`
-	Visitors int            `json:"visitors"`
-	Sites    []OverviewSite `json:"sites"`
-}
-
-type OverviewSite struct {
-	Name     string `json:"name"`
-	Visitors int    `json:"visitors"`
+	Lat      *float64 `json:"lat,omitempty"`
+	Lon      *float64 `json:"lon,omitempty"`
+	Country  string   `json:"country"`
+	Visitors int      `json:"visitors"`
+	Last     int64    `json:"last"`
 }
 
 // overviewLive places the visitors online now on the site overview's globe, busiest place first.
 func (a *App) overviewLive(w http.ResponseWriter, r *http.Request) error {
 	now := time.Now()
-	rows, err := a.db.QueryContext(r.Context(), "SELECT id,COALESCE(NULLIF(name,''),domain) FROM sites")
+	rows, err := a.db.QueryContext(r.Context(), "SELECT id FROM sites")
 	if err != nil {
 		return err
 	}
-	names := map[int64]string{}
+	var ids []int64
 	for rows.Next() {
 		var id int64
-		var name string
-		if err := rows.Scan(&id, &name); err != nil {
+		if err := rows.Scan(&id); err != nil {
 			rows.Close()
 			return err
 		}
-		names[id] = name
+		ids = append(ids, id)
 	}
 	err = rows.Err()
 	rows.Close()
@@ -160,7 +157,7 @@ func (a *App) overviewLive(w http.ResponseWriter, r *http.Request) error {
 		country  string
 	}
 	places := map[key]*OverviewPlace{}
-	add := func(k key, coords bool, site string, n int) {
+	add := func(k key, coords bool, n int, last int64) {
 		p := places[k]
 		if p == nil {
 			p = &OverviewPlace{Country: k.country}
@@ -171,22 +168,22 @@ func (a *App) overviewLive(w http.ResponseWriter, r *http.Request) error {
 			places[k] = p
 		}
 		p.Visitors += n
-		p.Sites = append(p.Sites, OverviewSite{site, n})
+		p.Last = max(p.Last, last)
 	}
 	// Visitors the City database placed sit at their city; the rest of a country's online visitors (no
 	// database, or an address it knows only the country of) sit at the country itself.
 	placed := map[int64]map[string]int{}
 	if a.placesKnown() {
-		for id, name := range names {
+		for _, id := range ids {
 			placed[id] = map[string]int{}
 			for _, pt := range a.live.points(id, now, "") {
-				add(key{pt.Lat, pt.Lon, pt.Country}, true, name, pt.Count)
+				add(key{pt.Lat, pt.Lon, pt.Country}, true, pt.Count, pt.Last)
 				placed[id][pt.Country] += pt.Count
 			}
 		}
 	}
 	// CROSS JOIN keeps sites as the outer loop, so each site reads only its recent rows through events_site_time.
-	rows, err = a.db.QueryContext(r.Context(), `SELECT s.id,e.country_code,count(DISTINCT `+visitorSQL+`)
+	rows, err = a.db.QueryContext(r.Context(), `SELECT s.id,e.country_code,count(DISTINCT `+visitorSQL+`),max(e.timestamp)
 		FROM sites s CROSS JOIN events_v2 e
 		WHERE e.site_id=s.id AND e.timestamp>=? AND e.country_code<>''
 		GROUP BY s.id,e.country_code`, now.Add(-liveWindow).Unix())
@@ -197,12 +194,13 @@ func (a *App) overviewLive(w http.ResponseWriter, r *http.Request) error {
 		var id int64
 		var country string
 		var n int
-		if err := rows.Scan(&id, &country, &n); err != nil {
+		var last int64
+		if err := rows.Scan(&id, &country, &n, &last); err != nil {
 			rows.Close()
 			return err
 		}
 		if rest := n - placed[id][country]; rest > 0 {
-			add(key{country: country}, false, names[id], rest)
+			add(key{country: country}, false, rest, last)
 		}
 	}
 	err = rows.Err()
@@ -212,10 +210,6 @@ func (a *App) overviewLive(w http.ResponseWriter, r *http.Request) error {
 	}
 	out := make([]OverviewPlace, 0, len(places))
 	for _, p := range places {
-		sort.Slice(p.Sites, func(i, j int) bool { return p.Sites[i].Visitors > p.Sites[j].Visitors })
-		if len(p.Sites) > 3 {
-			p.Sites = p.Sites[:3]
-		}
 		out = append(out, *p)
 	}
 	sort.Slice(out, func(i, j int) bool {

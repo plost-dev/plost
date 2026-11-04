@@ -1,14 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import * as d3 from "d3"
-import { CountryFlag } from "~/components/icons"
 import { UIIcon } from "~/components/UIIcon"
-import { countryName } from "~/lib/countries"
-import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
 import { COUNTRIES_BY_TWO_LETTER_CODE, countryCentroids, loadWorldMap, type WorldJsonCountryData } from "~/lib/world-countries"
 
-/** Visitors online now at one place; a place without coordinates is a whole country. */
-export type OverviewPlace = { lat?: number, lon?: number, country: string, visitors: number, sites: Array<{ name: string, visitors: number }> }
+/** Visitors online now at one place; a place without coordinates is a whole country. `last` is the latest visit
+ * there, Unix seconds: the newest place glows. */
+export type OverviewPlace = { lat?: number, lon?: number, country: string, visitors: number, last: number }
 type Mode = "globe" | "map"
 type Marker = OverviewPlace & { key: string, lonLat: [number, number] }
 type Dots = { globe: Array<[number, number]>, map: Array<[number, number]> }
@@ -50,8 +48,8 @@ function loadDots() {
   })
 }
 
-// How long the label card takes to slide from one place to the next.
-const GLIDE_MS = 700
+// One breath of the glow around the newest visit.
+const PULSE_MS = 1800
 
 function cssColor(el: Element, name: string, fallback: string) {
   return getComputedStyle(el).getPropertyValue(name).trim() || fallback
@@ -59,21 +57,14 @@ function cssColor(el: Element, name: string, fallback: string) {
 
 /** Right-clicking the map (or the context-menu key while it has focus) opens a small menu to switch globe and flat map. */
 export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
-  const { t, locale } = useT()
+  const { t } = useT()
   const [mode, setMode] = useState<Mode>("globe")
   const [menu, setMenu] = useState<{ x: number, y: number } | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const [data, setData] = useState<{ dots: Dots, features: WorldJsonCountryData[] } | null>(null)
   const [failed, setFailed] = useState(false)
-  const [tip, setTip] = useState<Marker | null>(null)
-  const tipRef = useRef<HTMLDivElement>(null)
-  const tipAt = useRef<[number, number]>([0, 0])
-  // While the card moves from one place to the next: where it set off and when.
-  const glide = useRef<{ from: [number, number], at: number } | null>(null)
-  const labelRef = useRef<{ key: string, right: boolean }>({ key: "", right: false })
   const frameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const hoverRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!menu) return
@@ -121,13 +112,15 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
     const ctx = canvas.getContext("2d")!
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     const max = Math.max(1, ...markers.map((m) => m.visitors))
+    const newest = markers.reduce<Marker | null>((best, m) => !best || m.last > best.last ? m : best, null)?.key
     let width = 0, height = 0, raf = 0, visible = true
     // Start facing the busiest country so the first frame already shows a visitor.
     // Tilted towards the viewer, so the globe is seen a little from above, with the north half in front.
     let rotation: [number, number] = [markers[0] ? -markers[0].lonLat[0] : -20, -25]
     let drag: { x: number, y: number, rotation: [number, number] } | null = null
-    // `edge` is the angle from the globe's centre in radians (0 on the flat map), to keep labels off the rim.
-    let shown: Array<{ marker: Marker, x: number, y: number, r: number, edge: number }> = []
+    let shown: Array<{ x: number, y: number, r: number, newest: boolean }> = []
+    // Small dots; a busier place is only a little larger.
+    const dotSize = (m: Marker) => 1.4 + Math.sqrt(m.visitors / max)
 
     const resize = () => {
       const rect = canvas.getBoundingClientRect()
@@ -169,7 +162,7 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
         for (const marker of markers) {
           if (d3.geoDistance(marker.lonLat, center) > Math.PI / 2 - 0.05) continue
           const xy = projection(marker.lonLat)
-          if (xy) shown.push({ marker, x: xy[0], y: xy[1], r: 2 + 1.2 * Math.sqrt(marker.visitors / max), edge: d3.geoDistance(marker.lonLat, center) })
+          if (xy) shown.push({ x: xy[0], y: xy[1], r: dotSize(marker), newest: marker.key === newest })
         }
       } else {
         // The whole world is too wide for the card and leaves it half empty, so the map is fitted to 125°W–160°E and
@@ -185,63 +178,37 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
         ctx.globalAlpha = 1
         for (const marker of markers) {
           const xy = projection(marker.lonLat)
-          if (xy) shown.push({ marker, x: xy[0], y: xy[1], r: 2 + 1.2 * Math.sqrt(marker.visitors / max), edge: 0 })
+          if (xy) shown.push({ x: xy[0], y: xy[1], r: dotSize(marker), newest: marker.key === newest })
         }
       }
+      // Plain dots for everyone online; the place of the newest visit breathes a ring and a soft glow.
+      ctx.fillStyle = accent
       for (const dot of shown) {
-        // A thin soft ring, not a wide glow.
-        const halo = ctx.createRadialGradient(dot.x, dot.y, dot.r, dot.x, dot.y, dot.r * 1.7)
-        halo.addColorStop(0, accent)
-        halo.addColorStop(1, "transparent")
-        ctx.globalAlpha = 0.25
-        ctx.fillStyle = halo
-        ctx.beginPath(); ctx.arc(dot.x, dot.y, dot.r * 1.7, 0, Math.PI * 2); ctx.fill()
-        ctx.globalAlpha = 1
-        ctx.fillStyle = accent
+        if (dot.newest) continue
         ctx.beginPath(); ctx.arc(dot.x, dot.y, dot.r, 0, Math.PI * 2); ctx.fill()
       }
-      // A hover labels that place. Otherwise one place keeps the label while it stays in view, so the card
-      // follows its dot instead of hopping between dots as the globe turns; then the busiest in view takes over.
-      // A label lets go once its dot nears the rim, and a new one is taken only from the front of the globe.
-      // The dot must also be on the canvas and below the corner buttons.
-      const inView = (dot: { x: number, y: number }) => dot.y > 64 && dot.y < height - 12 && dot.x > 12 && dot.x < width - 12
-      let label = hoverRef.current ? shown.find((dot) => dot.marker.key === hoverRef.current) : shown.find((dot) => dot.marker.key === labelRef.current.key && dot.edge < 1.15 && inView(dot))
-      if (!label && !hoverRef.current) label = shown.filter((dot) => dot.edge < 0.95 && inView(dot)).sort((a, b) => b.marker.visitors - a.marker.visitors)[0]
-      if (label && label.marker.key !== labelRef.current.key) {
-        // The side is chosen once per place, so the card never flips while it follows the dot.
-        const tipWidth = tipRef.current?.offsetWidth || 160
-        labelRef.current = { key: label.marker.key, right: label.x - tipWidth - label.r - 10 < 8 }
-        // A card already showing slides over to the new place instead of jumping there.
-        glide.current = tipRef.current && !reduced ? { from: [...tipAt.current], at: performance.now() } : null
-      }
-      // Position is written straight to the element so rotation never re-renders React.
-      if (label) {
-        const tipWidth = tipRef.current?.offsetWidth || 160, tipHeight = tipRef.current?.offsetHeight || 44
-        const gap = label.r + 10
-        const x = labelRef.current.right ? label.x + gap : label.x - tipWidth - gap
-        // Stay below the buttons in the top corner.
-        const y = Math.max(60, Math.min(height - tipHeight - 8, label.y - tipHeight / 2))
-        const to: [number, number] = [Math.max(8, Math.min(width - tipWidth - 8, x)), y]
-        const moving = glide.current
-        if (moving) {
-          // Eased in and out over GLIDE_MS, aiming at where the dot is now, so it lands on a moving dot smoothly.
-          const p = Math.min(1, (performance.now() - moving.at) / GLIDE_MS)
-          const e = p < 0.5 ? 4 * p * p * p : 1 - (-2 * p + 2) ** 3 / 2
-          tipAt.current = [moving.from[0] + (to[0] - moving.from[0]) * e, moving.from[1] + (to[1] - moving.from[1]) * e]
-          if (p >= 1) glide.current = null
-        } else {
-          tipAt.current = to
+      const fresh = shown.find((dot) => dot.newest)
+      if (fresh) {
+        if (!reduced) {
+          const phase = (performance.now() % PULSE_MS) / PULSE_MS
+          ctx.globalAlpha = 0.45 * (1 - phase)
+          ctx.beginPath(); ctx.arc(fresh.x, fresh.y, fresh.r + fresh.r * 4 * phase, 0, Math.PI * 2); ctx.fill()
+          ctx.globalAlpha = 1
         }
-        if (tipRef.current) tipRef.current.style.transform = `translate(${Math.round(tipAt.current[0])}px, ${Math.round(tipAt.current[1])}px)`
+        ctx.save()
+        ctx.shadowColor = accent
+        ctx.shadowBlur = 10
+        ctx.beginPath(); ctx.arc(fresh.x, fresh.y, fresh.r + 0.6, 0, Math.PI * 2); ctx.fill()
+        ctx.restore()
       }
-      setTip(label?.marker || null)
     }
 
     const tick = () => {
       raf = 0
       if (mode === "globe" && !drag && !reduced) rotation = [rotation[0] + 0.08, rotation[1]]
       draw()
-      if (mode === "globe" && !reduced && visible && document.visibilityState === "visible") raf = requestAnimationFrame(tick)
+      // The flat map stands still, but keeps drawing while the newest dot breathes.
+      if (!reduced && (mode === "globe" || newest) && visible && document.visibilityState === "visible") raf = requestAnimationFrame(tick)
     }
     const start = () => { if (!raf) raf = requestAnimationFrame(tick) }
 
@@ -251,22 +218,11 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
       canvas.setPointerCapture(event.pointerId)
     }
     const onMove = (event: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect()
-      if (drag) {
-        rotation = [drag.rotation[0] + (event.clientX - drag.x) * 0.3, Math.max(-60, Math.min(60, drag.rotation[1] - (event.clientY - drag.y) * 0.3))]
-        if (reduced) draw()
-        return
-      }
-      const x = event.clientX - rect.left, y = event.clientY - rect.top
-      const hit = shown.find((dot) => Math.hypot(dot.x - x, dot.y - y) <= Math.max(10, dot.r + 4))
-      const code = hit?.marker.key || null
-      if (code !== hoverRef.current) {
-        hoverRef.current = code
-        draw()
-      }
+      if (!drag) return
+      rotation = [drag.rotation[0] + (event.clientX - drag.x) * 0.3, Math.max(-60, Math.min(60, drag.rotation[1] - (event.clientY - drag.y) * 0.3))]
+      if (reduced) draw()
     }
     const onUp = () => { drag = null }
-    const onLeave = () => { if (hoverRef.current) { hoverRef.current = null; draw() } }
 
     resize()
     draw()
@@ -281,7 +237,6 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
     canvas.addEventListener("pointermove", onMove)
     canvas.addEventListener("pointerup", onUp)
     canvas.addEventListener("pointercancel", onUp)
-    canvas.addEventListener("pointerleave", onLeave)
     return () => {
       cancelAnimationFrame(raf)
       observer.disconnect()
@@ -291,11 +246,9 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
       canvas.removeEventListener("pointermove", onMove)
       canvas.removeEventListener("pointerup", onUp)
       canvas.removeEventListener("pointercancel", onUp)
-      canvas.removeEventListener("pointerleave", onLeave)
     }
   }, [data, markers, mode])
 
-  const top = tip?.sites[0]
   return (
     <div ref={frameRef} className={`overview-globe is-${mode}`} tabIndex={0} title={t("右键切换地球或平面地图")}
       onContextMenu={(event) => {
@@ -311,15 +264,6 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
       }}>
       <canvas ref={canvasRef} className="overview-globe-canvas" role="img" aria-label={t("当前在线访客位置")} />
       {failed ? <p className="overview-globe-state" role="status">{t("地图加载失败")}</p> : null}
-      {tip && top ? (
-        <div ref={tipRef} className="squircle overview-globe-tip" style={{ transform: `translate(${Math.round(tipAt.current[0])}px, ${Math.round(tipAt.current[1])}px)` }}>
-          {/* The card stays and slides; only what it says fades over to the new place. */}
-          <div key={tip.key} className="overview-globe-tip-body">
-            <strong><CountryFlag code={tip.country} shape="rect" className="overview-globe-flag" />{countryName(tip.country, locale)}</strong>
-            <span><i aria-hidden="true" />{(tip.sites.length > 1 ? t("{n} 人在线 · {k} 个站点").replace("{k}", String(tip.sites.length)) : t("{n} 人在线 · {site}").replace("{site}", top.name)).replace("{n}", numberShort(tip.visitors))}</span>
-          </div>
-        </div>
-      ) : null}
       {menu ? (
         <div ref={menuRef} role="menu" aria-label={t("地图样式")} className="squircle overview-globe-menu" style={{ left: menu.x, top: menu.y }}>
           {(["globe", "map"] as const).map((value) => (

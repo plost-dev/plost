@@ -59,10 +59,10 @@ func TestOverviewLivePlacesOnlineVisitorsAcrossSites(t *testing.T) {
 	if city.Lat == nil || *city.Lat != 35.69 || *city.Lon != 139.69 || city.Country != "JP" || city.Visitors != 3 {
 		t.Fatalf("city place = %+v", city)
 	}
-	if len(city.Sites) != 2 || city.Sites[0] != (OverviewSite{"b.example.test", 2}) {
-		t.Fatalf("city sites = %+v", city.Sites)
+	if since := time.Now().Unix() - city.Last; since < 0 || since > 60 {
+		t.Fatalf("city last visit = %d", city.Last)
 	}
-	if country.Lat != nil || country.Country != "US" || country.Visitors != 1 || country.Sites[0].Name != "a.example.test" {
+	if country.Lat != nil || country.Country != "US" || country.Visitors != 1 || country.Last == 0 {
 		t.Fatalf("country place = %+v", country)
 	}
 
