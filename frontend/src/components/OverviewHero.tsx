@@ -1,7 +1,9 @@
 import { Link, useRouter } from "@tanstack/react-router"
 import { useCallback, useEffect, useRef, useState } from "react"
 import { UIIcon } from "~/components/UIIcon"
-import { OverviewGlobe, type OverviewPlace } from "~/components/OverviewGlobe"
+import type { OverviewPlace } from "~/components/OverviewGlobe"
+import { OverviewMap } from "~/components/OverviewMap"
+import { overviewMapFn, type OverviewMapConfig } from "~/lib/map-usage-actions"
 import { overviewChartsFn, overviewLiveFn, type OverviewCharts, type sitesFn } from "~/lib/actions"
 import { numberShort } from "~/lib/format"
 import { useT } from "~/lib/i18n"
@@ -16,6 +18,7 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
   const router = useRouter()
   const [places, setPlaces] = useState<OverviewPlace[]>([])
   const [charts, setCharts] = useState<OverviewCharts | null>(null)
+  const [mapConfig, setMapConfig] = useState<OverviewMapConfig | null>(null)
   const [updatedAt, setUpdatedAt] = useState(() => Date.now())
   const [now, setNow] = useState(() => Date.now())
   const [refreshing, setRefreshing] = useState(false)
@@ -38,6 +41,8 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
   })(), [])
   // Each loader refresh, by hand, by the timer or pushed by the server, hands over a new list; the figures follow it.
   useEffect(() => { void load() }, [sites, load])
+  // Which map to draw, as the visitor map settings say; the built-in globe shows until it is known.
+  useEffect(() => { void overviewMapFn().then(setMapConfig).catch(() => setMapConfig({ service: "" })) }, [])
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30_000)
     return () => window.clearInterval(timer)
@@ -80,7 +85,7 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
       <div className="overview-hero-body">
         {charts ? <MetricsChart charts={charts} /> : <div className="overview-hero-loading" aria-hidden="true" />}
       </div>
-      <OverviewGlobe places={places} />
+      <OverviewMap places={places} config={mapConfig} />
     </section>
   )
 }

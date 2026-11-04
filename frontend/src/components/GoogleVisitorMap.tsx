@@ -10,12 +10,12 @@ import { mapboxVisitorData, type MapRows, type VisitorCountry } from "~/lib/mapb
 
 // The Maps JavaScript API has no bundled types here; only the few calls below are used.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Maps = any
+export type Maps = any
 declare global { interface Window { google?: { maps: Maps }; __plostGoogleMapsReady?: () => void; gm_authFailure?: () => void } }
 
 let loading: Promise<Maps> | null = null
 /** Loads the Maps JavaScript API once per page. A rejected key (gm_authFailure) or a failed script rejects. */
-function loadGoogleMaps(key: string, language: string): Promise<Maps> {
+export function loadGoogleMaps(key: string, language: string): Promise<Maps> {
   if (window.google?.maps?.Map) return Promise.resolve(window.google.maps)
   if (loading) return loading
   loading = new Promise((resolve, reject) => {

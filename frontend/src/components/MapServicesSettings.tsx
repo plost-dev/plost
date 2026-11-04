@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react"
 import { mapboxSettingsFn, saveMapboxSettingsFn, type MapboxSettings } from "~/lib/mapbox-actions"
 import { googleMapsSettingsFn, saveGoogleMapsSettingsFn, type GoogleMapsSettings } from "~/lib/google-maps-actions"
+import { mapUsageFn, saveMapUsageFn, type MapUsage } from "~/lib/map-usage-actions"
+import { useT } from "~/lib/i18n"
 import { showToast } from "~/lib/toast"
+import { Toggle } from "./Toggle"
+import { Tile } from "./ui"
 import { GoogleMapsSettingsPanel } from "./GoogleMapsSettingsPanel"
 import { MapboxSettingsPanel } from "./MapboxSettingsPanel"
 import { MapServiceTips } from "./MapServiceTips"
 
-type MapServices = { mapbox: MapboxSettings; google: GoogleMapsSettings }
+type MapServices = { mapbox: MapboxSettings; google: GoogleMapsSettings; usage: MapUsage }
 let loading: Promise<MapServices> | null = null
 
 /**
@@ -14,7 +18,7 @@ let loading: Promise<MapServices> | null = null
  * opened and switching to it does not wait for the server. A save clears it for the next visit.
  */
 export function loadMapServices() {
-  loading ??= Promise.all([mapboxSettingsFn(), googleMapsSettingsFn()]).then(([mapbox, google]) => ({ mapbox, google }))
+  loading ??= Promise.all([mapboxSettingsFn(), googleMapsSettingsFn(), mapUsageFn()]).then(([mapbox, google, usage]) => ({ mapbox, google, usage }))
   loading.catch(() => { loading = null })
   return loading
 }
@@ -28,14 +32,14 @@ export function MapServicesPage({ onSaved }: { onSaved: () => void }) {
     return () => { live = false }
   }, [])
   if (!data) return null
-  return <MapServicesSettings mapbox={data.mapbox} google={data.google} onSaved={() => { loading = null; onSaved() }} />
+  return <MapServicesSettings mapbox={data.mapbox} google={data.google} usage={data.usage} onSaved={() => { loading = null; onSaved() }} />
 }
 
 /**
  * The visitor map services. Both may be off, and then the built-in map is used; at most one is on, and it replaces the
  * built-in map. Each switch saves at once, and turning one on turns the other off.
  */
-function MapServicesSettings({ mapbox: initialMapbox, google: initialGoogle, onSaved }: { mapbox: MapboxSettings; google: GoogleMapsSettings; onSaved: () => void }) {
+function MapServicesSettings({ mapbox: initialMapbox, google: initialGoogle, usage, onSaved }: { mapbox: MapboxSettings; google: GoogleMapsSettings; usage: MapUsage; onSaved: () => void }) {
   const [mapbox, setMapbox] = useState(initialMapbox)
   const [google, setGoogle] = useState(initialGoogle)
   // A Mapbox switch saved on before any token was entered does nothing, so it shows as off.
@@ -68,6 +72,26 @@ function MapServicesSettings({ mapbox: initialMapbox, google: initialGoogle, onS
   return <>
     <MapboxSettingsPanel settings={mapbox} enabled={mapboxOn} onToggle={toggleMapbox} onKeySaved={next => { setMapbox(next); onSaved() }} />
     <GoogleMapsSettingsPanel settings={google} enabled={googleOn} onToggle={toggleGoogle} onKeySaved={next => { setGoogle(next); onSaved() }} />
+    <MapUsagePanel initial={usage} service={mapboxOn ? "Mapbox" : googleOn ? "Google 地图" : ""} onSaved={onSaved} />
     <MapServiceTips />
   </>
+}
+
+/** Where the map service that is on is used. Each switch saves at once; without a service on, both show the built-in map. */
+function MapUsagePanel({ initial, service, onSaved }: { initial: MapUsage; service: string; onSaved: () => void }) {
+  const { t } = useT()
+  const [usage, setUsage] = useState(initial)
+  async function change(next: Partial<MapUsage>) {
+    try {
+      setUsage(await saveMapUsageFn(next))
+      showToast("已保存，重新打开页面后生效。")
+      onSaved()
+    } catch (error) { showToast(error instanceof Error ? error.message : "保存失败", "error") }
+  }
+  return <Tile icon="map" title={t("使用范围")} subtitle={service ? t("{s} 用在哪些页面；没勾选的地方使用内置地图。").replace("{s}", t(service)) : t("先打开上面的 Mapbox 或 Google 地图，再选择用在哪些页面。")}>
+    <div className="flex flex-col gap-3">
+      <Toggle checked={usage.detail} disabled={!service} onChange={detail => void change({ detail })}>{t("站点详情页的访客地图")}</Toggle>
+      <Toggle checked={usage.overview} disabled={!service} onChange={overview => void change({ overview })}>{t("站点首页的地球")}</Toggle>
+    </div>
+  </Tile>
 }

@@ -1,0 +1,1 @@
+import{n as e}from"./rpc-BodAOrUS.js";var t=()=>e(`/api/map-usage`),n=t=>e(`/api/map-usage`,`PUT`,t),r=()=>e(`/api/overview/map`);export{r as n,n as r,t};

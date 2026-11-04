@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import * as d3 from "d3"
-import { UIIcon } from "~/components/UIIcon"
 import { useT } from "~/lib/i18n"
 import { COUNTRIES_BY_TWO_LETTER_CODE, countryCentroids, loadWorldMap, type WorldJsonCountryData } from "~/lib/world-countries"
 
 /** Visitors online now at one place; a place without coordinates is a whole country. `last` is the latest visit
  * there, Unix seconds: the newest place glows. */
 export type OverviewPlace = { lat?: number, lon?: number, country: string, visitors: number, last: number }
-type Mode = "globe" | "map"
-type Marker = OverviewPlace & { key: string, lonLat: [number, number] }
+export type OverviewMapMode = "globe" | "map"
+export type PlaceMarker = OverviewPlace & { key: string, lonLat: [number, number] }
+type Marker = PlaceMarker
 type Dots = { globe: Array<[number, number]>, map: Array<[number, number]> }
 
 let dotsPromise: Promise<{ dots: Dots, features: WorldJsonCountryData[] }> | undefined
@@ -55,40 +55,33 @@ function cssColor(el: Element, name: string, fallback: string) {
   return getComputedStyle(el).getPropertyValue(name).trim() || fallback
 }
 
-/** Right-clicking the map (or the context-menu key while it has focus) opens a small menu to switch globe and flat map. */
-export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
+/**
+ * Places on the map: a place the City database put at a city keeps its coordinates, a country-only place sits at the
+ * country's middle, and a place neither can put anywhere is left out.
+ */
+export function placeMarkers(places: OverviewPlace[], features: WorldJsonCountryData[]): PlaceMarker[] {
+  const centroids = countryCentroids(features)
+  return places.flatMap((place) => {
+    const key = `${place.country}:${place.lat ?? ""}:${place.lon ?? ""}`
+    if (place.lat !== undefined && place.lon !== undefined) return [{ ...place, key, lonLat: [place.lon, place.lat] as [number, number] }]
+    const a3 = COUNTRIES_BY_TWO_LETTER_CODE[place.country]?.alpha_3
+    const lonLat = a3 ? centroids.get(a3) : undefined
+    return lonLat ? [{ ...place, key, lonLat }] : []
+  })
+}
+
+/** The key of the place with the latest visit, which glows. */
+export const newestPlace = (markers: PlaceMarker[]) => markers.reduce<PlaceMarker | null>((best, m) => !best || m.last > best.last ? m : best, null)?.key
+
+/** The built-in dotted globe or flat map, drawn on a canvas. The frame around it (OverviewMap) chooses the mode. */
+export function OverviewGlobe({ places, mode }: { places: OverviewPlace[], mode: OverviewMapMode }) {
   const { t } = useT()
-  const [mode, setMode] = useState<Mode>("globe")
-  const [menu, setMenu] = useState<{ x: number, y: number } | null>(null)
-  const menuRef = useRef<HTMLDivElement>(null)
   const [data, setData] = useState<{ dots: Dots, features: WorldJsonCountryData[] } | null>(null)
   const [failed, setFailed] = useState(false)
-  const frameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   // The turn survives new data: every push of fresh places redraws, but the globe keeps spinning from where it is.
   const rotationRef = useRef<[number, number] | null>(null)
   const aimedRef = useRef(false)
-
-  useEffect(() => {
-    if (!menu) return
-    menuRef.current?.querySelector<HTMLButtonElement>("[aria-checked='true']")?.focus()
-    const close = (event: Event) => { if (!(event.target instanceof Node && menuRef.current?.contains(event.target))) setMenu(null) }
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return
-      setMenu(null)
-      frameRef.current?.focus()
-    }
-    document.addEventListener("pointerdown", close, true)
-    document.addEventListener("scroll", close, true)
-    document.addEventListener("keydown", onKey)
-    window.addEventListener("blur", close)
-    return () => {
-      document.removeEventListener("pointerdown", close, true)
-      document.removeEventListener("scroll", close, true)
-      document.removeEventListener("keydown", onKey)
-      window.removeEventListener("blur", close)
-    }
-  }, [menu])
 
   useEffect(() => {
     let alive = true
@@ -96,26 +89,15 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
     return () => { alive = false }
   }, [])
 
-  const markers = useMemo<Marker[]>(() => {
-    if (!data) return []
-    const centroids = countryCentroids(data.features)
-    return places.flatMap((place) => {
-      const key = `${place.country}:${place.lat ?? ""}:${place.lon ?? ""}`
-      if (place.lat !== undefined && place.lon !== undefined) return [{ ...place, key, lonLat: [place.lon, place.lat] as [number, number] }]
-      const a3 = COUNTRIES_BY_TWO_LETTER_CODE[place.country]?.alpha_3
-      const lonLat = a3 ? centroids.get(a3) : undefined
-      return lonLat ? [{ ...place, key, lonLat }] : []
-    })
-  }, [places, data])
+  const markers = useMemo<Marker[]>(() => data ? placeMarkers(places, data.features) : [], [places, data])
 
   useEffect(() => {
     const canvas = canvasRef.current
-    const frame = frameRef.current
-    if (!canvas || !frame || !data) return
+    if (!canvas || !data) return
     const ctx = canvas.getContext("2d")!
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches
     const max = Math.max(1, ...markers.map((m) => m.visitors))
-    const newest = markers.reduce<Marker | null>((best, m) => !best || m.last > best.last ? m : best, null)?.key
+    const newest = newestPlace(markers)
     let width = 0, height = 0, raf = 0, visible = true
     // Tilted towards the viewer, so the globe is seen a little from above, with the north half in front. It turns to
     // the busiest place once, when the first visitors arrive; after that it only ever keeps turning.
@@ -141,9 +123,9 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
 
     const draw = () => {
       if (!width || !height) return
-      const dotColor = cssColor(frame, "--overview-globe-dot", "#a1a1aa")
-      const accent = cssColor(frame, "--analytics-accent", "#2563eb")
-      const sphere = cssColor(frame, "--overview-globe-sphere", "#09090b")
+      const dotColor = cssColor(canvas, "--overview-globe-dot", "#a1a1aa")
+      const accent = cssColor(canvas, "--analytics-accent", "#2563eb")
+      const sphere = cssColor(canvas, "--overview-globe-sphere", "#09090b")
       ctx.clearRect(0, 0, width, height)
       shown = []
       if (mode === "globe") {
@@ -258,32 +240,8 @@ export function OverviewGlobe({ places }: { places: OverviewPlace[] }) {
     }
   }, [data, markers, mode])
 
-  return (
-    <div ref={frameRef} className={`overview-globe is-${mode}`} tabIndex={0} title={t("右键切换地球或平面地图")}
-      onContextMenu={(event) => {
-        event.preventDefault()
-        // Kept inside the map, since the card clips anything past its edge.
-        const rect = event.currentTarget.getBoundingClientRect()
-        setMenu({ x: Math.min(event.clientX - rect.left, rect.width - 136), y: Math.min(event.clientY - rect.top, rect.height - 88) })
-      }}
-      onKeyDown={(event) => {
-        if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return
-        event.preventDefault()
-        setMenu({ x: event.currentTarget.clientWidth / 2, y: event.currentTarget.clientHeight / 2 })
-      }}>
-      <canvas ref={canvasRef} className="overview-globe-canvas" role="img" aria-label={t("当前在线访客位置")} />
-      {failed ? <p className="overview-globe-state" role="status">{t("地图加载失败")}</p> : null}
-      {menu ? (
-        <div ref={menuRef} role="menu" aria-label={t("地图样式")} className="squircle overview-globe-menu" style={{ left: menu.x, top: menu.y }}>
-          {(["globe", "map"] as const).map((value) => (
-            <button key={value} type="button" role="menuitemradio" aria-checked={mode === value} className="squircle"
-              onClick={() => { setMode(value); setMenu(null); frameRef.current?.focus() }}>
-              {t(value === "globe" ? "地球" : "平面")}
-              {mode === value ? <UIIcon name="check" /> : null}
-            </button>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  )
+  return <>
+    <canvas ref={canvasRef} className="overview-globe-canvas" role="img" aria-label={t("当前在线访客位置")} />
+    {failed ? <p className="overview-globe-state" role="status">{t("地图加载失败")}</p> : null}
+  </>
 }

@@ -346,6 +346,14 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 .overview-globe.is-map .overview-globe-canvas { cursor:default; }
 .overview-globe-canvas:active { cursor:grabbing; }
 .overview-globe:focus-visible { outline:2px solid var(--accent-color); outline-offset:-2px; }
+/* Mapbox or Google Maps in place of the built-in globe: only the live dots, the newest breathing a ring. */
+.overview-map-stage { position:absolute; inset:0; background:transparent; }
+.overview-map-stage .mapboxgl-ctrl-attrib { font-size:10px; }
+.overview-live-dot { position:absolute; width:var(--size); height:var(--size); border-radius:50%; background:var(--analytics-accent, var(--accent-color)); transform:translate(-50%, -50%); pointer-events:none; }
+.overview-live-dot.is-newest { z-index:1; box-shadow:0 0 10px 1px var(--analytics-accent, var(--accent-color)); }
+.overview-live-dot.is-newest::after { content:""; position:absolute; inset:0; border-radius:50%; background:inherit; animation:overview-live-ring 1.8s ease-out infinite; }
+@keyframes overview-live-ring { from { transform:scale(1); opacity:.45; } to { transform:scale(5); opacity:0; } }
+@media (prefers-reduced-motion: reduce) { .overview-live-dot.is-newest::after { animation:none; opacity:0; } }
 /* The right-click menu that switches globe and flat map. */
 .overview-globe-menu { --sq-r:10px; position:absolute; z-index:3; display:flex; flex-direction:column; min-width:120px; padding:4px; border:1px solid var(--color-gray-200); background:var(--surface); box-shadow:0 8px 24px rgb(0 0 0 / .12); }
 .overview-globe-menu button { --sq-r:7px; display:flex; align-items:center; justify-content:space-between; gap:12px; padding:7px 10px; font-size:13px; color:var(--color-gray-700); text-align:left; }

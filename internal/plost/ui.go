@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"sync"
 	"time"
 
@@ -205,14 +206,10 @@ func (a *App) groupRows(ctx context.Context, site int64, rng Range, q url.Values
 }
 
 func (a *App) reportDetails(ctx context.Context, site Site, rng Range, q url.Values) (map[string]any, error) {
-	mapboxToken, googleKey := a.mapKeys()
-	result := map[string]any{"mapboxToken": mapboxToken, "googleMapsKey": ""}
-	if a.setting(ctx, "mapbox_enabled", "true") != "true" {
-		result["mapboxToken"] = ""
-	}
-	if a.googleMaps.Load() {
-		result["googleMapsKey"] = googleKey
-		result["mapboxToken"] = ""
+	result := map[string]any{"mapboxToken": "", "googleMapsKey": ""}
+	// The statistics pages show the chosen map service unless it is set to the overview only.
+	if service, key := a.mapService(ctx); service != "" && a.setting(ctx, mapUseDetail, "true") == "true" {
+		result[map[string]string{"mapbox": "mapboxToken", "google": "googleMapsKey"}[service]] = key
 	}
 	channel := `CASE WHEN referrer_source IN ('','Direct') THEN 'direct' WHEN referrer_source IN ('google.com','bing.com','baidu.com','duckduckgo.com','yahoo.com','yandex.com','yandex.ru','search.brave.com','ecosia.org','sogou.com','so.com') THEN 'organic_search' WHEN referrer_source IN ('twitter.com','x.com','t.co','facebook.com','instagram.com','reddit.com','weibo.com','youtube.com','bsky.app','threads.net','tiktok.com') THEN 'organic_social' WHEN referrer_source IN ('chatgpt.com','chat.openai.com','perplexity.ai','claude.ai','gemini.google.com','copilot.microsoft.com','grok.com','deepseek.com','chat.deepseek.com') THEN 'ai' ELSE 'referral' END`
 	w0, a0 := where(site.ID, rng, q)
@@ -497,4 +494,57 @@ func (a *App) googleMapsSettings(w http.ResponseWriter, r *http.Request) error {
 // by its start), and whether the page may save one into the env file.
 func (a *App) mapKeyState(enabled bool, key string) map[string]any {
 	return map[string]any{"enabled": enabled, "configured": key != "", "masked": maskKey(key), "editable": a.cfg.EnvFile != ""}
+}
+
+// Where the chosen map service (Mapbox or Google Maps) is used: on each site's statistics page, on the site
+// overview's globe, or both. Wherever it is not used, or no service is on, the built-in map is shown.
+const (
+	mapUseDetail   = "map_use_detail"   // On by default: the statistics pages used the service before this setting.
+	mapUseOverview = "map_use_overview" // Off by default: the overview keeps its dotted globe.
+)
+
+func (a *App) mapUsage(w http.ResponseWriter, r *http.Request) error {
+	if r.Method == "PUT" {
+		var in struct {
+			Detail   *bool `json:"detail"`
+			Overview *bool `json:"overview"`
+		}
+		if err := readJSON(w, r, &in); err != nil {
+			return err
+		}
+		for key, value := range map[string]*bool{mapUseDetail: in.Detail, mapUseOverview: in.Overview} {
+			if value == nil {
+				continue
+			}
+			if _, err := a.db.ExecContext(r.Context(), "INSERT INTO settings(key,value) VALUES(?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", key, strconv.FormatBool(*value)); err != nil {
+				return err
+			}
+		}
+	}
+	return jsonResponse(w, map[string]bool{
+		"detail":   a.setting(r.Context(), mapUseDetail, "true") == "true",
+		"overview": a.setting(r.Context(), mapUseOverview, "false") == "true",
+	})
+}
+
+// mapService is the map service that is on and has its key, with that key, or "" for the built-in map.
+func (a *App) mapService(ctx context.Context) (service, key string) {
+	mapboxToken, googleKey := a.mapKeys()
+	if a.googleMaps.Load() && googleKey != "" {
+		return "google", googleKey
+	}
+	if a.setting(ctx, "mapbox_enabled", "true") == "true" && mapboxToken != "" {
+		return "mapbox", mapboxToken
+	}
+	return "", ""
+}
+
+// overviewMap tells the site overview which map to draw: the service with its browser key when the overview is set to
+// use it, otherwise nothing and the page keeps its built-in globe.
+func (a *App) overviewMap(w http.ResponseWriter, r *http.Request) error {
+	service, key := a.mapService(r.Context())
+	if service == "" || a.setting(r.Context(), mapUseOverview, "false") != "true" {
+		return jsonResponse(w, map[string]string{"service": ""})
+	}
+	return jsonResponse(w, map[string]string{"service": service, "key": key})
 }
