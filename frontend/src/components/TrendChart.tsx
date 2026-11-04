@@ -34,7 +34,9 @@ const POINT_RADIUS: Record<TrafficMetric, number> = {pageviews: 7, visitors: 5, 
 const HEIGHT = 264
 const MARGIN = { top: 16, bottom: 32 }
 const AXIS_FONT_SIZE = 10
-const LABEL_LIFT = 4 // value labels sit just above their gridline, inside the plot
+const LABEL_LIFT = 4 // line chart: value labels sit just above their gridline, inside the plot
+const LABEL_GAP = 8 // bar chart: room between the right-aligned value labels and the plot
+const LABEL_CHAR_WIDTH = 6.2 // tabular digits at AXIS_FONT_SIZE, enough to size the gutter and label backings
 const TOOLTIP_ACTION_CLASS = "squircle min-h-8 rounded-md border border-gray-600 bg-gray-700 px-3 text-xs font-medium text-gray-100 hover:bg-gray-600"
 
 /** A bar with rounded top corners that sits on the baseline. */
@@ -178,13 +180,15 @@ export function TrendChart({
     const scale = axisScale(Math.max(0, ...points.flatMap(point => visible.map(key => point.values[key]))))
     const yMax = scale.max
     const yTickVals = scale.ticks
-    // Value labels sit inside the plot on their gridlines, so the plot spans the card's padding evenly on both sides.
-    const left = 0
+    const bars = type === "bar"
+    // Bars keep their value labels in a gutter left of the plot, beside each gridline (2026-11-04). A line chart keeps
+    // them inside the plot just above their gridlines, so it spans the card's padding evenly on both sides.
+    const labelWidth = Math.ceil(Math.max(...yTickVals.map(value => formatAxisTick(value).length)) * LABEL_CHAR_WIDTH)
+    const left = bars ? labelWidth + LABEL_GAP : 0
     const right = 0
     const innerW = Math.max(1, width - left - right)
     const innerH = HEIGHT - MARGIN.top - MARGIN.bottom
     const baseline = MARGIN.top + innerH
-    const bars = type === "bar"
     // Bars own a slot each and are centred in it; a line starts and ends on the plot's edges.
     const slot = innerW / Math.max(points.length, 1)
     const x = (i: number) => bars ? left + slot * (i + 0.5) : left + (points.length <= 1 ? innerW / 2 : (i / (points.length - 1)) * innerW)
@@ -306,8 +310,13 @@ export function TrendChart({
             <path data-metric={key} className="traffic-series-path" d={path} fill="none" stroke={`var(--traffic-${key})`} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" />
           </g>)}
           {layout.columns.map(({key, i, path}) => path ? <path key={`${i}-${key}`} data-metric={key} className="traffic-bar" d={path} /> : null)}
-          {/* Drawn over the series with a surface-coloured halo so a curve passing through never cuts a label. */}
-          {layout.yTickVals.slice(1).map(value => <text key={value} x={layout.left} y={layout.y(value) - LABEL_LIFT} textAnchor="start" className="trend-axis-label trend-value-label fill-gray-400" fontSize={AXIS_FONT_SIZE} fontWeight="400">{formatAxisTick(value)}</text>)}
+          {layout.bars
+            ? layout.yTickVals.map(value => <text key={value} x={layout.left - LABEL_GAP} y={layout.y(value)} dominantBaseline="middle" textAnchor="end" className="trend-axis-label fill-gray-400" fontSize={AXIS_FONT_SIZE} fontWeight="400">{formatAxisTick(value)}</text>)
+            // Drawn over the series on a surface-coloured backing so a curve or its fill passing through never touches a label.
+            : layout.yTickVals.slice(1).map(value => { const text = formatAxisTick(value); return <g key={value}>
+                <rect className="trend-value-backing" x={layout.left} y={layout.y(value) - LABEL_LIFT - AXIS_FONT_SIZE} width={text.length * LABEL_CHAR_WIDTH + 4} height={AXIS_FONT_SIZE + 2} rx="2" />
+                <text x={layout.left} y={layout.y(value) - LABEL_LIFT} textAnchor="start" className="trend-axis-label trend-value-label fill-gray-400" fontSize={AXIS_FONT_SIZE} fontWeight="400">{text}</text>
+              </g> })}
           {!layout.bars && points.length === 1 ? POINT_ORDER.filter(key => visible.includes(key)).map(key => <circle key={key} data-metric={key} cx={layout.x(0)} cy={layout.y(points[0].values[key])} r={POINT_RADIUS[key]} fill={key === "pageviews" ? "var(--surface)" : "none"} stroke={`var(--traffic-${key})`} strokeWidth="2" />) : null}
           {hover && selected && !layout.bars ? <>
             <line x1={hover.x} x2={hover.x} y1={MARGIN.top - 4} y2={HEIGHT - MARGIN.bottom + 4} stroke="var(--analytics-guide)" strokeWidth="1" />
