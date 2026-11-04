@@ -1340,7 +1340,6 @@
   "密钥写在服务的 env 文件里，不存数据库，恢复备份也不会丢；改完重启 Plost 生效。": "Keys live in the service's env file, not the database, so restoring a backup never loses them. Restart Plost after changing them.",
   "修改备份去向时需要确认身份。": "Confirm it is you when changing where backups go.",
   "与前一周期相比": "Compared with the previous period",
-  "近 24 小时 · 全部站点": "Last 24 hours · all sites",
   "实时，5 分钟内": "Live, last 5 minutes",
   "Token 和 Key 保存在服务的 env 文件里，不存数据库，保存后立即生效。请在 Mapbox 和 Google Cloud 里把它们限制为本站域名。": "Tokens and keys are kept in the service's env file, not the database, and take effect as soon as they are saved. Limit them to this site's domain in Mapbox and Google Cloud.",
   "两种地图同时只能开一种，都不开时显示内置地图。地图样式选择后自动保存，统计页重新打开后生效。": "Only one map service can be on at a time; with neither on, the built-in map is shown. A map style saves as you pick it and shows when the statistics page is reopened.",

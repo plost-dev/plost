@@ -56,13 +56,18 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
         <div className="overview-hero-heading">
           <span className="squircle overview-hero-badge" aria-hidden="true"><UIIcon name="globe" /></span>
           <h1 id="overview-hero-title" className="overview-hero-title">{t("nav.sites")}</h1>
-          <p className="overview-hero-sub">
-            {t("footer.sites").replace("{n}", numberShort(sites.length))} · <span role="status">{minutes < 1 ? t("刚刚更新") : t("{n} 分钟前更新").replace("{n}", String(minutes))}</span>
-            <button type="button" className="overview-hero-refresh" disabled={refreshing} onClick={refresh} aria-label={t("刷新")} title={t("刷新")}>
-              <UIIcon name="refresh" className={spinning ? "is-spinning" : undefined} />
-            </button>
-            · {t("近 24 小时 · 全部站点")}
-          </p>
+          {/* Two quiet chips say what the figures cover; the green dot says the page updates by itself. */}
+          <div className="overview-hero-meta">
+            <span className="overview-hero-chip">{t("footer.sites").replace("{n}", numberShort(sites.length))}</span>
+            <span className="overview-hero-chip"><UIIcon name="clock" />{t("近 24 小时")}</span>
+            <span className="overview-hero-live">
+              <i aria-hidden="true" />
+              <span role="status">{minutes < 1 ? t("刚刚更新") : t("{n} 分钟前更新").replace("{n}", String(minutes))}</span>
+              <button type="button" className="overview-hero-refresh" disabled={refreshing} onClick={refresh} aria-label={t("刷新")} title={t("刷新")}>
+                <UIIcon name="refresh" className={spinning ? "is-spinning" : undefined} />
+              </button>
+            </span>
+          </div>
         </div>
         <div className="overview-hero-tools">
           <div className="squircle overview-hero-seg" role="group" aria-label={t("站点显示方式")}>

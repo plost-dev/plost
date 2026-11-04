@@ -299,9 +299,16 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 .overview-hero-badge { --sq-r:10px; display:grid; place-items:center; width:32px; height:32px; flex:none; background:color-mix(in srgb, var(--accent-color) 12%, var(--surface)); color:var(--accent-color); }
 .overview-hero-badge .ui-icon { width:16px; height:16px; }
 .overview-hero-title { font-size:24px; line-height:1.2; font-weight:700; letter-spacing:-.025em; color:var(--color-gray-900); }
-.overview-hero-sub { display:flex; align-items:center; gap:4px; font-size:13px; color:var(--color-gray-500); white-space:nowrap; }
+.overview-hero-meta { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-left:4px; }
+.overview-hero-chip { display:inline-flex; align-items:center; gap:5px; height:24px; padding:0 9px; border-radius:999px; background:var(--color-gray-100); font-size:12px; font-weight:500; color:var(--color-gray-600); white-space:nowrap; font-variant-numeric:tabular-nums; }
+.overview-hero-chip .ui-icon { width:11px; height:11px; color:var(--color-gray-400); }
+.overview-hero-live { display:inline-flex; align-items:center; gap:6px; margin-left:4px; font-size:12px; color:var(--color-gray-500); white-space:nowrap; }
+.overview-hero-live > i { position:relative; width:6px; height:6px; border-radius:50%; background:var(--color-green-500); }
+.overview-hero-live > i::after { content:""; position:absolute; inset:-3px; border-radius:50%; background:var(--color-green-500); opacity:.35; animation:overview-live 2s ease-out infinite; }
+@keyframes overview-live { from { transform:scale(.5); opacity:.45; } to { transform:scale(1.6); opacity:0; } }
+@media (prefers-reduced-motion: reduce) { .overview-hero-live > i::after { animation:none; } }
 /* A small round refresh button right after the update time, without a border. */
-.overview-hero-refresh { display:grid; place-items:center; width:22px; height:22px; border-radius:50%; color:var(--color-gray-400); transition:background-color 120ms, color 120ms; }
+.overview-hero-refresh { display:grid; place-items:center; width:22px; height:22px; margin-left:-2px; border-radius:50%; color:var(--color-gray-400); transition:background-color 120ms, color 120ms; }
 .overview-hero-refresh:hover { background:var(--color-gray-100); color:var(--color-gray-700); }
 .overview-hero-refresh .ui-icon { width:12px; height:12px; }
 .overview-hero-refresh .is-spinning { animation:overview-spin .8s linear infinite; }
@@ -355,7 +362,7 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 @media(max-width:767px) {
   .overview-hero { grid-template-columns:minmax(0,1fr); grid-template-rows:auto; height:auto; margin:24px 0 20px; }
   .overview-hero-head { padding:22px 20px 0; }
-  .overview-hero-sub { flex-wrap:wrap; white-space:normal; }
+  .overview-hero-meta { flex-basis:100%; margin-left:0; }
   .overview-hero-body { padding:18px 20px 0; }
   .overview-hero-body > .overview-hero-tiles { grid-template-columns:repeat(2, minmax(0,1fr)); row-gap:20px; }
   .overview-hero-tile:nth-child(odd) { padding-left:0; border-left:0; }
