@@ -61,19 +61,28 @@ func geoArchive(t *testing.T, dbType, folder, country string) []byte {
 // geoMirror serves archives the way ipdata.plost.io and MaxMind do, and counts the archive downloads.
 type geoMirror struct {
 	mu        sync.Mutex
-	files     map[string][]byte // edition -> archive
-	sums      map[string]string // edition -> published checksum, when it should differ from the archive's
+	files     map[string][]byte     // edition -> archive
+	sums      map[string]string     // edition -> published checksum, when it should differ from the archive's
+	versions  map[string]geoRelease // the Plost mirror's version.json; empty: the mirror has none
 	downloads atomic.Int32
 	auth      string // MaxMind: the expected "account:key"
 	srv       *httptest.Server
 }
 
 func newGeoMirror(t *testing.T) *geoMirror {
-	m := &geoMirror{files: map[string][]byte{}, sums: map[string]string{}}
+	m := &geoMirror{files: map[string][]byte{}, sums: map[string]string{}, versions: map[string]geoRelease{}}
 	m.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		m.mu.Lock()
 		defer m.mu.Unlock()
 		name := strings.TrimPrefix(r.URL.Path, "/")
+		if name == "version.json" {
+			if len(m.versions) == 0 {
+				http.NotFound(w, r)
+				return
+			}
+			json.NewEncoder(w).Encode(m.versions)
+			return
+		}
 		if strings.HasSuffix(name, "/download") { // MaxMind: /<edition>/download?suffix=…
 			if user, pass, ok := r.BasicAuth(); !ok || user+":"+pass != m.auth {
 				http.Error(w, "unauthorized", 401)
@@ -148,7 +157,8 @@ func TestGeoIPDownloadsVerifiesAndReplacesOldVersion(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if state.Edition != "GeoLite2-City" || state.Source != "plost" || state.Error != "" || state.Size == 0 {
+	// Without version.json the version comes from the archive's name in the checksum line.
+	if state.Edition != "GeoLite2-City" || state.Source != "plost" || state.Error != "" || state.Size == 0 || state.Version != "20261103" || state.Latest != "20261103" {
 		t.Fatalf("state = %+v", state)
 	}
 	if got := a.geo.country(geoTestAddr, time.Now()); got != "GB" {
@@ -317,5 +327,34 @@ func TestGeoDue(t *testing.T) {
 		if got := geoDue(c.source, c.edition, c.state, c.loaded, now); got != c.want {
 			t.Errorf("%s: due = %v, want %v", c.name, got, c.want)
 		}
+	}
+}
+
+// The Plost mirror's version.json says which version is newest: the same version is not fetched again, and a
+// new one is downloaded and recorded as the version in use.
+func TestGeoIPFollowsMirrorVersion(t *testing.T) {
+	m := newGeoMirror(t)
+	sum := func(b []byte) string { h := sha256.Sum256(b); return hex.EncodeToString(h[:]) }
+	first := geoArchive(t, "GeoLite2-City", "GeoLite2-City_20261110", "GB")
+	m.set("GeoLite2-City", first, "")
+	m.versions["GeoLite2-City"] = geoRelease{Version: "20261110", SHA256: sum(first), PublishedAt: 1700000000}
+	a := geoTestApp(t, m).app
+	state, err := a.updateGeoIP(t.Context())
+	if err != nil || state.Version != "20261110" || state.Latest != "20261110" || state.LatestAt != 1700000000 || m.downloads.Load() != 1 {
+		t.Fatalf("state = %+v, downloads = %d, err = %v", state, m.downloads.Load(), err)
+	}
+	if state, err = a.updateGeoIP(t.Context()); err != nil || m.downloads.Load() != 1 || state.Version != "20261110" {
+		t.Fatalf("an unchanged version was fetched again: %+v, downloads = %d, err = %v", state, m.downloads.Load(), err)
+	}
+	next := geoArchive(t, "GeoLite2-City", "GeoLite2-City_20261113", "IE")
+	m.mu.Lock()
+	m.files["GeoLite2-City"] = next
+	m.versions["GeoLite2-City"] = geoRelease{Version: "20261113", SHA256: sum(next), PublishedAt: 1700300000}
+	m.mu.Unlock()
+	if state, err = a.updateGeoIP(t.Context()); err != nil || state.Version != "20261113" || m.downloads.Load() != 2 {
+		t.Fatalf("state = %+v, downloads = %d, err = %v", state, m.downloads.Load(), err)
+	}
+	if got := a.geo.country(geoTestAddr, time.Now()); got != "IE" {
+		t.Fatalf("country after the new version = %q, want IE", got)
 	}
 }

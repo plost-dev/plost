@@ -57,10 +57,13 @@ var (
 
 // geoState is what the settings page shows about the downloaded database, kept in settings.geoip_state.
 type geoState struct {
-	Source    string `json:"source,omitempty"`  // where the database in use came from
-	Edition   string `json:"edition,omitempty"` // which database it is
-	SHA256    string `json:"sha256,omitempty"`  // of the archive it came in, compared with the published one
-	BuiltAt   int64  `json:"builtAt,omitempty"` // when MaxMind built it
+	Source    string `json:"source,omitempty"`   // where the database in use came from
+	Edition   string `json:"edition,omitempty"`  // which database it is
+	SHA256    string `json:"sha256,omitempty"`   // of the archive it came in, compared with the published one
+	Version   string `json:"version,omitempty"`  // MaxMind's build date of the database in use, as 20261103
+	Latest    string `json:"latest,omitempty"`   // the newest version the source offered at the last check
+	LatestAt  int64  `json:"latestAt,omitempty"` // when the Plost mirror published it
+	BuiltAt   int64  `json:"builtAt,omitempty"`  // when MaxMind built it
 	Size      int64  `json:"size,omitempty"`
 	UpdatedAt int64  `json:"updatedAt,omitempty"` // when it was put in place
 	CheckedAt int64  `json:"checkedAt,omitempty"` // the last look for a new version, successful or not
@@ -246,23 +249,68 @@ func (a *App) geoGet(ctx context.Context, source, url string) (*http.Response, e
 	return nil, fmt.Errorf("下载服务器返回 HTTP %d", resp.StatusCode)
 }
 
-func (a *App) downloadGeoIP(ctx context.Context, source, edition string, state geoState) (geoState, error) {
-	archiveURL, sumURL := a.geoURLs(source, edition)
+// geoRelease is what a source says about its newest database: its checksum, its version, and when the Plost mirror
+// published it.
+type geoRelease struct {
+	Version     string `json:"version"`
+	SHA256      string `json:"sha256"`
+	PublishedAt int64  `json:"publishedAt"`
+}
+
+var geoVersionForm = regexp.MustCompile(`^[0-9]{8}$`)
+
+// geoLatest asks the source for its newest release. The Plost mirror lists every edition in version.json; MaxMind,
+// or a mirror without that file, publishes a checksum line that names the archive after its build date.
+func (a *App) geoLatest(ctx context.Context, source, edition string) (geoRelease, error) {
+	if source == "plost" {
+		base := a.geoMirrorURL
+		if base == "" {
+			base = geoMirrorBase
+		}
+		if resp, err := a.geoGet(ctx, source, base+"version.json"); err == nil {
+			var list map[string]geoRelease
+			err = json.NewDecoder(io.LimitReader(resp.Body, 64<<10)).Decode(&list)
+			resp.Body.Close()
+			if r, ok := list[edition]; err == nil && ok && sha256Form.MatchString(r.SHA256) && geoVersionForm.MatchString(r.Version) {
+				return r, nil
+			}
+		}
+	}
+	_, sumURL := a.geoURLs(source, edition)
 	resp, err := a.geoGet(ctx, source, sumURL)
 	if err != nil {
-		return state, err
+		return geoRelease{}, err
 	}
 	line, _ := io.ReadAll(io.LimitReader(resp.Body, 1024))
 	resp.Body.Close()
 	fields := strings.Fields(string(line))
 	if len(fields) == 0 || !sha256Form.MatchString(strings.ToLower(fields[0])) {
-		return state, errors.New("下载服务器没有给出有效的 SHA-256 校验值")
+		return geoRelease{}, errors.New("下载服务器没有给出有效的 SHA-256 校验值")
 	}
-	want := strings.ToLower(fields[0])
+	r := geoRelease{SHA256: strings.ToLower(fields[0])}
+	if len(fields) > 1 { // GeoLite2-City_20261103.tar.gz
+		if v := strings.TrimSuffix(strings.TrimPrefix(fields[1], edition+"_"), ".tar.gz"); geoVersionForm.MatchString(v) {
+			r.Version = v
+		}
+	}
+	return r, nil
+}
+
+func (a *App) downloadGeoIP(ctx context.Context, source, edition string, state geoState) (geoState, error) {
+	latest, err := a.geoLatest(ctx, source, edition)
+	if err != nil {
+		return state, err
+	}
+	want := latest.SHA256
 	if want == state.SHA256 && source == state.Source && edition == state.Edition && a.geo.ready() {
-		state.Error = ""
+		state.Error, state.Latest, state.LatestAt = "", latest.Version, latest.PublishedAt
+		if state.Version == "" {
+			state.Version = latest.Version
+		}
 		return state, nil
 	}
+	archiveURL, _ := a.geoURLs(source, edition)
+	var resp *http.Response
 	if err := os.MkdirAll(a.geoDir(), 0o700); err != nil {
 		return state, fmt.Errorf("无法创建 IP 数据库目录：%w", err)
 	}
@@ -318,7 +366,8 @@ func (a *App) downloadGeoIP(ctx context.Context, source, edition string, state g
 		return state, fmt.Errorf("新的 IP 数据库无法打开：%w", err)
 	}
 	_ = a.clearGeoDir(a.geoFile())
-	return geoState{Source: source, Edition: edition, SHA256: want, BuiltAt: built, Size: size, UpdatedAt: time.Now().Unix()}, nil
+	return geoState{Source: source, Edition: edition, SHA256: want, Version: latest.Version, Latest: latest.Version, LatestAt: latest.PublishedAt,
+		BuiltAt: built, Size: size, UpdatedAt: time.Now().Unix()}, nil
 }
 
 // unpackGeoIP copies the edition's .mmdb out of a MaxMind archive (a .tar.gz holding one dated folder).
@@ -406,13 +455,22 @@ type geoView struct {
 	Editable bool     `json:"editable"` // the keys can be saved from this page (-env-file)
 	Updating bool     `json:"updating"` // a download is running
 	State    geoState `json:"state"`
+	// With -geoip-db: when the file in use was built and when it last changed on disk.
+	FileBuiltAt   int64 `json:"fileBuiltAt,omitempty"`
+	FileChangedAt int64 `json:"fileChangedAt,omitempty"`
 }
 
 func (a *App) geoViewOf(ctx context.Context) geoView {
 	source, edition, state := a.geoSettings(ctx)
 	account, key := a.maxMindKeys()
-	return geoView{Managed: a.geoManaged(), FlagPath: a.cfg.GeoIPPath, Loaded: a.geo.ready(), Source: source, Edition: edition,
+	view := geoView{Managed: a.geoManaged(), FlagPath: a.cfg.GeoIPPath, Loaded: a.geo.ready(), Source: source, Edition: edition,
 		Account: maskKey(account), Key: maskSecret(key), Editable: a.cfg.EnvFile != "", Updating: a.geoUpdating.Load(), State: state}
+	if !view.Managed && a.geo != nil {
+		if db := a.geo.db.Load(); db != nil {
+			view.FileBuiltAt, view.FileChangedAt = int64(db.reader.Metadata.BuildEpoch), db.sig.mod.Unix()
+		}
+	}
+	return view
 }
 
 // maskSecret shows only the first four characters of the licence key, which unlike a map token is secret.

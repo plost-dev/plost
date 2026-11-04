@@ -24,9 +24,19 @@ function megabytes(size: number) {
   return `${(size / 1048576).toFixed(1)} MB`
 }
 
+/** MaxMind's build date, 20261103, written as 2026-11-03. */
+function versionLabel(version?: string) {
+  return version && /^\d{8}$/.test(version) ? `${version.slice(0, 4)}-${version.slice(4, 6)}-${version.slice(6)}` : "—"
+}
+
+/** The build date of a database known only by its timestamp, in the same form as a version. */
+function versionOfTime(seconds?: number) {
+  return seconds ? new Date(seconds * 1000).toISOString().slice(0, 10) : "—"
+}
+
 /** Settings → IP 数据库: where the GeoLite2 database comes from, which one, and how its updates are going. */
 export function GeoIPSettingsPage() {
-  const { t } = useT()
+  const { t, locale } = useT()
   const [data, setData] = useState<GeoIPSettings | null>(null)
   useEffect(() => {
     let live = true
@@ -43,10 +53,14 @@ export function GeoIPSettingsPage() {
   return <>
     {data.managed ? <GeoIPSettings data={data} onChange={setData} /> : <Tile icon="globe" title="IP 数据库">
       <p className="text-sm leading-6 text-gray-600">{t("IP 数据库由启动参数 -geoip-db 指定：{0}。Plost 不会下载或更新它，请在服务器上自行更新该文件。", { 0: data.flagPath })}</p>
+      <dl className="squircle backup-status-grid mt-6">
+        <div><dt>{t("当前版本")}</dt><dd>{data.loaded ? versionOfTime(data.fileBuiltAt) : t("未能加载")}</dd></div>
+        <div><dt>{t("文件更新时间")}</dt><dd>{data.fileChangedAt ? formatTimestamp(data.fileChangedAt * 1000, locale) : "—"}</dd></div>
+      </dl>
     </Tile>}
     <SettingsTips tips={[
       "IP 数据库用来判断访客所在的国家；GeoLite2-City 还能让实时访客地图显示到城市。经过 Cloudflare 时优先使用它给出的国家。",
-      "Plost 每天检查一次新版本，下载后先核对 SHA-256、再校验整个数据库，通过后才替换正在使用的库，并删除旧版本和未完成的下载。",
+      "Plost 每天对照数据来源的版本号检查一次，版本不同才下载；下载后先核对 SHA-256、再校验整个数据库，通过后才替换正在使用的库，并删除旧版本和未完成的下载。",
       "想直接从 MaxMind 下载：在 MaxMind 官网注册免费账号，在「Manage License Keys」里生成 Key，填进上面的 MaxMind 卡片。保存后会自动改用 MaxMind，并立即检测、下载、校验和替换，之后每天自动检测新版本。账号 ID 和 License Key 只写入 env 文件，不存数据库。",
       "除「在线查询」外，查询都在本机完成，访客 IP 不会发给任何人；选「在线查询」时，访客 IP 会发送到 Plost 的 geo.plost.io 服务查询（该服务不记录、不保存查询的 IP）。",
     ]} />
@@ -127,13 +141,14 @@ function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (nex
       {data.source !== "off" && data.source !== "online" ? <>
         <dl className="squircle backup-status-grid mt-6">
           <div><dt>{t("状态")}</dt><dd className={state.error && !data.updating && !checking ? "text-red-600" : undefined}>{status}</dd></div>
-          <div><dt>{t("数据版本")}</dt><dd>{data.loaded && state.builtAt ? formatTimestamp(state.builtAt * 1000, locale) : "—"}</dd></div>
+          <div><dt>{t("当前版本")}</dt><dd>{data.loaded ? state.version ? versionLabel(state.version) : versionOfTime(state.builtAt) : "—"}</dd></div>
+          <div><dt>{t("最新版本")}</dt><dd>{state.latest ? <>{versionLabel(state.latest)}{data.loaded && state.version ? <span className={state.latest === state.version ? "text-gray-500" : "text-orange-600"}> · {t(state.latest === state.version ? "已是最新" : "有新版本")}</span> : null}</> : "—"}</dd></div>
           <div><dt>{t("上次更新")}</dt><dd>{data.loaded && state.updatedAt ? formatTimestamp(state.updatedAt * 1000, locale) : "—"}</dd></div>
           <div><dt>{t("上次检查")}</dt><dd>{state.checkedAt ? formatTimestamp(state.checkedAt * 1000, locale) : "—"}</dd></div>
           {data.loaded && state.size ? <div><dt>{t("文件大小")}</dt><dd>{megabytes(state.size)}</dd></div> : null}
         </dl>
         <FormActions>
-          <ActionButton className="btn btn-secondary" loading={checking} disabled={data.updating || pending} onClick={() => void check()}>{t("立即检查更新")}</ActionButton>
+          <ActionButton className="btn btn-secondary" loading={checking} disabled={data.updating || pending} onClick={() => void check()}>{t("检查更新")}</ActionButton>
         </FormActions>
       </> : null}
     </Tile>
