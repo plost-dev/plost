@@ -1,0 +1,1 @@
+import{Cn as e}from"./index-Bt1t92da.js";var t=e;export{t as component};

@@ -45,9 +45,9 @@ function ChinaCityTile({ data, onChange }: { data: GeoIPSettings, onChange: (nex
     catch (error) { showToast(error instanceof Error ? error.message : "保存失败", "error") }
     finally { setPending(false) }
   }
-  return <Tile icon="map" title="中国访客的省份和城市">
+  return <Tile icon="map" title="中国访客的省份和城市"
+    titleAddon={<a className="settings-heading-link" href="https://cnip.io" target="_blank" rel="noreferrer">{t("打开 cnip.io")}</a>}>
     <Toggle checked={data.cnCity} disabled={pending} onChange={next => void change(next)}>{t("用 cnip.io 查询中国大陆访客的省份和城市")}</Toggle>
-    <p className="mt-4 text-sm leading-6 text-gray-600">{t("开启后，国家为中国的访客 IP 会发送到 api.cnip.io 查询省份和城市，其他国家仍用 IP 数据库；同一个 IP 的结果在内存里保留一天。查询超过 1.5 秒或失败时，改用 IP 数据库。城市从开启之后开始记录。")}</p>
   </Tile>
 }
 
@@ -80,7 +80,8 @@ export function GeoIPSettingsPage() {
       "IP 数据库用来判断访客所在的国家；GeoLite2-City 还能让实时访客地图显示到城市。经过 Cloudflare 时优先使用它给出的国家。",
       "Plost 每天对照数据来源的版本号检查一次，版本不同才下载；下载后先核对 SHA-256、再校验整个数据库，通过后才替换正在使用的库，并删除旧版本和未完成的下载。",
       "想直接从 MaxMind 下载：在 MaxMind 官网注册免费账号，在「Manage License Keys」里生成 Key，填进上面的 MaxMind 卡片。保存后会自动改用 MaxMind，并立即检测、下载、校验和替换，之后每天自动检测新版本。账号 ID 和 License Key 只写入 env 文件，不存数据库。",
-      "除「在线查询」外，查询都在本机完成，访客 IP 不会发给任何人；选「在线查询」时，访客 IP 会发送到 Plost 的 geo.plost.io 服务查询（该服务不记录、不保存查询的 IP）。",
+      "除「在线查询」和 cnip.io 外，查询都在本机完成，访客 IP 不会发给任何人；选「在线查询」时，访客 IP 会发送到 Plost 的 geo.plost.io 服务查询（该服务不记录、不保存查询的 IP）。",
+      "开启「中国访客的省份和城市」后，国家为中国的访客 IP 会发送到 api.cnip.io 查询省份和城市，其他国家仍用 IP 数据库；同一个 IP 的结果在内存里保留一天，查询超过 1.5 秒或失败时改用 IP 数据库。城市从开启之后开始记录。",
     ]} />
   </>
 }
