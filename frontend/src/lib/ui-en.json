@@ -1445,5 +1445,6 @@
   "仅国家": "Countries only",
   "内置地图轮廓": "Built-in map outlines",
   "没有使用 Mapbox 或 Google 地图时，统计页的访客分布地图画到多细。": "How detailed the visitor map on the statistics pages is when Mapbox or Google Maps is not used.",
-  "滚轮缩放 · 拖动移动 · 点击国家筛选": "Scroll to zoom · Drag to move · Click a country to filter"
+  "滚轮缩放 · 拖动移动 · 点击国家筛选": "Scroll to zoom · Drag to move · Click a country to filter",
+  "修改": "Edit"
 }
