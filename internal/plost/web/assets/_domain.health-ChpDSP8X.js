@@ -1,1 +1,0 @@
-import{rt as e}from"./index-Co4LWklV.js";import{r as t}from"./useRouter-ChX2SBsk.js";var n=t(),r=({error:t})=>(0,n.jsx)(e,{title:`页面出错`,description:t instanceof Error?t.message:void 0});export{r as errorComponent};
