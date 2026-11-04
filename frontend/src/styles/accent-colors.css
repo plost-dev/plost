@@ -26,6 +26,16 @@ html {
   --map-live:#22c55e;
 }
 html[data-accent="green"] { --map-live:#facc15; }
+
+/* Bar chart: one hue per accent, the front bar (visitors) at full strength and the bars behind mixed towards the
+   surface (traffic-overview.css). --bar-base-tooltip is the same hue lifted for the dark tooltip (2026-11-04). */
+html { --bar-base:#6d5dfc; --bar-base-tooltip:#a78bfa; }
+html[data-accent="blue"] { --bar-base:#2563eb; --bar-base-tooltip:#60a5fa; }
+html[data-accent="green"] { --bar-base:#1f9d55; --bar-base-tooltip:#4ade80; }
+html[data-accent="black"] { --bar-base:#3f3f46; --bar-base-tooltip:#d4d4d8; }
+html[data-accent="blue"][data-theme="dark"] { --bar-base:#3b82f6; }
+html[data-accent="green"][data-theme="dark"] { --bar-base:#22c55e; }
+html[data-accent="black"][data-theme="dark"] { --bar-base:#d4d4d8; }
 html[data-accent="blue"] { --map-live:#fb923c; }
 html[data-accent="black"] { --map-live:#22d3ee; }
 

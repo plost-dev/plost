@@ -8,12 +8,15 @@
 html[data-theme="dark"] .traffic-overview { --traffic-visits: #60a5fa; --traffic-pageviews: #4ade80; } /* Visitors keep the light-mode purple. */
 .traffic-overview .traffic-tooltip { --traffic-visitors: #a78bfa; --traffic-visits: #60a5fa; --traffic-pageviews: #4ade80; }
 /* The bars stand in front of each other, so they share one hue, darkest at the front, as Umami draws them; the
-   depths (--bar-*) come from VisitorGraph. "html" keeps this above the dark theme's colors. */
+   hue follows the accent (--bar-base, accent-colors.css) and the depths (--bar-*) come from VisitorGraph. "html"
+   keeps this above the dark theme's colors. */
 html .traffic-overview[data-chart="bar"] {
+  --traffic-visitors: var(--bar-base);
   --traffic-visits: color-mix(in srgb, var(--traffic-visitors) var(--bar-visits, 60%), var(--surface));
   --traffic-pageviews: color-mix(in srgb, var(--traffic-visitors) var(--bar-pageviews, 30%), var(--surface));
 }
 .traffic-overview[data-chart="bar"] .traffic-tooltip {
+  --traffic-visitors: var(--bar-base-tooltip);
   --traffic-visits: color-mix(in srgb, var(--traffic-visitors) var(--bar-visits-tooltip, 80%), var(--color-gray-800));
   --traffic-pageviews: color-mix(in srgb, var(--traffic-visitors) var(--bar-pageviews-tooltip, 58%), var(--color-gray-800));
 }
