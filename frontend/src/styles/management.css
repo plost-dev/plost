@@ -307,6 +307,9 @@ html[data-theme="dark"] .overview-hero { --overview-globe-dot:#d4d4d8; --overvie
 .overview-hero-live > i::after { content:""; position:absolute; inset:-3px; border-radius:50%; background:var(--color-green-500); opacity:.35; animation:overview-live 2s ease-out infinite; }
 @keyframes overview-live { from { transform:scale(.5); opacity:.45; } to { transform:scale(1.6); opacity:0; } }
 @media (prefers-reduced-motion: reduce) { .overview-hero-live > i::after { animation:none; } }
+/* "N 秒前更新" keeps one width: two monospaced digit places, right-aligned, inside a note wide enough for the longest. */
+.overview-hero-updated { display:inline-block; min-width:6.9em; }
+.overview-hero-age { display:inline-block; width:2ch; font-family:"Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace; text-align:right; }
 /* A small round refresh button right after the update time, without a border. */
 .overview-hero-refresh { display:grid; place-items:center; width:22px; height:22px; margin-left:-2px; border-radius:50%; color:var(--color-gray-400); transition:background-color 120ms, color 120ms; }
 .overview-hero-refresh:hover { background:var(--color-gray-100); color:var(--color-gray-700); }

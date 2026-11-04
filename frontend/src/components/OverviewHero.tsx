@@ -56,7 +56,13 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
   }, [])
 
   const seconds = Math.floor(Math.max(0, now - updatedAt) / 1000)
-  const updated = seconds < 10 ? t("刚刚更新") : seconds < 60 ? t("{n} 秒前更新").replace("{n}", String(Math.floor(seconds / 5) * 5)) : t("{n} 分钟前更新").replace("{n}", String(Math.floor(seconds / 60)))
+  // The number sits in a fixed two-digit box in a monospaced face, and the whole note keeps one width, so neither the
+  // text nor the refresh button beside it shifts as the seconds go by.
+  const age = (template: string, n: number) => {
+    const [before, after] = t(template).split("{n}")
+    return <>{before}<span className="overview-hero-age">{n}</span>{after}</>
+  }
+  const updated = seconds < 10 ? t("刚刚更新") : seconds < 60 ? age("{n} 秒前更新", Math.floor(seconds / 5) * 5) : age("{n} 分钟前更新", Math.floor(seconds / 60))
   async function refresh() {
     setRefreshing(true)
     setReplay(n => n + 1)
@@ -80,7 +86,7 @@ export function OverviewHero({ sites, layout, onLayout }: { sites: OverviewSite[
             <span className="overview-hero-chip"><UIIcon name="clock" />{t("近 24 小时")}</span>
             <span className="overview-hero-live">
               <i aria-hidden="true" />
-              <span role="status">{updated}</span>
+              <span role="status" className="overview-hero-updated">{updated}</span>
               <button type="button" className="overview-hero-refresh" disabled={refreshing} onClick={refresh} aria-label={t("刷新")} title={t("刷新")}>
                 <UIIcon name="refresh" className={spinning ? "is-spinning" : undefined} />
               </button>
