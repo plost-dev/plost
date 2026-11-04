@@ -18,6 +18,7 @@ const livePerSite = 5000 // A ceiling on memory for a very busy site; the oldest
 
 type livePlace struct {
 	at       int64
+	arrived  int64 // When this visitor came online: their first pageview of the current five-minute stretch.
 	lat, lon float64
 	country  string
 }
@@ -36,6 +37,10 @@ func (l *livePlaces) record(site int64, visitor string, place livePlace) {
 	if places == nil {
 		places = map[string]livePlace{}
 		l.sites[site] = places
+	}
+	place.arrived = place.at
+	if before, ok := places[visitor]; ok && place.at-before.at <= int64(liveWindow/time.Second) {
+		place.arrived = before.arrived
 	}
 	places[visitor] = place
 	if len(places) > livePerSite {
@@ -66,7 +71,8 @@ type LivePoint struct {
 	Lon     float64 `json:"lon"`
 	Country string  `json:"country"`
 	Count   int     `json:"count"`
-	Last    int64   `json:"last"` // The latest visit there, Unix seconds.
+	Last    int64   `json:"last"`    // The latest visit there, Unix seconds.
+	Arrived int64   `json:"arrived"` // When the newest of the visitors there came online, Unix seconds.
 }
 
 // points groups the site's visitors online now by place, the busiest first. A country filter narrows it; other
@@ -85,6 +91,7 @@ func (l *livePlaces) points(site int64, now time.Time, country string) []LivePoi
 		}
 		counts[key].Count++
 		counts[key].Last = max(counts[key].Last, p.at)
+		counts[key].Arrived = max(counts[key].Arrived, p.arrived)
 	}
 	l.mu.Unlock()
 	out := make([]LivePoint, 0, len(counts))

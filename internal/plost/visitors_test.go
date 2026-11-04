@@ -174,7 +174,9 @@ func TestVisitorsAndVisitsAreCountedLikeUmami(t *testing.T) {
 	if err != nil || len(points) != 2 {
 		t.Fatalf("series: %v %d", err, len(points))
 	}
-	for i, want := range [][2]int64{{4, 4}, {1, 1}} { // [visitors, visits] for the hours starting at 10:00 and 11:00
+	// [visitors, visits] for the hours starting at 10:00 and 11:00. B2 at 11:30 is s3 coming back: a visit in that hour,
+	// but the visitor was already counted at 10:00, so the hours add up to the overview's 4 visitors and 5 visits.
+	for i, want := range [][2]int64{{4, 4}, {0, 1}} {
 		if points[i].Visitors != want[0] || points[i].Visits != want[1] {
 			t.Errorf("hour %d: visitors %d visits %d, want %v", 10+i, points[i].Visitors, points[i].Visits, want)
 		}

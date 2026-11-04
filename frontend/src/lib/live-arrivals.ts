@@ -3,11 +3,11 @@ import { useEffect, useMemo, useRef, useState } from "react"
 const FLASH_MS = 3200
 
 /** A visitor online now placed by city (the report's livePoints). */
-export type LivePoint = { lat: number; lon: number; country: string; count: number }
+export type LivePoint = { lat: number; lon: number; country: string; count: number; arrived?: number }
 export const pointKey = (p: LivePoint) => `${p.lat},${p.lon}`
 
 /**
- * The keys whose count went up since the last refresh, for the map to flash. The first data a map gets is only a
+ * The keys whose value went up since the last refresh, for the map to flash. The first data a map gets is only a
  * baseline, so opening the page does not light up everything at once.
  */
 function useRising(counts: ReadonlyMap<string, number>): ReadonlySet<string> {
@@ -39,10 +39,13 @@ export function useLiveArrivals(live: ReadonlyArray<{ country: string }>): Reado
   return useRising(counts)
 }
 
-/** Places (pointKey) whose number of visitors online went up since the last refresh. */
+/**
+ * Places (pointKey) where a new visitor came online since the last refresh: the newest arrival there is later than
+ * before. Only those flash, and one visitor leaving while another arrives still counts as an arrival.
+ */
 export function usePointArrivals(points: ReadonlyArray<LivePoint>): ReadonlySet<string> {
-  const counts = useMemo(() => new Map(points.map(p => [pointKey(p), p.count])), [points])
-  return useRising(counts)
+  const arrivals = useMemo(() => new Map(points.map(p => [pointKey(p), p.arrived ?? p.count])), [points])
+  return useRising(arrivals)
 }
 
 /**
@@ -65,7 +68,7 @@ export function unplacedLive(live: ReadonlyArray<{ country: string }>, points: R
 /** The size of a place's dot: a little larger for more visitors there, without swallowing its neighbours. */
 export const pointRadius = (count: number) => 3.4 + Math.min(4, Math.log2(count + 1) * 1.2)
 
-/** The HTML dot Mapbox and Google Maps put at a place; it pulses, and sends out rings when visitors just arrived. */
+/** The HTML dot Mapbox and Google Maps put at a place; it sends out rings only when a visitor just arrived there. */
 export function liveDot(point: LivePoint, arriving: boolean, t: (key: string, params?: Record<string, string | number>) => string): HTMLElement {
   const dot = document.createElement("span")
   dot.className = `map-live-point${arriving ? " is-arrival" : ""}`

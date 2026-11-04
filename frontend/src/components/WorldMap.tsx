@@ -377,8 +377,7 @@ function WorldMap({
       }
       for (const c of clusters) {
         const r = pointRadius(c.count) / scale
-        dots.append("circle").attr("class", "live-dot-pulse").attr("cx", c.x).attr("cy", c.y).attr("r", r * 2.4)
-        dots.append("circle").attr("class", "live-dot").attr("cx", c.x).attr("cy", c.y).attr("r", r)
+        dots.append("circle").attr("class", c.arriving ? "live-dot is-arrival" : "live-dot").attr("cx", c.x).attr("cy", c.y).attr("r", r)
         if (c.arriving) for (const delay of [0, 0.6, 1.2]) dots.append("circle").attr("class", "live-dot-arrival").attr("cx", c.x).attr("cy", c.y).attr("r", 16 / scale).style("animation-delay", `${delay}s`)
       }
     }

@@ -46,7 +46,7 @@ func TestLivePointsPlaceVisitorsByCity(t *testing.T) {
 	if err := json.Unmarshal(x.call(t, "GET", "/api/sites/example.com/report?period=today", nil, 200), &report); err != nil {
 		t.Fatal(err)
 	}
-	if len(report.LivePoints) != 1 || report.LivePoints[0] != (LivePoint{Lat: 35.69, Lon: 139.69, Country: "JP", Count: 2, Last: report.LivePoints[0].Last}) || report.LivePoints[0].Last == 0 {
+	if len(report.LivePoints) != 1 || report.LivePoints[0] != (LivePoint{Lat: 35.69, Lon: 139.69, Country: "JP", Count: 2, Last: report.LivePoints[0].Last, Arrived: report.LivePoints[0].Arrived}) || report.LivePoints[0].Last == 0 || report.LivePoints[0].Arrived == 0 {
 		t.Fatalf("live points: %+v", report.LivePoints)
 	}
 	json.Unmarshal(x.call(t, "GET", "/api/sites/example.com/report?period=today&country=US", nil, 200), &report)
@@ -56,5 +56,33 @@ func TestLivePointsPlaceVisitorsByCity(t *testing.T) {
 	// Five minutes later the visitors are no longer online.
 	if got := a.live.points(1, time.Now().Add(liveWindow+time.Minute), ""); len(got) != 0 {
 		t.Fatalf("after the window: %+v", got)
+	}
+}
+
+// A place's arrival time moves only when a new visitor comes online there, not when someone already there opens
+// another page, so the map flashes just the places where someone arrived.
+func TestLivePointArrivalTracksNewVisitorsOnly(t *testing.T) {
+	l := newLivePlaces()
+	t0 := time.Date(2026, 11, 4, 10, 0, 0, 0, time.UTC).Unix()
+	at := func(sec int64) livePlace { return livePlace{at: t0 + sec, lat: 1, lon: 2, country: "CN"} }
+	arrived := func(now int64) int64 {
+		p := l.points(1, time.Unix(t0+now, 0), "")
+		if len(p) != 1 {
+			t.Fatalf("points: %+v", p)
+		}
+		return p[0].Arrived - t0
+	}
+	l.record(1, "a", at(0))
+	l.record(1, "a", at(60)) // another page by the same visitor
+	if got := arrived(60); got != 0 {
+		t.Errorf("same visitor moved the arrival to %d", got)
+	}
+	l.record(1, "b", at(120)) // someone new
+	if got := arrived(120); got != 120 {
+		t.Errorf("new visitor: arrival %d", got)
+	}
+	l.record(1, "a", at(60+int64(liveWindow/time.Second)+30)) // a comes back after going offline
+	if got := arrived(60 + int64(liveWindow/time.Second) + 30); got != 60+int64(liveWindow/time.Second)+30 {
+		t.Errorf("returning visitor: arrival %d", got)
 	}
 }

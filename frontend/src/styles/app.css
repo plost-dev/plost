@@ -564,15 +564,20 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   vector-effect: non-scaling-stroke;
 }
 
-.live-dot-pulse {
-  fill: var(--map-live);
-  opacity: 0.28;
+/* A new visitor: the dot itself lights up once, and rings spread out from it and fade. Dots without a new visitor
+   stay still, so only the places where someone just arrived move. */
+.live-dot.is-arrival {
   transform-box: fill-box;
   transform-origin: center;
-  animation: live-pulse 1.8s ease-out infinite;
+  animation: live-dot-flash 1.6s ease-out 2;
+}
+/* The individual scale property, not transform: Mapbox and Google place their markers with transform. */
+@keyframes live-dot-flash {
+  0% { scale: 1; filter: brightness(1); }
+  25% { scale: 1.6; filter: brightness(1.25) drop-shadow(0 0 4px var(--map-live)); }
+  100% { scale: 1; filter: brightness(1); }
 }
 
-/* A new visitor: rings that spread out from the country and fade, three times. */
 .live-dot-arrival {
   fill: none;
   stroke: var(--map-live);
@@ -589,13 +594,7 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   100% { opacity: 0; transform: scale(1.6); }
 }
 
-@media (prefers-reduced-motion: reduce) { .live-dot-arrival { animation: none; opacity: 0.6; } }
-
-@keyframes live-pulse {
-  0% { opacity: 0.35; }
-  70% { opacity: 0; }
-  100% { opacity: 0; }
-}
+@media (prefers-reduced-motion: reduce) { .live-dot-arrival { animation: none; opacity: 0.6; } .live-dot.is-arrival { animation: none; } }
 
 .map-stage {
   --sq-r:15px;
@@ -1002,12 +1001,12 @@ html[data-theme="dark"] .map-empty-note { background:var(--surface); }
 .mapbox-stage[data-show-flags="false"] .mapbox-country-marker img { display:none; }
 .mapbox-stage[data-show-flags="false"] .mapbox-live-dot { top:50%; left:50%; right:auto; transform:translate(-50%,-50%); }
 .mapbox-live-dot { position:absolute; top:-4px; right:-4px; width:10px; height:10px; border:2px solid var(--surface); border-radius:50%; background:var(--map-live); }
-/* A visitor online placed by city (Mapbox and Google Maps), with the same pulse and arrival rings as the built-in map.
+/* A visitor online placed by city (Mapbox and Google Maps), with the same arrival flash and rings as the built-in map.
    Absolute like the other markers: a relative dot would sit in the overlay's flow and drift down by every dot before it. */
 .map-live-point { position:absolute; display:block; width:var(--point-size,8px); height:var(--point-size,8px); border:2px solid var(--surface); border-radius:50%; background:var(--map-live); box-sizing:content-box; pointer-events:auto; }
-.map-live-point::before { content:""; position:absolute; inset:-6px; border-radius:50%; background:var(--map-live); opacity:.28; animation:live-pulse 1.8s ease-out infinite; }
+.map-live-point.is-arrival { animation:live-dot-flash 1.6s ease-out 2; }
 .map-live-point.is-arrival::after { content:""; position:absolute; inset:-6px; border:2px solid var(--map-live); border-radius:50%; animation:live-arrival 1.6s ease-out 3 both; }
-@media (prefers-reduced-motion: reduce) { .map-live-point::before, .map-live-point.is-arrival::after { animation:none; } }
+@media (prefers-reduced-motion: reduce) { .map-live-point.is-arrival, .map-live-point.is-arrival::after { animation:none; } }
 .mapbox-country-marker.is-arrival .mapbox-live-dot::after { content:""; position:absolute; inset:-4px; border:2px solid var(--map-live); border-radius:50%; animation:live-arrival 1.6s ease-out 3 both; }
 @media (prefers-reduced-motion: reduce) { .mapbox-country-marker.is-arrival .mapbox-live-dot::after { animation:none; opacity:.6; } }
 .mapbox-visitor-tooltip { --sq-r:15px; position:absolute; z-index:11; max-width:176px; padding:10px 12px; pointer-events:none; background:var(--surface); color:var(--color-gray-800); border:1px solid var(--color-gray-200); box-shadow:0 6px 20px #0002; font-size:12px; line-height:1.7; overflow-wrap:anywhere; }

@@ -262,7 +262,22 @@ func (a *App) series(ctx context.Context, site int64, r Range, q url.Values) ([]
 	caseSQL += " ELSE -1 END"
 	w, wa := where(site, r, q)
 	args = append(args, wa...)
-	rows, err := a.db.QueryContext(ctx, "SELECT bucket,count(DISTINCT visitor),sum(pv),count(*),100.0*sum(pv=1)/count(*),avg(dur) FROM (SELECT "+caseSQL+" AS bucket,"+visitorSQL+" AS visitor,"+visitSQL+" AS visit,count(*) AS pv,max(timestamp)-min(timestamp) AS dur FROM events_v2 WHERE "+w+" AND name='pageview' GROUP BY bucket,visitor,visit) GROUP BY bucket", args...)
+	// Pageviews fall in the bucket they happened in. A visit belongs to the bucket it started in, so a visit that runs
+	// past a bucket boundary is counted once and the buckets add up to the overview's visit total; its bounce and
+	// duration are measured over the whole visit. Within a day (hour and minute buckets) a visitor is counted in the
+	// bucket of their first pageview in the range, so the buckets also add up to the visitor total and the gap to
+	// visits shows the return visits. Longer buckets keep the usual distinct visitors per day, week or month.
+	visitorBucket := "SELECT bucket,count(DISTINCT visitor) AS n FROM ev GROUP BY bucket"
+	if hourly {
+		visitorBucket = "SELECT bucket,count(*) AS n FROM (SELECT min(bucket) AS bucket FROM ev GROUP BY visitor) GROUP BY bucket"
+	}
+	query := "WITH ev AS (SELECT " + caseSQL + " AS bucket," + visitorSQL + " AS visitor," + visitSQL + " AS visit,timestamp FROM events_v2 WHERE " + w + " AND name='pageview'), " +
+		"vi AS (SELECT min(bucket) AS bucket,count(*) AS pv,max(timestamp)-min(timestamp) AS dur FROM ev GROUP BY visit), " +
+		"b AS (SELECT bucket,count(*) AS pv FROM ev GROUP BY bucket), " +
+		"va AS (SELECT bucket,count(*) AS n,100.0*sum(pv=1)/count(*) AS bounce,avg(dur) AS dur FROM vi GROUP BY bucket), " +
+		"vu AS (" + visitorBucket + ") " +
+		"SELECT b.bucket,COALESCE(vu.n,0),b.pv,COALESCE(va.n,0),COALESCE(va.bounce,0),COALESCE(va.dur,0) FROM b LEFT JOIN vu ON vu.bucket=b.bucket LEFT JOIN va ON va.bucket=b.bucket"
+	rows, err := a.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
