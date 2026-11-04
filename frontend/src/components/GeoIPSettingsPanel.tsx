@@ -6,7 +6,7 @@ import { formatTimestamp } from "~/lib/format"
 import { useT } from "~/lib/i18n"
 import { showToast } from "~/lib/toast"
 import { ActionButton } from "./ActionButton"
-import { Field, FormActions } from "./SettingsForm"
+import { Field } from "./SettingsForm"
 import { Tile } from "./ui"
 import { Toggle } from "./Toggle"
 
@@ -107,6 +107,8 @@ function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (nex
   }
 
   const busy = data.updating || checking
+  // Only worth pressing when the mirror has a newer version than the one in use, or there is none yet or the last try failed.
+  const canUpdate = !data.loaded || !!state.error || (!!state.latest && state.latest !== state.version)
   const badge = busy ? <GeoIPBadge text={t("正在更新…")} />
     : state.error ? <GeoIPBadge text={t(state.error)} tone="error" />
     : data.loaded ? <GeoIPBadge text={[state.version ? versionLabel(state.version) : versionOfTime(state.builtAt), state.updatedAt ? t("更新于 {0}", { 0: formatTimestamp(state.updatedAt * 1000, locale) }) : ""].filter(Boolean).join(" · ")} />
@@ -115,14 +117,14 @@ function GeoIPSettings({ data, onChange }: { data: GeoIPSettings; onChange: (nex
     <Tile icon="globe" title="IP 数据库" titleAddon={badge} actions={<MaxMindWatermark />}>
       <fieldset disabled={pending} className="backup-fields">
         <Field label="数据库">
-          <select className="squircle input" value={data.edition} onChange={event => void chooseEdition(event.target.value as GeoIPEdition)}>
-            {EDITIONS.map(id => <option key={id} value={id}>{id}</option>)}
-          </select>
+          <div className="geoip-edition-row">
+            <select className="squircle input" value={data.edition} onChange={event => void chooseEdition(event.target.value as GeoIPEdition)}>
+              {EDITIONS.map(id => <option key={id} value={id}>{id}</option>)}
+            </select>
+            <ActionButton className="btn btn-secondary" loading={checking} disabled={busy || !canUpdate} title={canUpdate ? undefined : t("已经是最新版本。")} onClick={() => void check()}>{t("更新")}</ActionButton>
+          </div>
         </Field>
       </fieldset>
-      <FormActions>
-        <ActionButton className="btn btn-secondary" loading={checking} disabled={data.updating || pending} onClick={() => void check()}>{t("更新")}</ActionButton>
-      </FormActions>
     </Tile>
   </>
 }
