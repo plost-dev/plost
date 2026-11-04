@@ -1,6 +1,6 @@
 {
   "source": "../self-hosted/app/src",
-  "footerSource": "../cloud/app/src/styles/app.css (footer section only)",
+  "footerSource": "../self-hosted/app/src/styles/app.css (footer section only)",
   "date": "2026-10-31",
   "files": [
     {
