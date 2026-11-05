@@ -6,6 +6,8 @@ import { browserDisplayName } from "~/lib/report-values"
 // Original-color SVGs are pinned to The SVG; unsupported products retain their
 // existing local artwork instead of borrowing a different product's brand.
 const platform = (file: string) => `/brands/platforms/${file}.svg`
+// Icons the instance owner supplied for browsers and apps (see public/brands/browsers/SOURCES.md).
+const browserIcon = (file: string) => `/brands/browsers/${file}.svg`
 
 const BROWSER_ICONS: Record<string, string> = {
   Chrome: platform("chrome"),
@@ -43,20 +45,23 @@ const BROWSER_ICONS: Record<string, string> = {
   DuckDuckGo: platform("duckduckgo"),
   curl: platform("curl"),
   Ecosia: platform("ecosia"),
-  "Yandex Browser": "/images/icon/browser/yandex.png",
+  "Yandex Browser": browserIcon("yandex"),
   "QQ Browser": "/images/icon/browser/qq.png",
   "UC Browser": "/images/icon/browser/uc.svg",
   // The vendors' own marks: their browsers' icons are near-identical blue globes.
   "MIUI Browser": platform("xiaomi"),
   "Huawei Browser Mobile": platform("huawei"),
   "Huawei Browser": platform("huawei"),
-  "vivo Browser": platform("vivo"),
+  "vivo Browser": browserIcon("vivo"),
+  "OPPO Browser": browserIcon("oppo"),
+  Quark: browserIcon("quark"),
   "iOS WebView": platform("safari"),
   "macOS WebView": platform("safari"),
   WeChat: "/brands/sources/wechat.svg",
   QQ: "/brands/sources/qq.svg",
   Weibo: "/brands/sources/sina-weibo.svg",
-  Douyin: "/brands/sources/tiktok.svg",
+  Douyin: browserIcon("douyin"),
+  DingTalk: browserIcon("dingtalk"),
   Baidu: "/brands/sources/baidu.svg",
   "Sogou Browser": "/brands/sources/sogou.svg",
   Feishu: platform("lark-badge"),
