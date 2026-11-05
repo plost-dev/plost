@@ -167,7 +167,8 @@ function AssetIcon({ src, fallback, className = "" }: { src: string, fallback: s
 function BrowserIcon({ name }: { name: string }) {
   const src = platformIconSrc(BROWSER_ICONS, browserDisplayName(name))
   if (src) return <AssetIcon src={src} fallback="browser" className={platformIconClass(src)} />
-  return <UIIcon name="browser" className={rowIconClassName} />
+  // A browser without its own icon gets the owner-supplied generic one.
+  return <img src={browserIcon("default")} alt="" aria-hidden="true" className={`${rowIconClassName} object-contain`} />
 }
 
 function OsIcon({ name }: { name: string }) {
