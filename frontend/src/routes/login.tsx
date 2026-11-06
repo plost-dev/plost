@@ -7,6 +7,7 @@ import { instanceSetupFn, loginFn, meFn } from "~/lib/actions"
 import { passkeyLoginFn, verifyLogin2faFn } from "~/lib/auth-actions"
 import { useT } from "~/lib/i18n"
 import { PasswordInput } from "~/components/PasswordInput"
+import { UIIcon } from "~/components/UIIcon"
 
 export const Route = createFileRoute("/login")({
   loader: async () => {
@@ -30,99 +31,116 @@ function LoginPage() {
   const [pending, setPending] = useState(false)
 
 
+  const passkeyLogin = async () => {
+    setError("")
+    setPending(true)
+    try {
+      await passkeyLoginFn()
+      await router.invalidate()
+      await router.navigate({ to: "/dashboard" })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("Passkey 登录失败"))
+    } finally {
+      setPending(false)
+    }
+  }
+
   return (
     <div className="auth-page">
       <main className="auth-main">
         <section className="auth-panel">
-          <div className="auth-brand"><Link to="/"><BrandMark /></Link></div>
-          {needs2fa ? <header className="text-center">
-            <h1 className="auth-heading">{t("login.2fa_title")}</h1>
-            <p className="mt-2 text-pretty text-sm leading-6 text-gray-500">{t("login.2fa_sub")}</p>
-          </header> : <h1 className="sr-only">{t("login.title")}</h1>}
-          {needs2fa ? (
-            <form
-              data-radius="large" className="squircle ui-surface auth-card flex w-full flex-col gap-y-5 p-6"
-              onSubmit={async (e) => {
-                e.preventDefault()
-                setPending(true)
-                setError("")
-                try {
-                  await verifyLogin2faFn({ data: { code } })
-                  await router.invalidate()
-                  await router.navigate({ to: "/dashboard" })
-                } catch (err) {
-                  setError(err instanceof Error ? err.message : t("验证失败"))
-                } finally {
-                  setPending(false)
-                }
-              }}
-            >
-              <label className="flex flex-col gap-y-2 text-sm font-semibold text-gray-800">
-                {t("security.verify_2fa")}
-                <input className="squircle input" value={code} onChange={(e) => setCode(e.target.value)} required autoFocus />
-              </label>
-              {error ? <p role="alert" className="text-sm text-red-500">{t(error || "")}</p> : null}
-              <ActionButton className="btn btn-primary w-full"  loading={pending} type="submit">
-                {pending ? t("login.verifying") : t("login.2fa_submit")}
-              </ActionButton>
-              <ActionButton type="button" className="btn btn-ghost w-full" onClick={() => { setNeeds2fa(false); setCode("") }}>{t("login.back")}</ActionButton>
-            </form>
-          ) : (
-            <form
-              data-radius="large" className="squircle ui-surface auth-card flex w-full flex-col gap-y-5 p-6"
-              onSubmit={async (e) => {
-                e.preventDefault()
-                setPending(true)
-                setError("")
-                try {
-                  const result = await loginFn({ data: { email, password } })
-                  if ("needs2fa" in result && result.needs2fa) {
-                    setNeeds2fa(true)
-                    return
-                  }
-                  await router.invalidate()
-                  await router.navigate({ to: "/dashboard" })
-                } catch (err) {
-                  setError(err instanceof Error ? err.message : t("登录失败"))
-                } finally {
-                  setPending(false)
-                }
-              }}
-            >
-              <label className="flex flex-col gap-y-2 text-sm font-semibold text-gray-800">
-                {t("login.email")}
-                <input className="squircle input" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-              </label>
-              <label className="flex flex-col gap-y-2 text-sm font-semibold text-gray-800">
-                {t("login.password")}
-                <PasswordInput className="squircle input" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
-              </label>
-              {error ? <p role="alert" className="text-sm text-red-500">{t(error || "")}</p> : null}
-              <ActionButton className="btn btn-primary w-full"  loading={pending} type="submit">
-                {pending ? t("login.pending") : t("login.submit")}
-              </ActionButton>
-              {passkeyEnabled ? <ActionButton
-                type="button"
-                className="btn btn-secondary w-full"
-                disabled={pending}
-                onClick={async () => {
-                  setError("")
+          <div data-radius="large" className="squircle ui-surface login-card">
+            <header className="login-band">
+              <Link to="/" className="login-band-logo"><BrandMark animated /></Link>
+              <h1>{needs2fa ? t("login.2fa_title") : t("login.welcome")}</h1>
+              <p>{needs2fa ? t("login.2fa_sub") : t("login.subtitle")}</p>
+            </header>
+            {needs2fa ? (
+              <form
+                className="login-body"
+                onSubmit={async (e) => {
+                  e.preventDefault()
                   setPending(true)
+                  setError("")
                   try {
-                    await passkeyLoginFn()
+                    await verifyLogin2faFn({ data: { code } })
                     await router.invalidate()
                     await router.navigate({ to: "/dashboard" })
                   } catch (err) {
-                    setError(err instanceof Error ? err.message : t("Passkey 登录失败"))
+                    setError(err instanceof Error ? err.message : t("验证失败"))
                   } finally {
                     setPending(false)
                   }
                 }}
               >
-                {t("login.passkey")}
-              </ActionButton> : null}
-            </form>
-          )}
+                <label className="login-field">
+                  <span className="login-label">{t("security.verify_2fa")}</span>
+                  <span className="login-input">
+                    <UIIcon name="shield-check" className="login-input-icon" />
+                    <input className="squircle input" autoComplete="one-time-code" value={code} onChange={(e) => setCode(e.target.value)} required autoFocus />
+                  </span>
+                </label>
+                {error ? <p role="alert" className="text-sm text-red-500">{t(error || "")}</p> : null}
+                <ActionButton className="btn btn-primary w-full" loading={pending} type="submit">
+                  {pending ? t("login.verifying") : t("login.2fa_submit")}
+                </ActionButton>
+                <ActionButton type="button" className="btn btn-ghost w-full" onClick={() => { setNeeds2fa(false); setCode("") }}>{t("login.back")}</ActionButton>
+              </form>
+            ) : (
+              <form
+                className="login-body"
+                onSubmit={async (e) => {
+                  e.preventDefault()
+                  setPending(true)
+                  setError("")
+                  try {
+                    const result = await loginFn({ data: { email, password } })
+                    if ("needs2fa" in result && result.needs2fa) {
+                      setNeeds2fa(true)
+                      return
+                    }
+                    await router.invalidate()
+                    await router.navigate({ to: "/dashboard" })
+                  } catch (err) {
+                    setError(err instanceof Error ? err.message : t("登录失败"))
+                  } finally {
+                    setPending(false)
+                  }
+                }}
+              >
+                <label className="login-field">
+                  <span className="login-label">{t("login.email")}</span>
+                  <span className="login-input">
+                    <UIIcon name="mail" className="login-input-icon" />
+                    <input className="squircle input" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  </span>
+                </label>
+                <label className="login-field">
+                  <span className="login-label">{t("login.password")}</span>
+                  <span className="login-input">
+                    <UIIcon name="lock" className="login-input-icon" />
+                    <PasswordInput className="squircle input" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  </span>
+                </label>
+                {error ? <p role="alert" className="text-sm text-red-500">{t(error || "")}</p> : null}
+                <ActionButton className="btn btn-primary login-submit w-full" loading={pending} type="submit">
+                  {pending ? t("login.pending") : <>{t("login.submit")}<UIIcon name="arrow" className="login-submit-arrow" /></>}
+                </ActionButton>
+                {passkeyEnabled ? <>
+                  <p className="login-or">{t("login.or")}</p>
+                  <ActionButton type="button" className="btn btn-secondary login-passkey w-full" disabled={pending} onClick={passkeyLogin}>
+                    <UIIcon name="key" className="login-passkey-icon" />{t("login.passkey")}
+                  </ActionButton>
+                  <ul className="login-passkey-methods" aria-label={t("login.pk_methods")}>
+                    <li><span className="login-passkey-method-icon"><UIIcon name="fingerprint" /></span>{t("login.pk_fingerprint")}</li>
+                    <li><span className="login-passkey-method-icon"><UIIcon name="face-scan" /></span>{t("login.pk_face")}</li>
+                    <li><span className="login-passkey-method-icon"><UIIcon name="device-mobile" /></span>{t("login.pk_phone")}</li>
+                    <li><span className="login-passkey-method-icon"><UIIcon name="shield-check" /></span>{t("login.pk_key")}</li>
+                  </ul>
+                </> : null}
+              </form>
+            )}
+          </div>
         </section>
       </main>
       <SiteFooter />

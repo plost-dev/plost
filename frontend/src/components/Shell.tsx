@@ -262,7 +262,7 @@ function FooterLanguage({ user }: { user?: ShellUser }) {
     {open ? <div className="squircle language-menu" role="menu" aria-label={label}>
       {LOCALES.map(item => <button key={item.code} type="button" role="menuitemradio" aria-checked={item.code === locale}
         className={`squircle language-menu-item${item.code === locale ? " is-active" : ""}`} onClick={() => void choose(item.code)}>
-        <CountryFlag code={item.flag} shape="rect" className="language-menu-flag" />
+        <CountryFlag code={item.flag} shape="square" className="language-menu-flag" />
         <span className="language-menu-name" lang={item.code}>{item.name}</span>
         {item.code === locale ? <UIIcon name="check" className="language-menu-check" /> : null}
       </button>)}

@@ -1,1 +1,0 @@
-import{W as e}from"./index-3uEEsEiZ.js";import{r as t}from"./useRouter-ChX2SBsk.js";var n=t(),r=({error:t})=>(0,n.jsx)(e,{title:`页面出错`,description:t instanceof Error?t.message:void 0});export{r as errorComponent};

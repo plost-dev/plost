@@ -410,7 +410,7 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
 }
 .language-menu-item:hover, .language-menu-item:focus-visible { background: rgb(255 255 255 / 0.08); outline: none; }
 .language-menu-item.is-active { background: color-mix(in srgb, var(--accent-color) 22%, transparent); color: color-mix(in srgb, var(--accent-color) 55%, #fff); }
-.language-menu-flag.country-flag { flex: none; width: 22px; height: 16px; border-radius: 3px; object-fit: cover; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12); }
+.language-menu-flag.country-flag { flex: none; width: 18px; height: 18px; border-radius: 0; object-fit: cover; box-shadow: 0 0 0 1px rgb(127 127 127 / 0.18); }
 .language-menu-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .language-menu-check { flex: none; font-size: 0.8rem; }
 @media (max-width: 640px) {
@@ -1195,6 +1195,54 @@ html[data-theme="dark"] .settings-brand-logo-color.is-dark { display:block; }
 .auth-heading { font-size: var(--ui-text-page); line-height: 1.35; font-weight: 600; color: var(--color-gray-900); }
 .auth-card a:not(.btn) { color: var(--analytics-accent); text-underline-offset: 4px; }
 .auth-card a:not(.btn):hover { text-decoration: underline; }
+
+/* Login: the logo sits in a colored band at the top of the card; it alternates
+   between the centered O and the full wordmark (BrandMark animated). */
+.login-card { overflow: hidden; background: var(--surface); border: 1px solid var(--color-gray-200); box-shadow: 0 24px 60px -32px rgb(40 20 110 / .35); }
+.login-band { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 36px 24px 26px; overflow: hidden; text-align: center; color: var(--accent-on-solid); background: linear-gradient(135deg, color-mix(in srgb, var(--accent-color) 86%, #fff), color-mix(in srgb, var(--accent-color) 82%, #000)); }
+.login-band::before { content: ""; position: absolute; inset: -45%; background: conic-gradient(from 0deg, transparent, rgb(255 255 255 / .16), transparent 30%); animation: login-band-spin 8s linear infinite; }
+.login-band > * { position: relative; }
+.login-band h1 { margin: 6px 0 0; font-size: 20px; line-height: 1.35; font-weight: 650; }
+.login-band p { margin: 0; max-width: 320px; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--accent-on-solid) 74%, transparent); text-wrap: pretty; }
+.login-band-logo { display: inline-flex; border-radius: 22px; }
+.login-band-logo:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+@keyframes login-band-spin { to { transform: rotate(360deg); } }
+
+.login-band .logo.plost-logo { --plost-tile-size: 88px; --plost-brand: #fff; --plost-brand-ink: var(--accent-color); }
+.logo.plost-logo.plost-logo--animated :is(.plost-logo__pill, .plost-logo__tile, .plost-logo__wordmark) { display: block; }
+.logo.plost-logo.plost-logo--animated .plost-logo__mark {
+  color: var(--plost-symbol-ink);
+  transform: translate(-50%, -50%) translate(calc(var(--plost-tile-size) * var(--plost-symbol-x)), calc(var(--plost-tile-size) * var(--plost-symbol-y))) scale(var(--plost-symbol-scale));
+  transition: color var(--plost-duration) var(--plost-ease), transform var(--plost-duration) var(--plost-ease);
+}
+
+.login-body { display: flex; flex-direction: column; gap: 18px; padding: 26px 28px 28px; }
+.login-field { display: flex; flex-direction: column; gap: 8px; }
+.login-label { font-size: 13px; font-weight: 600; color: var(--color-gray-800); }
+.login-input { position: relative; display: block; color: var(--color-gray-400); }
+.login-input:focus-within { color: var(--analytics-accent); }
+.login-input .input { padding-inline-start: 44px; }
+.login-input-icon { position: absolute; z-index: 1; top: 50%; inset-inline-start: 16px; transform: translateY(-50%); width: 16px; height: 16px; pointer-events: none; transition: color .2s; }
+.login-input .password-toggle { color: var(--color-gray-400); }
+.login-submit-arrow { width: 14px; height: 14px; transition: transform .2s; }
+.login-submit:hover .login-submit-arrow { transform: translateX(3px); }
+[dir="rtl"] .login-submit-arrow { transform: scaleX(-1); }
+[dir="rtl"] .login-submit:hover .login-submit-arrow { transform: scaleX(-1) translateX(3px); }
+.login-or { display: flex; align-items: center; gap: 12px; margin: -2px 0; font-size: 12px; color: var(--color-gray-400); }
+.login-or::before, .login-or::after { content: ""; flex: 1; height: 1px; background: var(--color-gray-200); }
+.login-passkey-icon { width: 16px; height: 16px; color: var(--analytics-accent); }
+.login-passkey-methods { display: flex; justify-content: center; gap: 18px; margin: -4px 0 0; padding: 0; list-style: none; }
+.login-passkey-methods li { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 44px; font-size: 11px; color: var(--color-gray-500); }
+.login-passkey-method-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--color-gray-100); color: var(--color-gray-600); }
+.login-passkey-method-icon .ui-icon { width: 16px; height: 16px; }
+@media (max-width: 480px) {
+  .login-band { padding: 30px 20px 22px; }
+  .login-body { padding: 22px 20px 24px; }
+  .login-passkey-methods { gap: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-band::before { animation: none; }
+}
 .btn:focus-visible, .input:focus-visible, .site-header a:focus-visible, .site-header button:focus-visible { outline: 3px solid color-mix(in srgb,var(--analytics-accent) 35%,transparent); outline-offset: 3px; }
 @media(max-width:639px) { :root { --ui-text-page: 22px; --ui-text-input:16px; --ui-card-padding: 16px; --ui-grid-gap:16px; }  }
 
