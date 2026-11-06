@@ -1,11 +1,12 @@
 import { ActionButton } from "~/components/ActionButton"
 import { redirect, Link, createFileRoute, useRouter } from "@tanstack/react-router"
-import { useEffect, useRef, useState } from "react"
+import { useState } from "react"
 import { BrandMark } from "~/components/BrandMark"
 import { SiteFooter } from "~/components/Shell"
 import { instanceSetupFn, loginFn, meFn, updateProfileFn } from "~/lib/actions"
 import { passkeyLoginFn, verifyLogin2faFn } from "~/lib/auth-actions"
 import { useT } from "~/lib/i18n"
+import { useChoiceMenu } from "~/lib/use-choice-menu"
 import { PasswordInput } from "~/components/PasswordInput"
 import { UIIcon } from "~/components/UIIcon"
 import { LoginBandEffect } from "~/components/LoginBandEffect"
@@ -156,30 +157,19 @@ function LoginPage() {
 
 function LoginEffectMenu({ effect, onChange }: { effect: LoginEffect, onChange: (next: LoginEffect) => void }) {
   const { t } = useT()
-  const [open, setOpen] = useState(false)
-  const boxRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const onClick = (event: MouseEvent) => { if (!boxRef.current?.contains(event.target as Node)) setOpen(false) }
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { setOpen(false); triggerRef.current?.focus() } }
-    window.addEventListener("mousedown", onClick)
-    window.addEventListener("keydown", onKey)
-    boxRef.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus()
-    return () => { window.removeEventListener("mousedown", onClick); window.removeEventListener("keydown", onKey) }
-  }, [open])
+  const { open, setOpen, boxRef, triggerRef } = useChoiceMenu()
   const label = t("login.effect")
   return <div className="login-effect" ref={boxRef}>
     <button type="button" ref={triggerRef} className="squircle login-effect-trigger" aria-label={label} title={label}
       aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(value => !value)}>
       <UIIcon name="shirt" />
     </button>
-    {open ? <div className="squircle login-effect-menu" role="menu" aria-label={label}>
+    {open ? <div className="squircle choice-menu login-effect-menu" role="menu" aria-label={label}>
       {LOGIN_EFFECTS.map(item => <button key={item.value} type="button" role="menuitemradio" aria-checked={item.value === effect}
-        className={`squircle login-effect-item${item.value === effect ? " is-active" : ""}`}
+        className={`squircle choice-menu-item login-effect-item${item.value === effect ? " is-active" : ""}`}
         onClick={() => { onChange(item.value); setOpen(false) }}>
-        <span className="login-effect-name">{t(item.label)}</span>
-        {item.value === effect ? <UIIcon name="check" className="login-effect-check" /> : null}
+        <span className="choice-menu-name">{t(item.label)}</span>
+        {item.value === effect ? <UIIcon name="check" className="choice-menu-check" /> : null}
       </button>)}
     </div> : null}
   </div>

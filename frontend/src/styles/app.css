@@ -128,8 +128,8 @@ html[data-theme="dark"] .source-brand-icon { background-color:#fff; border-radiu
 }
 /* Application logos keep the centered O in every input state. The website
    owns the animated wordmark; shared generated brand assets remain reusable. */
-.logo.plost-logo :is(.plost-logo__pill, .plost-logo__tile, .plost-logo__wordmark) { display: none; }
-.logo.plost-logo .plost-logo__mark {
+.logo.plost-logo:not(.plost-logo--animated) :is(.plost-logo__pill, .plost-logo__tile, .plost-logo__wordmark) { display: none; }
+.logo.plost-logo:not(.plost-logo--animated) .plost-logo__mark {
   color: var(--plost-brand);
   transform: translate(-50%, -50%);
   transition: none;
@@ -374,26 +374,18 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
 
 /* Language menu: two columns of flag + native name, opening upward from the footer button (2026-11-04). */
 .site-footer-language { position: relative; display: inline-flex; }
-.language-menu {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  inset-inline-end: 0;
+/* Menus of choices opened from a small button (language, sign-in animation); see lib/use-choice-menu.ts. */
+.choice-menu {
   z-index: 60;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 2px 4px;
-  width: min(21rem, calc(100vw - 24px));
-  max-height: calc(100dvh - 96px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
   padding: 8px;
   --sq-r: 16px;
   background: #0c0c0e;
   color: #e4e4e7;
   outline: 1px solid rgb(255 255 255 / 0.1);
   box-shadow: 0 16px 40px rgb(0 0 0 / 0.45);
+  text-align: start;
 }
-.language-menu-item {
+.choice-menu-item {
   display: flex;
   align-items: center;
   gap: 10px;
@@ -408,11 +400,23 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   text-align: start;
   cursor: pointer;
 }
-.language-menu-item:hover, .language-menu-item:focus-visible { background: rgb(255 255 255 / 0.08); outline: none; }
-.language-menu-item.is-active { background: color-mix(in srgb, var(--accent-color) 22%, transparent); color: color-mix(in srgb, var(--accent-color) 55%, #fff); }
+.choice-menu-item:hover, .choice-menu-item:focus-visible { background: rgb(255 255 255 / 0.08); outline: none; }
+.choice-menu-item.is-active { background: color-mix(in srgb, var(--accent-color) 22%, transparent); color: color-mix(in srgb, var(--accent-color) 55%, #fff); }
+.choice-menu-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.choice-menu-check { flex: none; font-size: 0.8rem; }
+.language-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  inset-inline-end: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 4px;
+  width: min(21rem, calc(100vw - 24px));
+  max-height: calc(100dvh - 96px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .language-menu-flag.country-flag { flex: none; width: 18px; height: 18px; border-radius: 0; object-fit: cover; box-shadow: 0 0 0 1px rgb(127 127 127 / 0.18); }
-.language-menu-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.language-menu-check { flex: none; font-size: 0.8rem; }
 @media (max-width: 640px) {
   /* The footer button may sit at either edge; on a phone the menu spans the screen instead of hanging off it. */
   .language-menu { position: fixed; inset-inline: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); width: auto; gap: 2px; padding: 6px; }
@@ -1196,24 +1200,15 @@ html[data-theme="dark"] .settings-brand-logo-color.is-dark { display:block; }
 .auth-card a:not(.btn) { color: var(--analytics-accent); text-underline-offset: 4px; }
 .auth-card a:not(.btn):hover { text-decoration: underline; }
 
-/* Login: the logo sits in a colored band at the top of the card; it alternates
-   between the centered O and the full wordmark (BrandMark animated). */
+/* Login: the logo sits in a colored band at the top of the card; it shows the O and
+   expands into the full wordmark on hover or focus (BrandMark animated). */
 .login-card { overflow: hidden; background: var(--surface); border: 1px solid var(--color-gray-200); box-shadow: 0 24px 60px -32px rgb(40 20 110 / .35); }
-.login-band { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 36px 24px 26px; overflow: hidden; text-align: center; color: var(--accent-on-solid); background: linear-gradient(135deg, color-mix(in srgb, var(--accent-color) 86%, #fff), color-mix(in srgb, var(--accent-color) 82%, #000)); }
-.login-band { isolation: isolate; }
+.login-band { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 36px 24px 26px; overflow: hidden; isolation: isolate; text-align: center; color: var(--accent-on-solid); background: linear-gradient(135deg, color-mix(in srgb, var(--accent-color) 86%, #fff), color-mix(in srgb, var(--accent-color) 82%, #000)); }
 .login-band > :not(.login-fx) { position: relative; }
 .login-shell { position: relative; }
 .login-band h1 { margin: 6px 0 0; font-size: 20px; line-height: 1.35; font-weight: 650; }
 .login-band p { margin: 0; max-width: 320px; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--accent-on-solid) 74%, transparent); text-wrap: pretty; }
 .login-band-logo { display: inline-flex; border-radius: 22px; }
-/* The O stays until hover or keyboard focus, touch screens included (brand.css expands it there by default). */
-@media (hover: none) {
-  .plost-logo.plost-logo--animated:not(:focus-visible, .is-expanded) {
-    --plost-plate-opacity: 0; --plost-plate-scale: .72; --plost-plate-blur: 3px; --plost-pill-opacity: 1;
-    --plost-symbol-scale: 1; --plost-symbol-x: 0; --plost-symbol-y: 0; --plost-symbol-ink: var(--plost-brand);
-    --plost-letters-opacity: 0; --plost-letters-scale: .98; --plost-letters-blur: 2px;
-  }
-}
 
 /* Sign-in band animations, chosen with the shirt button (lib/login-effect.ts). */
 .login-fx { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
@@ -1245,22 +1240,12 @@ html[data-theme="dark"] .settings-brand-logo-color.is-dark { display:block; }
 .login-effect-trigger:hover, .login-effect-trigger[aria-expanded="true"] { background: rgb(255 255 255 / .26); }
 .login-effect-trigger:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .login-effect-trigger .ui-icon { width: 16px; height: 16px; }
-.login-effect-menu { position: absolute; top: calc(100% + 6px); inset-inline-end: 0; display: flex; flex-direction: column; gap: 2px; min-width: 150px; padding: 6px; --sq-r: 14px; background: #0c0c0e; color: #e4e4e7; outline: 1px solid rgb(255 255 255 / .1); box-shadow: 0 16px 40px rgb(0 0 0 / .4); text-align: start; }
-.login-effect-item { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; --sq-r: 10px; border: 0; background: transparent; color: inherit; font-size: .875rem; cursor: pointer; }
-.login-effect-item:hover, .login-effect-item:focus-visible { background: rgb(255 255 255 / .08); outline: none; }
-.login-effect-item.is-active { background: color-mix(in srgb, var(--accent-color) 22%, transparent); color: color-mix(in srgb, var(--accent-color) 55%, #fff); }
-.login-effect-name { flex: 1; text-align: start; white-space: nowrap; }
-.login-effect-check { width: 12px; height: 12px; }
+.login-effect-menu { position: absolute; top: calc(100% + 6px); inset-inline-end: 0; display: flex; flex-direction: column; gap: 2px; min-width: 150px; padding: 6px; --sq-r: 14px; }
+.login-effect-item { height: 36px; }
 .login-effect-preview { display: block; height: 72px; padding: 0; --sq-r: 14px; }
 .login-band-logo:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
 
 .login-band .logo.plost-logo { --plost-tile-size: 88px; --plost-brand: #fff; --plost-brand-ink: var(--accent-color); }
-.logo.plost-logo.plost-logo--animated :is(.plost-logo__pill, .plost-logo__tile, .plost-logo__wordmark) { display: block; }
-.logo.plost-logo.plost-logo--animated .plost-logo__mark {
-  color: var(--plost-symbol-ink);
-  transform: translate(-50%, -50%) translate(calc(var(--plost-tile-size) * var(--plost-symbol-x)), calc(var(--plost-tile-size) * var(--plost-symbol-y))) scale(var(--plost-symbol-scale));
-  transition: color var(--plost-duration) var(--plost-ease), transform var(--plost-duration) var(--plost-ease);
-}
 
 .login-body { display: flex; flex-direction: column; gap: 18px; padding: 26px 28px 28px; }
 .login-field { display: flex; flex-direction: column; gap: 8px; }
@@ -1269,7 +1254,6 @@ html[data-theme="dark"] .settings-brand-logo-color.is-dark { display:block; }
 .login-input:focus-within { color: var(--analytics-accent); }
 .login-input .input { padding-inline-start: 44px; }
 .login-input-icon { position: absolute; z-index: 1; top: 50%; inset-inline-start: 16px; transform: translateY(-50%); width: 16px; height: 16px; pointer-events: none; transition: color .2s; }
-.login-input .password-toggle { color: var(--color-gray-400); }
 .login-or { display: flex; align-items: center; gap: 12px; margin: -2px 0; font-size: 12px; color: var(--color-gray-400); }
 .login-or::before, .login-or::after { content: ""; flex: 1; height: 1px; background: var(--color-gray-200); }
 .login-passkey-icon { width: 16px; height: 16px; color: var(--analytics-accent); }

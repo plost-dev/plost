@@ -1,1 +1,0 @@
-import{n as e,o as t}from"./useSelector-CngtT5Ai.js";import{t as n}from"./MapServicesSettings-D-Cu4QlO.js";var r=t();function i(){let t=e();return(0,r.jsx)(n,{onSaved:()=>t.invalidate()})}export{i as component};

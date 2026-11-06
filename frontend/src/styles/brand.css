@@ -126,9 +126,10 @@
 .plost-logo__lockup-wordmark { display: block; height: calc(var(--plost-tile-size) * .46); width: auto; fill: var(--plost-ink); }
 .plost-logo--lockup .plost-logo__wordmark { display: none; }
 .plost-logo--lockup .plost-logo__mark { color: var(--plost-brand-ink); transform: translate(-50%, -50%); transition: none; }
-/* Touch users see the full name without depending on a hover gesture. */
+/* Touch users see the full name without depending on a hover gesture,
+   except where the page asks for the O until hover or focus (--animated). */
 @media (hover: none) {
-  .plost-logo:not(.plost-logo--lockup) {
+  .plost-logo:not(.plost-logo--lockup, .plost-logo--animated) {
     --plost-plate-opacity: 1;
     --plost-plate-scale: 1;
     --plost-plate-blur: 0px;

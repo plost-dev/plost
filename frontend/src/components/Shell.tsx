@@ -11,6 +11,7 @@ import { CountryFlag } from "./icons"
 import { UIIcon } from "./UIIcon"
 import { createThemeUpdate } from "~/lib/theme-update"
 import { showToast } from "~/lib/toast"
+import { useChoiceMenu } from "~/lib/use-choice-menu"
 
 type ShellUser = {
   isAdmin?: boolean
@@ -225,19 +226,8 @@ function FooterTheme({ user }: { user: NonNullable<ShellUser> }) {
 function FooterLanguage({ user }: { user?: ShellUser }) {
   const { locale, setLocale, t } = useT()
   const router = useRouter()
-  const [open, setOpen] = useState(false)
+  const { open, setOpen, boxRef, triggerRef } = useChoiceMenu()
   const [pending, setPending] = useState(false)
-  const boxRef = useRef<HTMLDivElement>(null)
-  const triggerRef = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const onClick = (event: MouseEvent) => { if (!boxRef.current?.contains(event.target as Node)) setOpen(false) }
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { setOpen(false); triggerRef.current?.focus() } }
-    window.addEventListener("mousedown", onClick)
-    window.addEventListener("keydown", onKey)
-    boxRef.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus()
-    return () => { window.removeEventListener("mousedown", onClick); window.removeEventListener("keydown", onKey) }
-  }, [open])
   const choose = async (next: Locale) => {
     setOpen(false)
     if (next === locale) return
@@ -259,12 +249,12 @@ function FooterLanguage({ user }: { user?: ShellUser }) {
       aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(value => !value)}>
       <LanguageGlyph />
     </button>
-    {open ? <div className="squircle language-menu" role="menu" aria-label={label}>
+    {open ? <div className="squircle choice-menu language-menu" role="menu" aria-label={label}>
       {LOCALES.map(item => <button key={item.code} type="button" role="menuitemradio" aria-checked={item.code === locale}
-        className={`squircle language-menu-item${item.code === locale ? " is-active" : ""}`} onClick={() => void choose(item.code)}>
+        className={`squircle choice-menu-item language-menu-item${item.code === locale ? " is-active" : ""}`} onClick={() => void choose(item.code)}>
         <CountryFlag code={item.flag} shape="square" className="language-menu-flag" />
-        <span className="language-menu-name" lang={item.code}>{item.name}</span>
-        {item.code === locale ? <UIIcon name="check" className="language-menu-check" /> : null}
+        <span className="choice-menu-name" lang={item.code}>{item.name}</span>
+        {item.code === locale ? <UIIcon name="check" className="choice-menu-check" /> : null}
       </button>)}
     </div> : null}
   </div>
