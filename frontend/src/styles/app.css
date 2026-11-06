@@ -382,7 +382,7 @@ html[data-theme="dark"] .logo.plost-logo { --plost-pill: transparent; }
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 2px 4px;
-  width: min(25rem, calc(100vw - 24px));
+  width: min(21rem, calc(100vw - 24px));
   max-height: calc(100dvh - 96px);
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -1224,21 +1224,12 @@ html[data-theme="dark"] .settings-brand-logo-color.is-dark { display:block; }
 .login-input .input { padding-inline-start: 44px; }
 .login-input-icon { position: absolute; z-index: 1; top: 50%; inset-inline-start: 16px; transform: translateY(-50%); width: 16px; height: 16px; pointer-events: none; transition: color .2s; }
 .login-input .password-toggle { color: var(--color-gray-400); }
-.login-submit-arrow { width: 14px; height: 14px; transition: transform .2s; }
-.login-submit:hover .login-submit-arrow { transform: translateX(3px); }
-[dir="rtl"] .login-submit-arrow { transform: scaleX(-1); }
-[dir="rtl"] .login-submit:hover .login-submit-arrow { transform: scaleX(-1) translateX(3px); }
 .login-or { display: flex; align-items: center; gap: 12px; margin: -2px 0; font-size: 12px; color: var(--color-gray-400); }
 .login-or::before, .login-or::after { content: ""; flex: 1; height: 1px; background: var(--color-gray-200); }
 .login-passkey-icon { width: 16px; height: 16px; color: var(--analytics-accent); }
-.login-passkey-methods { display: flex; justify-content: center; gap: 18px; margin: -4px 0 0; padding: 0; list-style: none; }
-.login-passkey-methods li { display: flex; flex-direction: column; align-items: center; gap: 6px; min-width: 44px; font-size: 11px; color: var(--color-gray-500); }
-.login-passkey-method-icon { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 10px; background: var(--color-gray-100); color: var(--color-gray-600); }
-.login-passkey-method-icon .ui-icon { width: 16px; height: 16px; }
 @media (max-width: 480px) {
   .login-band { padding: 30px 20px 22px; }
   .login-body { padding: 22px 20px 24px; }
-  .login-passkey-methods { gap: 12px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .login-band::before { animation: none; }

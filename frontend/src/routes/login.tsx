@@ -123,20 +123,14 @@ function LoginPage() {
                   </span>
                 </label>
                 {error ? <p role="alert" className="text-sm text-red-500">{t(error || "")}</p> : null}
-                <ActionButton className="btn btn-primary login-submit w-full" loading={pending} type="submit">
-                  {pending ? t("login.pending") : <>{t("login.submit")}<UIIcon name="arrow" className="login-submit-arrow" /></>}
+                <ActionButton className="btn btn-primary w-full" loading={pending} type="submit">
+                  {pending ? t("login.pending") : t("login.submit")}
                 </ActionButton>
                 {passkeyEnabled ? <>
                   <p className="login-or">{t("login.or")}</p>
                   <ActionButton type="button" className="btn btn-secondary login-passkey w-full" disabled={pending} onClick={passkeyLogin}>
                     <UIIcon name="key" className="login-passkey-icon" />{t("login.passkey")}
                   </ActionButton>
-                  <ul className="login-passkey-methods" aria-label={t("login.pk_methods")}>
-                    <li><span className="login-passkey-method-icon"><UIIcon name="fingerprint" /></span>{t("login.pk_fingerprint")}</li>
-                    <li><span className="login-passkey-method-icon"><UIIcon name="face-scan" /></span>{t("login.pk_face")}</li>
-                    <li><span className="login-passkey-method-icon"><UIIcon name="device-mobile" /></span>{t("login.pk_phone")}</li>
-                    <li><span className="login-passkey-method-icon"><UIIcon name="shield-check" /></span>{t("login.pk_key")}</li>
-                  </ul>
                 </> : null}
               </form>
             )}
