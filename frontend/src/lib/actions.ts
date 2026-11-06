@@ -6,7 +6,7 @@ import type {Overview,SeriesBy,Row,RecentVisitor,RecentEvent} from "./ch"
 import type {DashSearch} from "./range"
 import type {SiteCheckReport} from "./site-checks"
 
-export type User={id:number;email:string;name:string;theme:"system"|"dark"|"light";locale:Locale;avatar:string;totp:boolean;totp_enabled:boolean;isAdmin:boolean;gravatarUrl?:string}
+export type User={id:number;email:string;name:string;theme:"system"|"dark"|"light";locale:Locale;avatar:string;loginEffect?:string;totp:boolean;totp_enabled:boolean;isAdmin:boolean;gravatarUrl?:string}
 export type Site={id:number;domain:string;name:string;timezone:string;public:boolean;createdAt:number}
 type Input<T>={data:T}
 type GoOverview={visitors:number;visits:number;pageviews:number;online:number;bounceRate:number;duration:number}
@@ -20,13 +20,13 @@ export function meFn(){
   meAsking??=rpc<{user:User|null}>("/api/auth").then(result=>asUser(result.user)).finally(()=>{meAsking=null})
   return meAsking
 }
-export async function instanceSetupFn(){const result=await rpc<{needsSetup:boolean;passkey?:boolean}>("/api/auth");return {needsSetup:result.needsSetup,passkey:!!result.passkey}}
+export async function instanceSetupFn(){const result=await rpc<{needsSetup:boolean;passkey?:boolean;loginEffect?:string}>("/api/auth");return {needsSetup:result.needsSetup,passkey:!!result.passkey,loginEffect:result.loginEffect||""}}
 export async function loginFn({data}:Input<{email:string;password:string}>){const r=await rpc<{requiresTOTP:boolean}>("/api/login","POST",data);return r.requiresTOTP?{needs2fa:true,email:data.email}:{needs2fa:false}}
 export const setupAdminFn=({data}:Input<{email:string;password:string;name:string}>)=>rpc("/api/setup","POST",data)
 export const logoutFn=()=>rpc("/api/logout","POST")
 export async function updateProfileFn({data}:Input<Omit<Partial<User>,"avatar"|"theme">&{avatar?:string|null;theme?:string;currentPassword?:string;oldPassword?:string;password?:string}>){
   const u=await meFn();if(!u)throw Error("请先登录")
-  const result=await rpc("/api/account","PUT",{name:data.name??u.name,email:data.email??u.email,locale:data.locale??u.locale,theme:data.theme??u.theme,...("avatar"in data?{avatar:data.avatar}:{}),currentPassword:data.currentPassword||data.oldPassword||"",password:data.password||""})
+  const result=await rpc("/api/account","PUT",{name:data.name??u.name,email:data.email??u.email,locale:data.locale??u.locale,theme:data.theme??u.theme,...("avatar"in data?{avatar:data.avatar}:{}),...(data.loginEffect?{loginEffect:data.loginEffect}:{}),currentPassword:data.currentPassword||data.oldPassword||"",password:data.password||""})
   try{if(data.theme)localStorage.setItem("plost:theme",data.theme);if(data.locale)localStorage.setItem("plost:locale",data.locale)}catch{}
   return result
 }

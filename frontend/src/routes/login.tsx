@@ -1,20 +1,22 @@
 import { ActionButton } from "~/components/ActionButton"
 import { redirect, Link, createFileRoute, useRouter } from "@tanstack/react-router"
-import { useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { BrandMark } from "~/components/BrandMark"
 import { SiteFooter } from "~/components/Shell"
-import { instanceSetupFn, loginFn, meFn } from "~/lib/actions"
+import { instanceSetupFn, loginFn, meFn, updateProfileFn } from "~/lib/actions"
 import { passkeyLoginFn, verifyLogin2faFn } from "~/lib/auth-actions"
 import { useT } from "~/lib/i18n"
 import { PasswordInput } from "~/components/PasswordInput"
 import { UIIcon } from "~/components/UIIcon"
+import { LoginBandEffect } from "~/components/LoginBandEffect"
+import { LOGIN_EFFECTS, readLocalLoginEffect, resolveLoginEffect, saveLocalLoginEffect, type LoginEffect } from "~/lib/login-effect"
 
 export const Route = createFileRoute("/login")({
   loader: async () => {
     if (await meFn()) throw redirect({ to: "/dashboard" })
     const setup = await instanceSetupFn()
     if (setup.needsSetup) throw redirect({ to: "/setup" })
-    return { passkeyEnabled: setup.passkey }
+    return { passkeyEnabled: setup.passkey, loginEffect: setup.loginEffect }
   },
   component: LoginPage,
 })
@@ -22,7 +24,8 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const router = useRouter()
   const { t } = useT()
-  const { passkeyEnabled } = Route.useLoaderData()
+  const { passkeyEnabled, loginEffect } = Route.useLoaderData()
+  const [effect, setEffect] = useState<LoginEffect>(() => resolveLoginEffect(loginEffect))
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [code, setCode] = useState("")
@@ -31,13 +34,20 @@ function LoginPage() {
   const [pending, setPending] = useState(false)
 
 
+  // A choice made on this page before signing in becomes the account's choice once signed in.
+  const enter = async () => {
+    const chosen = readLocalLoginEffect()
+    if (chosen && chosen !== loginEffect) await updateProfileFn({ data: { loginEffect: chosen } }).catch(() => undefined)
+    await router.invalidate()
+    await router.navigate({ to: "/dashboard" })
+  }
+
   const passkeyLogin = async () => {
     setError("")
     setPending(true)
     try {
       await passkeyLoginFn()
-      await router.invalidate()
-      await router.navigate({ to: "/dashboard" })
+      await enter()
     } catch (err) {
       setError(err instanceof Error ? err.message : t("Passkey 登录失败"))
     } finally {
@@ -49,8 +59,11 @@ function LoginPage() {
     <div className="auth-page">
       <main className="auth-main">
         <section className="auth-panel">
+          <div className="login-shell">
+          <LoginEffectMenu effect={effect} onChange={(next) => { setEffect(next); saveLocalLoginEffect(next) }} />
           <div data-radius="large" className="squircle ui-surface login-card">
-            <header className="login-band">
+            <header className={`login-band login-band--${effect}`}>
+              <LoginBandEffect effect={effect} />
               <Link to="/" className="login-band-logo"><BrandMark animated /></Link>
               <h1>{needs2fa ? t("login.2fa_title") : t("login.welcome")}</h1>
               <p>{needs2fa ? t("login.2fa_sub") : t("login.subtitle")}</p>
@@ -64,8 +77,7 @@ function LoginPage() {
                   setError("")
                   try {
                     await verifyLogin2faFn({ data: { code } })
-                    await router.invalidate()
-                    await router.navigate({ to: "/dashboard" })
+                    await enter()
                   } catch (err) {
                     setError(err instanceof Error ? err.message : t("验证失败"))
                   } finally {
@@ -99,8 +111,7 @@ function LoginPage() {
                       setNeeds2fa(true)
                       return
                     }
-                    await router.invalidate()
-                    await router.navigate({ to: "/dashboard" })
+                    await enter()
                   } catch (err) {
                     setError(err instanceof Error ? err.message : t("登录失败"))
                   } finally {
@@ -135,9 +146,41 @@ function LoginPage() {
               </form>
             )}
           </div>
+          </div>
         </section>
       </main>
       <SiteFooter />
     </div>
   )
+}
+
+function LoginEffectMenu({ effect, onChange }: { effect: LoginEffect, onChange: (next: LoginEffect) => void }) {
+  const { t } = useT()
+  const [open, setOpen] = useState(false)
+  const boxRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const onClick = (event: MouseEvent) => { if (!boxRef.current?.contains(event.target as Node)) setOpen(false) }
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { setOpen(false); triggerRef.current?.focus() } }
+    window.addEventListener("mousedown", onClick)
+    window.addEventListener("keydown", onKey)
+    boxRef.current?.querySelector<HTMLButtonElement>('[aria-checked="true"]')?.focus()
+    return () => { window.removeEventListener("mousedown", onClick); window.removeEventListener("keydown", onKey) }
+  }, [open])
+  const label = t("login.effect")
+  return <div className="login-effect" ref={boxRef}>
+    <button type="button" ref={triggerRef} className="squircle login-effect-trigger" aria-label={label} title={label}
+      aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(value => !value)}>
+      <UIIcon name="shirt" />
+    </button>
+    {open ? <div className="squircle login-effect-menu" role="menu" aria-label={label}>
+      {LOGIN_EFFECTS.map(item => <button key={item.value} type="button" role="menuitemradio" aria-checked={item.value === effect}
+        className={`squircle login-effect-item${item.value === effect ? " is-active" : ""}`}
+        onClick={() => { onChange(item.value); setOpen(false) }}>
+        <span className="login-effect-name">{t(item.label)}</span>
+        {item.value === effect ? <UIIcon name="check" className="login-effect-check" /> : null}
+      </button>)}
+    </div> : null}
+  </div>
 }

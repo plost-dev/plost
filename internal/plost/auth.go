@@ -34,7 +34,12 @@ type User struct {
 	Theme  string `json:"theme"`
 	TOTP   bool   `json:"totp"`
 	Avatar string `json:"avatar"`
+	// LoginEffect is the animation behind the logo on the sign-in page; empty means the default.
+	LoginEffect string `json:"loginEffect"`
 }
+
+// The sign-in page reads the owner's choice before anyone signs in, so only these names are stored.
+var loginEffects = map[string]bool{"aurora": true, "wave": true, "dots": true, "bars": true, "line": true, "shift": true}
 
 func digest(s string) string { h := sha256.Sum256([]byte(s)); return hex.EncodeToString(h[:]) }
 
@@ -44,8 +49,8 @@ func (a *App) user(r *http.Request) (*User, error) {
 		return nil, err
 	}
 	var u User
-	err = a.db.QueryRowContext(r.Context(), `SELECT u.id,u.email,u.name,u.locale,u.theme,u.totp_secret<>'',u.avatar
- FROM sessions s JOIN users u ON s.user_id=u.id WHERE s.token_hash=? AND s.host=? AND s.expires>? AND s.pending=0`, digest(c.Value), r.Host, unixNow()).Scan(&u.ID, &u.Email, &u.Name, &u.Locale, &u.Theme, &u.TOTP, &u.Avatar)
+	err = a.db.QueryRowContext(r.Context(), `SELECT u.id,u.email,u.name,u.locale,u.theme,u.totp_secret<>'',u.avatar,u.login_effect
+ FROM sessions s JOIN users u ON s.user_id=u.id WHERE s.token_hash=? AND s.host=? AND s.expires>? AND s.pending=0`, digest(c.Value), r.Host, unixNow()).Scan(&u.ID, &u.Email, &u.Name, &u.Locale, &u.Theme, &u.TOTP, &u.Avatar, &u.LoginEffect)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +81,12 @@ func (a *App) authStatus(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	u, _ := a.user(r)
-	return jsonResponse(w, map[string]any{"needsSetup": count == 0, "user": u, "version": a.cfg.Version, "passkey": a.hasPasskeys(r.Context())})
+	// A single-owner instance: the owner's sign-in animation is shown to whoever opens the sign-in page.
+	var effect string
+	if count > 0 {
+		_ = a.db.QueryRowContext(r.Context(), "SELECT login_effect FROM users WHERE id=1").Scan(&effect)
+	}
+	return jsonResponse(w, map[string]any{"needsSetup": count == 0, "user": u, "version": a.cfg.Version, "passkey": a.hasPasskeys(r.Context()), "loginEffect": effect})
 }
 
 type credentials struct {
@@ -180,6 +190,7 @@ func (a *App) profile(w http.ResponseWriter, r *http.Request) error {
 		CurrentPassword string          `json:"currentPassword"`
 		Password        string          `json:"password"`
 		Avatar          json.RawMessage `json:"avatar"`
+		LoginEffect     string          `json:"loginEffect"`
 	}
 	if err := readJSON(w, r, &in); err != nil {
 		return err
@@ -207,6 +218,12 @@ func (a *App) profile(w http.ResponseWriter, r *http.Request) error {
 				return failure(400, "头像尺寸无效")
 			}
 		}
+	}
+	// Omitting the field keeps the saved animation, so other account forms need not send it.
+	if in.LoginEffect == "" {
+		in.LoginEffect = u.LoginEffect
+	} else if !loginEffects[in.LoginEffect] {
+		return failure(400, "账号设置无效")
 	}
 	if in.Name == "" || len(in.Name) > 100 || !validEmail(in.Email) || !uiLocales[in.Locale] || (in.Theme != "system" && in.Theme != "dark" && in.Theme != "light") {
 		return failure(400, "账号设置无效")
@@ -240,7 +257,7 @@ func (a *App) profile(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	defer tx.Rollback()
-	if _, err = tx.ExecContext(r.Context(), "UPDATE users SET name=?,email=?,locale=?,theme=?,avatar=? WHERE id=1", in.Name, in.Email, in.Locale, in.Theme, avatar); err != nil {
+	if _, err = tx.ExecContext(r.Context(), "UPDATE users SET name=?,email=?,locale=?,theme=?,avatar=?,login_effect=? WHERE id=1", in.Name, in.Email, in.Locale, in.Theme, avatar, in.LoginEffect); err != nil {
 		return err
 	}
 	if passwordChange {

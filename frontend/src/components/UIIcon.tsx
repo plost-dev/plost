@@ -55,6 +55,7 @@ const icons: Record<string, string> = {
   circle: "circle",
   "device-mobile": "mobile-screen-button",
   "shield-check": "shield-check",
+  shirt: "shirt",
   "device-tablet": "tablet-screen-button",
   "device-laptop": "laptop",
   "device-desktop": "desktop",

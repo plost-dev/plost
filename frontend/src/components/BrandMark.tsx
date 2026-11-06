@@ -1,4 +1,4 @@
-import { useEffect, useRef, type CSSProperties } from "react"
+import type { CSSProperties } from "react"
 import geometry from "~/assets/brand.json"
 
 function GlyphPath({ letter }: { letter: typeof geometry.letters[number] }) {
@@ -34,28 +34,8 @@ export function BrandWordmark() {
   )
 }
 
-// Alternates between the centered O and the full wordmark while it is on screen.
-// Hover and keyboard focus still expand it; reduced-motion users keep the O.
-function useWordmarkLoop(enabled: boolean) {
-  const ref = useRef<HTMLSpanElement>(null)
-  useEffect(() => {
-    const el = ref.current
-    if (!enabled || !el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
-    let expanded = false
-    const tick = () => {
-      if (el.matches(":hover")) return
-      expanded = !expanded
-      el.classList.toggle("is-expanded", expanded)
-    }
-    const start = window.setTimeout(tick, 900)
-    const loop = window.setInterval(tick, 2600)
-    return () => { window.clearTimeout(start); window.clearInterval(loop); el.classList.remove("is-expanded") }
-  }, [enabled])
-  return ref
-}
-
+/** animated: shows the centered O and expands into the full wordmark on hover or keyboard focus. */
 export function BrandMark({ className = "", animated = false }: { className?: string, animated?: boolean }) {
-  const ref = useWordmarkLoop(animated)
   const style = {
     "--plost-mark-width": `${geometry.css.mk_w * 100}%`,
     "--plost-wordmark-width": `${geometry.css.wm_w * 100}%`,
@@ -65,7 +45,7 @@ export function BrandMark({ className = "", animated = false }: { className?: st
     "--plost-morph-y": geometry.css.ty,
   } as CSSProperties
   return (
-    <span ref={ref} className={`logo plost-logo${animated ? " plost-logo--animated" : ""} ${className}`.trim()} role="img" aria-label="Plost" style={style}>
+    <span className={`logo plost-logo${animated ? " plost-logo--animated" : ""} ${className}`.trim()} role="img" aria-label="Plost" style={style}>
       <span className="plost-logo__badge">
         <span className="plost-logo__pill" aria-hidden="true" />
         <span className="plost-logo__tile">

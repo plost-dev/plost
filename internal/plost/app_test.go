@@ -648,6 +648,15 @@ func TestUISettingsAuthorizationAndShareVisibility(t *testing.T) {
 		x.call(t, "PUT", "/api/account", map[string]any{"name": "Owner", "email": "owner@example.test", "locale": locale, "theme": "system"}, 200)
 	}
 	x.call(t, "PUT", "/api/account", map[string]any{"name": "Owner", "email": "owner@example.test", "locale": "pt", "theme": "system"}, 400)
+	x.call(t, "PUT", "/api/account", map[string]any{"name": "Owner", "email": "owner@example.test", "locale": "zh-CN", "theme": "system", "loginEffect": "scan"}, 400)
+	x.call(t, "PUT", "/api/account", map[string]any{"name": "Owner", "email": "owner@example.test", "locale": "zh-CN", "theme": "system", "loginEffect": "wave"}, 200)
+	// Saving the profile without the field keeps the chosen sign-in animation.
+	x.call(t, "PUT", "/api/account", map[string]any{"name": "Owner", "email": "owner@example.test", "locale": "zh-CN", "theme": "system"}, 200)
+	var effectState struct{ LoginEffect string }
+	json.Unmarshal(x.call(t, "GET", "/api/account", nil, 200), &effectState)
+	if effectState.LoginEffect != "wave" {
+		t.Fatalf("login effect = %q, want wave", effectState.LoginEffect)
+	}
 	var share struct{ Token string }
 	json.Unmarshal(x.call(t, "POST", "/api/sites/example.com/shares", map[string]string{"name": "Test"}, 200), &share)
 	body := x.call(t, "GET", "/api/sites/example.com/settings", nil, 200)
@@ -655,6 +664,10 @@ func TestUISettingsAuthorizationAndShareVisibility(t *testing.T) {
 		t.Fatal("owner cannot reopen share URL")
 	}
 	x.call(t, "POST", "/api/logout", nil, 200)
+	json.Unmarshal(x.call(t, "GET", "/api/auth", nil, 200), &effectState)
+	if effectState.LoginEffect != "wave" {
+		t.Fatalf("signed-out auth status login effect = %q, want wave", effectState.LoginEffect)
+	}
 	for _, path := range []string{"/api/mapbox", "/api/sites/example.com/visitors", "/api/sites/example.com/settings"} {
 		x.call(t, "GET", path, nil, 401)
 	}

@@ -1200,13 +1200,59 @@ html[data-theme="dark"] .settings-brand-logo-color.is-dark { display:block; }
    between the centered O and the full wordmark (BrandMark animated). */
 .login-card { overflow: hidden; background: var(--surface); border: 1px solid var(--color-gray-200); box-shadow: 0 24px 60px -32px rgb(40 20 110 / .35); }
 .login-band { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 36px 24px 26px; overflow: hidden; text-align: center; color: var(--accent-on-solid); background: linear-gradient(135deg, color-mix(in srgb, var(--accent-color) 86%, #fff), color-mix(in srgb, var(--accent-color) 82%, #000)); }
-.login-band::before { content: ""; position: absolute; inset: -45%; background: conic-gradient(from 0deg, transparent, rgb(255 255 255 / .16), transparent 30%); animation: login-band-spin 8s linear infinite; }
-.login-band > * { position: relative; }
+.login-band { isolation: isolate; }
+.login-band > :not(.login-fx) { position: relative; }
+.login-shell { position: relative; }
 .login-band h1 { margin: 6px 0 0; font-size: 20px; line-height: 1.35; font-weight: 650; }
 .login-band p { margin: 0; max-width: 320px; font-size: 13px; line-height: 1.6; color: color-mix(in srgb, var(--accent-on-solid) 74%, transparent); text-wrap: pretty; }
 .login-band-logo { display: inline-flex; border-radius: 22px; }
+/* The O stays until hover or keyboard focus, touch screens included (brand.css expands it there by default). */
+@media (hover: none) {
+  .plost-logo.plost-logo--animated:not(:focus-visible, .is-expanded) {
+    --plost-plate-opacity: 0; --plost-plate-scale: .72; --plost-plate-blur: 3px; --plost-pill-opacity: 1;
+    --plost-symbol-scale: 1; --plost-symbol-x: 0; --plost-symbol-y: 0; --plost-symbol-ink: var(--plost-brand);
+    --plost-letters-opacity: 0; --plost-letters-scale: .98; --plost-letters-blur: 2px;
+  }
+}
+
+/* Sign-in band animations, chosen with the shirt button (lib/login-effect.ts). */
+.login-fx { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+.login-fx-aurora { filter: blur(28px); }
+.login-fx-aurora i { position: absolute; width: 60%; height: 90%; border-radius: 50%; opacity: .55; animation: login-fx-drift 12s ease-in-out infinite; }
+.login-fx-aurora i:nth-child(1) { left: -10%; top: -30%; background: #a78bfa; }
+.login-fx-aurora i:nth-child(2) { right: -15%; top: 10%; background: #f0abfc; animation-delay: -4s; animation-duration: 14s; }
+.login-fx-aurora i:nth-child(3) { left: 25%; bottom: -50%; background: #67e8f9; animation-delay: -8s; animation-duration: 16s; opacity: .4; }
+@keyframes login-fx-drift { 0%, 100% { transform: translate(0, 0) scale(1); } 33% { transform: translate(18%, 10%) scale(1.15); } 66% { transform: translate(-12%, -8%) scale(.9); } }
+.login-fx-wave svg { position: absolute; left: 0; bottom: 0; width: 200%; height: 46%; }
+.login-fx-wave-front { fill: rgb(255 255 255 / .1); animation: login-fx-wave 9s linear infinite; }
+.login-fx-wave-back { fill: rgb(255 255 255 / .07); height: 60% !important; animation: login-fx-wave 14s linear infinite reverse; }
+@keyframes login-fx-wave { to { transform: translateX(-50%); } }
+.login-fx-dots i { position: absolute; bottom: -8px; border-radius: 50%; background: #fff; opacity: 0; animation: login-fx-rise linear infinite; }
+@keyframes login-fx-rise { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: .7; } 85% { opacity: .5; } 100% { transform: translateY(-260px); opacity: 0; } }
+.login-fx-bars { display: flex; align-items: flex-end; gap: 6px; padding: 0 14px; }
+.login-fx-bars i { flex: 1; height: 58%; border-radius: 4px 4px 0 0; background: linear-gradient(to top, rgb(255 255 255 / .02), rgb(255 255 255 / .16)); transform-origin: bottom; animation: login-fx-bar 3s ease-in-out infinite; }
+@keyframes login-fx-bar { 0%, 100% { transform: scaleY(.25); } 50% { transform: scaleY(1); } }
+.login-fx-line svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.login-fx-line-stroke { fill: none; stroke: rgb(255 255 255 / .35); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; stroke-dasharray: 1; stroke-dashoffset: 1; animation: login-fx-draw 5s ease-in-out infinite; }
+.login-fx-line-area { fill: rgb(255 255 255 / .1); animation: login-fx-area 5s ease-in-out infinite; }
+@keyframes login-fx-draw { 0% { stroke-dashoffset: 1; opacity: 1; } 55%, 80% { stroke-dashoffset: 0; opacity: 1; } 100% { stroke-dashoffset: 0; opacity: 0; } }
+@keyframes login-fx-area { 0%, 30% { opacity: 0; } 60%, 80% { opacity: 1; } 100% { opacity: 0; } }
+.login-band--shift { background: linear-gradient(120deg, color-mix(in srgb, var(--accent-color) 80%, #fff), color-mix(in srgb, var(--accent-color) 70%, #a21caf), color-mix(in srgb, var(--accent-color) 85%, #000), color-mix(in srgb, var(--accent-color) 75%, #0891b2)); background-size: 300% 300%; animation: login-fx-shift 10s ease-in-out infinite; }
+@keyframes login-fx-shift { 0%, 100% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } }
+
+.login-effect { position: absolute; z-index: 2; top: 12px; inset-inline-end: 12px; }
+.login-effect-trigger { display: grid; place-items: center; width: 34px; height: 34px; --sq-r: 12px; border: 0; background: rgb(255 255 255 / .14); color: #fff; cursor: pointer; transition: background .2s; }
+.login-effect-trigger:hover, .login-effect-trigger[aria-expanded="true"] { background: rgb(255 255 255 / .26); }
+.login-effect-trigger:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.login-effect-trigger .ui-icon { width: 16px; height: 16px; }
+.login-effect-menu { position: absolute; top: calc(100% + 6px); inset-inline-end: 0; display: flex; flex-direction: column; gap: 2px; min-width: 150px; padding: 6px; --sq-r: 14px; background: #0c0c0e; color: #e4e4e7; outline: 1px solid rgb(255 255 255 / .1); box-shadow: 0 16px 40px rgb(0 0 0 / .4); text-align: start; }
+.login-effect-item { display: flex; align-items: center; gap: 10px; height: 36px; padding: 0 10px; --sq-r: 10px; border: 0; background: transparent; color: inherit; font-size: .875rem; cursor: pointer; }
+.login-effect-item:hover, .login-effect-item:focus-visible { background: rgb(255 255 255 / .08); outline: none; }
+.login-effect-item.is-active { background: color-mix(in srgb, var(--accent-color) 22%, transparent); color: color-mix(in srgb, var(--accent-color) 55%, #fff); }
+.login-effect-name { flex: 1; text-align: start; white-space: nowrap; }
+.login-effect-check { width: 12px; height: 12px; }
+.login-effect-preview { display: block; height: 72px; padding: 0; --sq-r: 14px; }
 .login-band-logo:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
-@keyframes login-band-spin { to { transform: rotate(360deg); } }
 
 .login-band .logo.plost-logo { --plost-tile-size: 88px; --plost-brand: #fff; --plost-brand-ink: var(--accent-color); }
 .logo.plost-logo.plost-logo--animated :is(.plost-logo__pill, .plost-logo__tile, .plost-logo__wordmark) { display: block; }
@@ -1232,7 +1278,7 @@ html[data-theme="dark"] .settings-brand-logo-color.is-dark { display:block; }
   .login-body { padding: 22px 20px 24px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  .login-band::before { animation: none; }
+  .login-band, .login-fx, .login-fx * { animation: none !important; }
 }
 .btn:focus-visible, .input:focus-visible, .site-header a:focus-visible, .site-header button:focus-visible { outline: 3px solid color-mix(in srgb,var(--analytics-accent) 35%,transparent); outline-offset: 3px; }
 @media(max-width:639px) { :root { --ui-text-page: 22px; --ui-text-input:16px; --ui-card-padding: 16px; --ui-grid-gap:16px; }  }
