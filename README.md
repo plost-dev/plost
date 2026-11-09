@@ -182,7 +182,7 @@ CSV export for a signed-in administrator is `GET /api/export/{domain}`.
 
 ## Backups
 
-**Settings → Backup** downloads a `.plostbk` file. The password is separate from the account password, at least 12 bytes, and is not stored next to the file. Recovery needs the account password, the backup password, and the confirmation text `RESTORE`. Plost writes a pre-restore snapshot under `backups/before-restore-*.db`, then swaps the database. Sessions are dropped; sign in with the account that was inside the backup.
+**Settings → Backup and restore** downloads a `.plostbk` file. The password is separate from the account password, at least 12 bytes, and is not stored next to the file. Recovery needs the account password, the backup password, and the confirmation text `RESTORE`. Plost writes a pre-restore snapshot under `backups/before-restore-*.db`, then swaps the database. Sessions are dropped; sign in with the account that was inside the backup.
 
 Scheduled backups use the same file format, live in `backups/scheduled/`, and can be uploaded to R2 or S3 over HTTPS on a public address. Plost does not delete old objects in the bucket.
 
