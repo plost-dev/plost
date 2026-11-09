@@ -1,1 +1,0 @@
-import{s as e}from"./index-BO3fWQMW.js";import{o as t}from"./useSelector-CngtT5Ai.js";var n=t(),r=()=>(0,n.jsx)(n.Fragment,{children:(0,n.jsx)(e,{})});export{r as component};

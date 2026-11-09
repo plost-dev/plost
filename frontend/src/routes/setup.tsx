@@ -17,7 +17,7 @@ export const Route = createFileRoute("/setup")({
 })
 
 function SetupPage() {
-  const { t } = useT()
+  const { t, locale } = useT()
   const router = useRouter()
   const [name, setName] = useState("")
   const [email, setEmail] = useState("")
@@ -41,7 +41,7 @@ function SetupPage() {
               setPending(true)
               setError("")
               try {
-                await setupAdminFn({data: {name, email, password}})
+                await setupAdminFn({data: {name, email, password, locale}})
                 await router.invalidate()
                 await router.navigate({to: "/dashboard", replace: true})
               } catch (failure) {

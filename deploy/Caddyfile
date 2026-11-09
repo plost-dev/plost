@@ -1,5 +1,5 @@
 # Replace stats.example.com with your instance domain. Plost reads the visitor's address from the X-Forwarded-For
-# header Caddy sets on its own; see "访客 IP 与代理" in the README.
+# header Caddy sets on its own; see "Visitor IP and proxies" in README.md.
 stats.example.com {
     encode zstd gzip
     reverse_proxy 127.0.0.1:3101
