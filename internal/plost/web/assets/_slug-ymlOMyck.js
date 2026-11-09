@@ -1,1 +1,0 @@
-import{W as e}from"./index-BO3fWQMW.js";import{o as t}from"./useSelector-CngtT5Ai.js";var n=t(),r=({error:t})=>(0,n.jsx)(e,{title:`分享链接无效`,description:t instanceof Error?t.message:void 0});export{r as errorComponent};

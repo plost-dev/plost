@@ -22,7 +22,28 @@ import (
 	"github.com/plost-dev/plost/internal/plost"
 )
 
-const usage = `用法：
+const usage = `plost-import-umami copies history from an Umami PostgreSQL database into a stopped Plost instance.
+
+  plost-import-umami list
+  plost-import-umami import   -data DIR -site UMAMI_ID=domain [-site ...] [options]
+  plost-import-umami rollback -data DIR -site domain [-apply]
+
+The Umami URL is read only from UMAMI_DATABASE_URL
+(for example postgres://user@host/db?sslmode=require). It is not a flag, so it stays out of the
+process list and shell history. Umami is read in a read-only transaction and is never modified.
+
+import is a dry run until you add -apply. Stop Plost before -apply.
+  -create-sites     create a missing Plost site (private by default)
+  -timezone ZONE    time zone for a new site, such as Asia/Shanghai (default Etc/UTC); existing sites keep theirs
+  -since TIME       import events at or after this time: 2026-01-01 or 2026-01-01T00:00:00Z (UTC)
+  -until TIME       import events before this time; set it to the moment the tracker switched to Plost
+  -strict           fail when Plost cannot represent an event, instead of skipping it
+  -allow-overlap    allow the window to overlap data Plost has already collected (counts can double)
+  -report FILE      write the JSON reconciliation report (-apply writes it under DIR/backups/ by default)
+
+Progress lines are printed in Chinese. The same commands:
+
+用法：
   plost-import-umami list
   plost-import-umami import   -data 数据目录 -site Umami站点ID=域名 [-site ...] [选项]
   plost-import-umami rollback -data 数据目录 -site 域名 [-apply]
@@ -47,7 +68,7 @@ func (s siteFlags) String() string { return "" }
 func (s siteFlags) Set(v string) error {
 	id, target, ok := strings.Cut(v, "=")
 	if !ok || strings.TrimSpace(id) == "" || strings.TrimSpace(target) == "" {
-		return errors.New("格式应为 Umami站点ID=域名")
+		return errors.New("expected UMAMI_ID=domain（格式应为 Umami站点ID=域名）")
 	}
 	s[strings.TrimSpace(id)] = strings.TrimSpace(target)
 	return nil
@@ -76,7 +97,7 @@ func main() {
 		os.Exit(2)
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "错误："+err.Error())
+		fmt.Fprintln(os.Stderr, "error: "+err.Error())
 		os.Exit(1)
 	}
 }

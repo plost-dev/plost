@@ -94,6 +94,7 @@ type credentials struct {
 	Name     string `json:"name"`
 	Password string `json:"password"`
 	Code     string `json:"code"`
+	Locale   string `json:"locale"`
 }
 
 // validPassword leaves the choice to the person: at least eight characters of any kind, digits only included,
@@ -125,7 +126,13 @@ func (a *App) setup(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	// The singleton primary key makes two simultaneous setup requests mutually exclusive.
-	_, err = a.db.ExecContext(r.Context(), "INSERT INTO users(id,email,name,password_hash,created_at) VALUES(1,?,?,?,?)", in.Email, in.Name, string(hash), unixNow())
+	// The setup page is already in the visitor's language. Keep that choice on the account, or the
+	// default zh-CN would replace it the moment they are signed in.
+	locale := "zh-CN"
+	if uiLocales[in.Locale] {
+		locale = in.Locale
+	}
+	_, err = a.db.ExecContext(r.Context(), "INSERT INTO users(id,email,name,password_hash,locale,created_at) VALUES(1,?,?,?,?,?)", in.Email, in.Name, string(hash), locale, unixNow())
 	if err != nil {
 		var n int
 		_ = a.db.QueryRowContext(r.Context(), "SELECT count(*) FROM users").Scan(&n)

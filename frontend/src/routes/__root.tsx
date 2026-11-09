@@ -1,6 +1,6 @@
 import { createRootRoute, Outlet, useRouterState } from "@tanstack/react-router"
 import { useEffect, type ReactNode } from "react"
-import { I18nProvider, isLocale, useT } from "~/lib/i18n"
+import { I18nProvider, browserLocale, isLocale, useT } from "~/lib/i18n"
 import { rootPreferencesFn } from "~/lib/auth-actions"
 import { MapStyleProvider } from "~/lib/map-preferences"
 import { DEFAULT_GOOGLE_MAP_STYLE } from "~/lib/google-map-styles"
@@ -42,7 +42,7 @@ export function RootShell({ children }: { children: ReactNode }) {
   // The shell also wraps errors raised before the root loader has preferences.
   // index.html owns the SPA document; this shell only supplies shared providers.
   const preferences = Route.useLoaderData()
-  const locale = isLocale(preferences?.locale) ? preferences.locale : "zh-CN"
+  const locale = isLocale(preferences?.locale) ? preferences.locale : browserLocale()
   return (
     <I18nProvider locale={locale}>
       <MapStyleProvider styleId={preferences?.mapboxStyle ?? DEFAULT_MAPBOX_STYLE} googleStyleId={preferences?.googleMapStyle ?? DEFAULT_GOOGLE_MAP_STYLE}>

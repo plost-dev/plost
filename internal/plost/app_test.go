@@ -96,6 +96,20 @@ func (x *testApp) event(t *testing.T, domain, visitor, page string) {
 	}
 }
 
+func TestSetupKeepsChosenLanguage(t *testing.T) {
+	x := newTestApp(t)
+	x.call(t, "POST", "/api/setup", map[string]any{"email": "owner@example.test", "name": "Owner", "password": testPassword, "locale": "en"}, 200)
+	var locale string
+	if err := x.app.db.QueryRow("SELECT locale FROM users").Scan(&locale); err != nil || locale != "en" {
+		t.Fatalf("locale = %q", locale)
+	}
+	y := newTestApp(t)
+	y.call(t, "POST", "/api/setup", map[string]any{"email": "owner@example.test", "name": "Owner", "password": testPassword, "locale": "no-such"}, 200)
+	if err := y.app.db.QueryRow("SELECT locale FROM users").Scan(&locale); err != nil || locale != "zh-CN" {
+		t.Fatalf("unknown locale stored as %q", locale)
+	}
+}
+
 func TestSetupSingletonAndClosedRegistration(t *testing.T) {
 	x := newTestApp(t)
 	x.setup(t)
